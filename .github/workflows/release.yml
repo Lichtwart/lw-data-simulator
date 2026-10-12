@@ -40,7 +40,7 @@ jobs:
         env:
           V: ${{ steps.v.outputs.version }}
         run: node scripts/release-notes.mjs "$V" > release-notes.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-notes
           path: release-notes.md

@@ -7,6 +7,8 @@ demo library.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-12
+
 ### Added
 
 - First version of the Lichtwart Demo Simulator: sign in to Cumulocity, create and run demo

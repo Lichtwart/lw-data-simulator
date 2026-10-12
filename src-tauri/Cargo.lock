@@ -2137,7 +2137,7 @@ version = "0.1.0"
 dependencies = [
  "apple-native-keyring-store",
  "axum",
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "chrono-tz",
  "jsonschema",

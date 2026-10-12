@@ -1,0 +1,728 @@
+{
+  "type": "lw-demo-floorplan",
+  "schemaVersion": 1,
+  "name": "Erdgeschoss",
+  "description": "Markt: Verkaufsraum, Kühlung, Lager, Technikraum und Parkplatz",
+  "icon": "map",
+  "image": "ground-floor.svg",
+  "imageWidth": 1680,
+  "imageHeight": 1074,
+  "widgets": [
+    {
+      "id": "w-dali-wc",
+      "kind": "control",
+      "x": 185,
+      "y": 120,
+      "icon": "light-bulb",
+      "title": "WC und Lager",
+      "confirm": false,
+      "control": {
+        "type": "dali",
+        "group": 4,
+        "modes": [
+          "off",
+          "on",
+          "auto"
+        ]
+      }
+    },
+    {
+      "id": "w-ac-wc-set",
+      "kind": "control",
+      "x": 185,
+      "y": 176,
+      "icon": "thermometer-half",
+      "title": "Klima WC",
+      "confirm": false,
+      "control": {
+        "type": "modbus",
+        "itemId": "ac_wc_set",
+        "valueType": "number",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "unit": "°C"
+      }
+    },
+    {
+      "id": "w-wc-leak",
+      "kind": "sensor",
+      "x": 120,
+      "y": 248,
+      "icon": "tint",
+      "measurement": {
+        "itemId": "restroom_leak"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Wasser",
+        "offLabel": "Trocken",
+        "onLevel": "alarm",
+        "offLevel": "good"
+      },
+      "locked": true,
+      "alarms": [
+        {
+          "kind": "type",
+          "alarmType": "lw_demo_restroom_leak"
+        }
+      ]
+    },
+    {
+      "id": "w-l13",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-13"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 250,
+      "y": 248
+    },
+    {
+      "id": "w-dali-staff",
+      "kind": "control",
+      "x": 515,
+      "y": 120,
+      "icon": "light-bulb",
+      "title": "Personal",
+      "confirm": false,
+      "control": {
+        "type": "dali",
+        "group": 3,
+        "modes": [
+          "off",
+          "on",
+          "auto"
+        ]
+      }
+    },
+    {
+      "id": "w-crew-occ",
+      "kind": "sensor",
+      "x": 450,
+      "y": 192,
+      "icon": "user",
+      "measurement": {
+        "itemId": "crew_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-l8",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-8"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 580,
+      "y": 192
+    },
+    {
+      "id": "w-co2",
+      "kind": "alarm",
+      "x": 780,
+      "y": 136,
+      "icon": "air-quality",
+      "text": "CO₂-Tank",
+      "note": "Leck: Raum lüften",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "co2_leakage"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_co2"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-fuses",
+      "kind": "alarm",
+      "x": 910,
+      "y": 136,
+      "icon": "bell",
+      "text": "Sicherungen",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "fuse_freezer"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_cooler"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_crew"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_manager"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_support"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_totem"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_signages"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_parking"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_vestibules"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_restroom"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_dry_storage"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_co2"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-klima",
+      "kind": "alarm",
+      "icon": "air-conditioner",
+      "text": "Klima",
+      "note": "Störungen der Klimageräte",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "ac_wc_act"
+        },
+        {
+          "kind": "item",
+          "itemId": "ac_dry_act"
+        },
+        {
+          "kind": "item",
+          "itemId": "ac_mgr_act"
+        },
+        {
+          "kind": "item",
+          "itemId": "ac_crew_act"
+        }
+      ],
+      "locked": true,
+      "x": 1040,
+      "y": 136
+    },
+    {
+      "id": "w-subdist",
+      "kind": "alarm",
+      "icon": "warning",
+      "text": "Unterverteilung",
+      "note": "Energiezähler Störung",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "en_cms_kwh"
+        },
+        {
+          "kind": "item",
+          "itemId": "en_sign_kwh"
+        }
+      ],
+      "locked": true,
+      "x": 780,
+      "y": 276
+    },
+    {
+      "id": "w-energy",
+      "kind": "sensor",
+      "x": 910,
+      "y": 276,
+      "icon": "bolt",
+      "measurement": {
+        "itemId": "energy_total"
+      },
+      "title": "Energie gesamt",
+      "unit": "kWh",
+      "decimals": 0,
+      "locked": true
+    },
+    {
+      "id": "w-peak",
+      "kind": "sensor",
+      "x": 1040,
+      "y": 276,
+      "icon": "plug",
+      "measurement": {
+        "itemId": "current_peak_total"
+      },
+      "title": "Spitzenstrom",
+      "unit": "A",
+      "decimals": 0,
+      "ranges": [
+        {
+          "min": null,
+          "max": 100,
+          "level": "good"
+        },
+        {
+          "min": 100,
+          "max": 200,
+          "level": "warning"
+        },
+        {
+          "min": 200,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-ac-dry-mode",
+      "kind": "control",
+      "x": 1265,
+      "y": 120,
+      "icon": "fan",
+      "title": "Klima Trocken",
+      "confirm": false,
+      "control": {
+        "type": "modbus",
+        "itemId": "ac_dry_mode",
+        "valueType": "multi",
+        "options": [
+          {
+            "value": 0,
+            "label": "Heizen",
+            "icon": "fire"
+          },
+          {
+            "value": 1,
+            "label": "Automatik",
+            "icon": "rotate-right"
+          },
+          {
+            "value": 2,
+            "label": "Kühlen",
+            "icon": "snowflake-o"
+          },
+          {
+            "value": 3,
+            "label": "Entfeuchten",
+            "icon": "air-quality"
+          },
+          {
+            "value": 4,
+            "label": "Befeuchten",
+            "icon": "tint"
+          }
+        ]
+      }
+    },
+    {
+      "id": "w-dry-leak",
+      "kind": "sensor",
+      "x": 1200,
+      "y": 192,
+      "icon": "tint",
+      "measurement": {
+        "itemId": "dry_leak"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Wasser",
+        "offLabel": "Trocken",
+        "onLevel": "alarm",
+        "offLevel": "good"
+      },
+      "locked": true,
+      "alarms": [
+        {
+          "kind": "type",
+          "alarmType": "lw_demo_dry_leak_alarm"
+        }
+      ]
+    },
+    {
+      "id": "w-l14",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-14"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 1330,
+      "y": 192
+    },
+    {
+      "id": "w-dali-shop",
+      "kind": "control",
+      "x": 185,
+      "y": 467,
+      "icon": "light-bulb",
+      "title": "Verkaufsraum",
+      "confirm": false,
+      "control": {
+        "type": "dali",
+        "group": 2,
+        "modes": [
+          "off",
+          "on",
+          "auto"
+        ]
+      }
+    },
+    {
+      "id": "w-l19",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-19"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 380,
+      "y": 483
+    },
+    {
+      "id": "w-l20",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-20"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 510,
+      "y": 483
+    },
+    {
+      "id": "w-l21",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-21"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 640,
+      "y": 483
+    },
+    {
+      "id": "w-l22",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-22"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 770,
+      "y": 483
+    },
+    {
+      "id": "w-l11",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-11"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 900,
+      "y": 483
+    },
+    {
+      "id": "w-freezer",
+      "kind": "sensor",
+      "x": 1080,
+      "y": 483,
+      "icon": "snowflake-o",
+      "measurement": {
+        "itemId": "freezer_temp"
+      },
+      "title": "Tiefkühler",
+      "decimals": 1,
+      "staleAfterMin": 15,
+      "ranges": [
+        {
+          "min": null,
+          "max": -15,
+          "level": "good"
+        },
+        {
+          "min": -15,
+          "max": -12,
+          "level": "warning"
+        },
+        {
+          "min": -12,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "fuse_freezer"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-cooler",
+      "kind": "sensor",
+      "x": 1210,
+      "y": 483,
+      "icon": "thermometer-half",
+      "measurement": {
+        "itemId": "cooler_temp"
+      },
+      "title": "Kühlzelle",
+      "decimals": 1,
+      "staleAfterMin": 15,
+      "ranges": [
+        {
+          "min": null,
+          "max": 5,
+          "level": "good"
+        },
+        {
+          "min": 5,
+          "max": 8,
+          "level": "warning"
+        },
+        {
+          "min": 8,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "fuse_cooler"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-freezer-occ",
+      "kind": "sensor",
+      "x": 1340,
+      "y": 483,
+      "icon": "user",
+      "measurement": {
+        "itemId": "freezer_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-cooler-occ",
+      "kind": "sensor",
+      "x": 1470,
+      "y": 483,
+      "icon": "user",
+      "measurement": {
+        "itemId": "cooler_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-dali-outside",
+      "kind": "control",
+      "x": 185,
+      "y": 767,
+      "icon": "light-bulb",
+      "title": "Totem und Schriftzug",
+      "confirm": false,
+      "control": {
+        "type": "dali",
+        "group": 1,
+        "modes": [
+          "off",
+          "on",
+          "auto"
+        ]
+      }
+    },
+    {
+      "id": "w-l1",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-1"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 380,
+      "y": 783
+    },
+    {
+      "id": "w-l3",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-3"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 510,
+      "y": 783
+    },
+    {
+      "id": "w-lux",
+      "kind": "sensor",
+      "x": 640,
+      "y": 783,
+      "icon": "sun-o",
+      "measurement": {
+        "itemId": "lux-1"
+      },
+      "title": "Außenhelligkeit",
+      "unit": "lx",
+      "decimals": 0,
+      "locked": true
+    },
+    {
+      "id": "w-ev-1",
+      "kind": "sensor",
+      "x": 820,
+      "y": 783,
+      "icon": "car",
+      "measurement": {
+        "itemId": "ev_slot_1"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-ev-2",
+      "kind": "sensor",
+      "x": 950,
+      "y": 783,
+      "icon": "car",
+      "measurement": {
+        "itemId": "ev_slot_2"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-ev-3",
+      "kind": "sensor",
+      "x": 1080,
+      "y": 783,
+      "icon": "car",
+      "measurement": {
+        "itemId": "ev_slot_3"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-ev-alarm",
+      "kind": "alarm",
+      "x": 820,
+      "y": 923,
+      "icon": "charging-battery",
+      "text": "Ladesäulen",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "en_ev1_kwh"
+        },
+        {
+          "kind": "item",
+          "itemId": "en_ev2_kwh"
+        },
+        {
+          "kind": "item",
+          "itemId": "en_ev3_kwh"
+        }
+      ],
+      "locked": true
+    }
+  ]
+}

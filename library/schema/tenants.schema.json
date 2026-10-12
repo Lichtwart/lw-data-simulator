@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.lichtwart.io/demo-simulator/tenants.schema.json",
+  "title": "Baked-in tenants (library/tenants.json)",
+  "description": "PRD §5. No passwords. Mirror of TenantsFile in src-tauri/src/model/auth.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "schemaVersion", "tenants"],
+  "properties": {
+    "type": { "const": "lw-tenants" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "tenants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "tenantId", "baseUrl"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "label": { "$ref": "common.schema.json#/$defs/localizedText" },
+          "tenantId": { "type": "string", "pattern": "^t[0-9]+$" },
+          "baseUrl": {
+            "description": "https base URL without trailing slash.",
+            "type": "string",
+            "pattern": "^https://[^/\\s]+$"
+          }
+        }
+      }
+    }
+  }
+}

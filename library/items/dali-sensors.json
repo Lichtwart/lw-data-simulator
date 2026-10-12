@@ -1,0 +1,58 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    {
+      "kind": "daliBrightness",
+      "id": "lux-1",
+      "index": 1,
+      "title": {
+        "de": "Außenhelligkeit",
+        "en": "Ambient light"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:sensor",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 40000,
+        "step": 250,
+        "default": 12000
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          250,
+          1500,
+          5000,
+          12000,
+          20000,
+          27000,
+          31000,
+          33000,
+          31000,
+          27000,
+          20000,
+          12000,
+          5000,
+          1500,
+          250,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  ]
+}

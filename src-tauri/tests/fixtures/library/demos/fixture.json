@@ -1,0 +1,46 @@
+{
+  "type": "lw-demo",
+  "schemaVersion": 1,
+  "id": "fixture",
+  "name": { "de": "Testdemo", "en": "Test demo" },
+  "description": { "de": "Fixture für Tests", "en": "Test fixture" },
+  "tags": ["fixture"],
+  "includes": [],
+  "excludes": ["light-3"],
+  "daliLampCount": 4,
+  "daliGroups": [
+    { "id": 1, "name": "Shop", "converters": [1, 2], "minLevel": 0, "maxLevel": 100 },
+    { "id": 2, "name": "Aussen", "converters": [3, 4], "minLevel": 10, "maxLevel": 90,
+      "luxThreshold": 4500, "slaveOf": 1, "dynamicControl": false, "automaticSwitch": true }
+  ],
+  "digitalInputs": [
+    { "index": 1, "itemId": "di-pump-1", "type": "daliAction",
+      "highLevelAction": "on", "lowLevelAction": "off", "groups": [2] },
+    { "index": 2, "itemId": "di-door", "type": "measurement" },
+    { "index": 3, "itemId": "gas-meter", "type": "impulseCounter",
+      "initCount": 1000, "increment": 10, "unit": "m3" }
+  ],
+  "sendIntervalSec": 30,
+  "scenarios": [
+    { "id": "normal", "name": { "de": "Normalbetrieb", "en": "Normal" }, "start": true,
+      "set": [
+        { "kind": "value", "itemId": "freezer_temp", "value": -18 },
+        { "kind": "generator", "itemId": "freezer_temp",
+          "generator": { "kind": "randomWalk", "center": -18, "spread": 1 } },
+        { "kind": "fault", "target": { "kind": "slaveTimeout", "slaveKey": "kuehlung" }, "active": false },
+        { "kind": "fault", "target": { "kind": "slaveAlarm", "slaveKey": "kuehlung", "alarmName": "co2Leakage" }, "active": false },
+        { "kind": "fault", "target": { "kind": "customAlarm", "itemId": "doorOpen" }, "active": false },
+        { "kind": "fault", "target": { "kind": "daliLamp", "lamp": 2, "alarmType": "lw_lampFailure_1_02_openCircuit" }, "active": false },
+        { "kind": "fault", "target": { "kind": "daliBus", "alarmType": "lw_daliBusPowerFail" }, "active": false }
+      ] },
+    { "id": "trouble", "name": { "de": "Störung", "en": "Trouble" },
+      "set": [
+        { "kind": "fault", "target": { "kind": "slaveTimeout", "slaveKey": "kuehlung" }, "active": true },
+        { "kind": "fault", "target": { "kind": "slaveAlarm", "slaveKey": "kuehlung", "alarmName": "co2Leakage" }, "active": true },
+        { "kind": "fault", "target": { "kind": "customAlarm", "itemId": "doorOpen" }, "active": true },
+        { "kind": "fault", "target": { "kind": "daliLamp", "lamp": 2, "alarmType": "lw_lampFailure_1_02_openCircuit" }, "active": true },
+        { "kind": "fault", "target": { "kind": "daliBus", "alarmType": "lw_daliBusPowerFail" }, "active": false }
+      ] }
+  ],
+  "floorplans": ["floorplans/fixture/ground.json"]
+}

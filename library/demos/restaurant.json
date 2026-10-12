@@ -1,0 +1,736 @@
+{
+  "type": "lw-demo",
+  "schemaVersion": 1,
+  "id": "restaurant",
+  "name": {
+    "de": "Restaurant",
+    "en": "Restaurant"
+  },
+  "description": {
+    "de": "Drive-Through-Restaurant mit Küche, Gastraum, Bestellung, Beleuchtung, Klima und Energiezählern.",
+    "en": "Drive-through restaurant with kitchen, dining area, ordering, lighting, climate and energy meters."
+  },
+  "tags": [
+    "restaurant"
+  ],
+  "includes": [],
+  "excludes": [],
+  "daliLampCount": 10,
+  "daliGroups": [
+    {
+      "id": 1,
+      "name": "Außen",
+      "converters": [
+        1,
+        2,
+        3
+      ],
+      "minLevel": 0,
+      "maxLevel": 100,
+      "luxThreshold": 5000,
+      "automaticSwitch": true,
+      "dynamicControl": false
+    },
+    {
+      "id": 2,
+      "name": "Gastraum",
+      "converters": [
+        4,
+        5
+      ],
+      "minLevel": 0,
+      "maxLevel": 100
+    },
+    {
+      "id": 3,
+      "name": "Küche",
+      "converters": [
+        6,
+        7
+      ],
+      "minLevel": 0,
+      "maxLevel": 100
+    },
+    {
+      "id": 4,
+      "name": "Personal",
+      "converters": [
+        8,
+        9,
+        10
+      ],
+      "minLevel": 0,
+      "maxLevel": 100
+    }
+  ],
+  "digitalInputs": [
+    {
+      "index": 4,
+      "itemId": "freezer_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 5,
+      "itemId": "cooler_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 6,
+      "itemId": "order_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 7,
+      "itemId": "crew_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 8,
+      "itemId": "support_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 9,
+      "itemId": "restroom_leak",
+      "type": "measurement"
+    },
+    {
+      "index": 10,
+      "itemId": "dry_leak",
+      "type": "measurement"
+    }
+  ],
+  "sendIntervalSec": 30,
+  "scenarios": [
+    {
+      "id": "normal",
+      "name": {
+        "de": "Normalbetrieb",
+        "en": "Normal operation"
+      },
+      "start": true,
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "light-1",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-2",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-3",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-4",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-5",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-6",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-7",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-8",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-9",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-10",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_kit_set",
+          "value": 21
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_din_set",
+          "value": 21
+        },
+        {
+          "kind": "value",
+          "itemId": "order_occ",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "crew_occ",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "support_occ",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "restroom_leak",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "dry_leak",
+          "value": 0
+        },
+        {
+          "kind": "generator",
+          "itemId": "lux-1",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              250,
+              1500,
+              5000,
+              12000,
+              20000,
+              27000,
+              31000,
+              33000,
+              31000,
+              27000,
+              20000,
+              12000,
+              5000,
+              1500,
+              250,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "grill_1"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fry_oil_exchange"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fuse_kitchen"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "klima_kueche",
+            "alarmName": "ac_kit_alarm"
+          },
+          "active": false
+        },
+        {
+          "kind": "generator",
+          "itemId": "ac_kit_act",
+          "generator": {
+            "kind": "randomWalk",
+            "center": 22,
+            "spread": 1.5,
+            "step": 0.3
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "freezer_temp",
+          "generator": {
+            "kind": "randomWalk",
+            "center": -18,
+            "spread": 1,
+            "step": 0.2
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "cooler_temp",
+          "generator": {
+            "kind": "randomWalk",
+            "center": 3,
+            "spread": 1,
+            "step": 0.2
+          }
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "kuehlung",
+            "alarmName": "en_frz_alarm"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fuse_freezer"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveTimeout",
+            "slaveKey": "klima_kueche"
+          },
+          "active": false
+        },
+        {
+          "kind": "generator",
+          "itemId": "en_kit_peak",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              8,
+              7,
+              6,
+              6,
+              7,
+              9,
+              12,
+              14,
+              16,
+              17,
+              19,
+              24,
+              27,
+              23,
+              16,
+              15,
+              16,
+              22,
+              26,
+              25,
+              18,
+              13,
+              10,
+              9
+            ]
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "en_din_peak",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              5,
+              5,
+              4,
+              4,
+              5,
+              6,
+              7,
+              9,
+              10,
+              11,
+              13,
+              15,
+              16,
+              14,
+              11,
+              10,
+              11,
+              14,
+              16,
+              15,
+              12,
+              9,
+              7,
+              6
+            ]
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "ac_din_act",
+          "generator": {
+            "kind": "randomWalk",
+            "center": 22,
+            "spread": 1.5,
+            "step": 0.3
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "current_peak_total",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              35,
+              33,
+              32,
+              32,
+              33,
+              40,
+              58,
+              78,
+              84,
+              72,
+              66,
+              70,
+              76,
+              70,
+              66,
+              70,
+              82,
+              88,
+              78,
+              64,
+              52,
+              44,
+              40,
+              37
+            ]
+          }
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 5,
+            "alarmType": "lw_lampFailure_1_05_generic"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 6,
+            "alarmType": "lw_converter_1_06_lost"
+          },
+          "active": false
+        }
+      ]
+    },
+    {
+      "id": "night",
+      "name": {
+        "de": "Nacht",
+        "en": "Night"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "light-1",
+          "value": 100
+        },
+        {
+          "kind": "value",
+          "itemId": "light-2",
+          "value": 100
+        },
+        {
+          "kind": "value",
+          "itemId": "light-3",
+          "value": 100
+        },
+        {
+          "kind": "value",
+          "itemId": "light-4",
+          "value": 5
+        },
+        {
+          "kind": "value",
+          "itemId": "light-5",
+          "value": 5
+        },
+        {
+          "kind": "value",
+          "itemId": "light-6",
+          "value": 5
+        },
+        {
+          "kind": "value",
+          "itemId": "light-7",
+          "value": 5
+        },
+        {
+          "kind": "value",
+          "itemId": "light-8",
+          "value": 5
+        },
+        {
+          "kind": "value",
+          "itemId": "light-9",
+          "value": 5
+        },
+        {
+          "kind": "value",
+          "itemId": "light-10",
+          "value": 5
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_kit_set",
+          "value": 17
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_din_set",
+          "value": 17
+        },
+        {
+          "kind": "value",
+          "itemId": "order_occ",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "crew_occ",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "support_occ",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "lux-1",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "kitchen-fault",
+      "name": {
+        "de": "Störung Küche",
+        "en": "Kitchen fault"
+      },
+      "set": [
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "grill_1"
+          },
+          "active": true
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fry_oil_exchange"
+          },
+          "active": true
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fuse_kitchen"
+          },
+          "active": true
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "klima_kueche",
+            "alarmName": "ac_kit_alarm"
+          },
+          "active": true
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_kit_act",
+          "value": 32
+        }
+      ]
+    },
+    {
+      "id": "cooling-fault",
+      "name": {
+        "de": "Störung Kühlung",
+        "en": "Cooling fault"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "freezer_temp",
+          "value": -9
+        },
+        {
+          "kind": "value",
+          "itemId": "cooler_temp",
+          "value": 11
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "kuehlung",
+            "alarmName": "en_frz_alarm"
+          },
+          "active": true
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fuse_freezer"
+          },
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "comm-loss",
+      "name": {
+        "de": "Kommunikationsausfall Klima Küche",
+        "en": "Kitchen AC communication loss"
+      },
+      "set": [
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveTimeout",
+            "slaveKey": "klima_kueche"
+          },
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "lunch-peak",
+      "name": {
+        "de": "Mittagsspitze",
+        "en": "Lunch peak"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "order_occ",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "crew_occ",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "support_occ",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "en_kit_peak",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "en_din_peak",
+          "value": 24
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_din_act",
+          "value": 26
+        },
+        {
+          "kind": "generator",
+          "itemId": "current_peak_total",
+          "generator": {
+            "kind": "randomWalk",
+            "center": 250,
+            "spread": 20,
+            "step": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": "lamp-fault",
+      "name": {
+        "de": "Leuchtenausfall",
+        "en": "Lamp failure"
+      },
+      "set": [
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 5,
+            "alarmType": "lw_lampFailure_1_05_generic"
+          },
+          "active": true
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 6,
+            "alarmType": "lw_converter_1_06_lost"
+          },
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "water-damage",
+      "name": {
+        "de": "Wasserschaden",
+        "en": "Water damage"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "restroom_leak",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "dry_leak",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "floorplans": [
+    "floorplans/restaurant/ground-floor.json"
+  ]
+}

@@ -1,0 +1,164 @@
+/* App stylesheet: Tailwind v4 + shadcn/ui theme mapped onto Lichtwart tokens.
+   Rules (from the design system SKILL.md):
+   - never hard-code hex values or fonts — use the semantic Tailwind colors below
+     (bg-background, text-foreground, bg-primary, bg-signal, …) which point at --lw-* tokens;
+   - one orange per view: `signal` is reserved for the single most important CTA/KPI;
+   - FT Polar (`font-display`) only for headings ≥ 28px; everything else Manrope;
+   - focus ring is always the Lichtwart focus ring. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./fonts.css";
+@import "./tokens.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Light (default) ---------- */
+:root {
+  --background: var(--lw-surface-page);
+  --foreground: var(--lw-text-body);
+  --card: var(--lw-surface-raised);
+  --card-foreground: var(--lw-text-body);
+  --popover: var(--lw-surface-raised);
+  --popover-foreground: var(--lw-text-body);
+  --primary: var(--lw-night-blue);
+  --primary-foreground: var(--lw-text-on-dark);
+  --secondary: var(--lw-surface-sunken);
+  --secondary-foreground: var(--lw-text-strong);
+  --muted: var(--lw-surface-sunken);
+  --muted-foreground: var(--lw-text-muted);
+  --accent: var(--lw-surface-sunken);
+  --accent-foreground: var(--lw-text-strong);
+  --signal: var(--lw-orange);
+  --signal-foreground: var(--lw-night-blue);
+  --destructive: var(--lw-danger);
+  --destructive-foreground: var(--lw-white);
+  --success: var(--lw-success);
+  --success-bg: var(--lw-success-bg);
+  --warning: var(--lw-warning);
+  --warning-bg: var(--lw-warning-bg);
+  --danger-bg: var(--lw-danger-bg);
+  --info: var(--lw-info);
+  --info-bg: var(--lw-info-bg);
+  --strong: var(--lw-text-strong);
+  --subtle: var(--lw-text-subtle);
+  --border: var(--lw-surface-line);
+  --input: var(--lw-surface-border);
+  --ring: var(--lw-orange);
+  --sidebar: var(--lw-night-blue);
+  --sidebar-foreground: var(--lw-text-on-dark);
+  --sidebar-muted: var(--lw-text-on-dark-muted);
+}
+
+/* ---------- Dark ("night mode") ----------
+   The token file defines no dark palette. This mapping is derived only from existing
+   tokens (deep Night Blue surfaces, on-dark text — "keep night-mode surfaces deep blue,
+   not black"). TODO(design): review with the design system owners. */
+.dark {
+  --background: var(--lw-night-blue);
+  --foreground: var(--lw-text-on-dark);
+  --card: color-mix(in oklab, var(--lw-night-blue) 92%, var(--lw-warm-gray));
+  --card-foreground: var(--lw-text-on-dark);
+  --popover: color-mix(in oklab, var(--lw-night-blue) 92%, var(--lw-warm-gray));
+  --popover-foreground: var(--lw-text-on-dark);
+  --primary: var(--lw-warm-gray);
+  --primary-foreground: var(--lw-night-blue);
+  --secondary: color-mix(in oklab, var(--lw-night-blue) 85%, var(--lw-warm-gray));
+  --secondary-foreground: var(--lw-text-on-dark);
+  --muted: color-mix(in oklab, var(--lw-night-blue) 85%, var(--lw-warm-gray));
+  --muted-foreground: var(--lw-text-on-dark-muted);
+  --accent: color-mix(in oklab, var(--lw-night-blue) 85%, var(--lw-warm-gray));
+  --accent-foreground: var(--lw-text-on-dark);
+  --strong: var(--lw-white);
+  --subtle: var(--lw-text-on-dark-muted);
+  --border: color-mix(in oklab, var(--lw-night-blue) 78%, var(--lw-warm-gray));
+  --input: color-mix(in oklab, var(--lw-night-blue) 65%, var(--lw-warm-gray));
+  --sidebar: color-mix(in oklab, var(--lw-night-blue) 95%, var(--lw-warm-gray));
+  /* Status backgrounds: the light tints are unreadable on deep blue, so use deep status-tinted
+     blues instead; destructive is lightened to keep contrast on dark surfaces. */
+  --success-bg: color-mix(in oklab, var(--lw-night-blue) 78%, var(--lw-success));
+  --warning-bg: color-mix(in oklab, var(--lw-night-blue) 78%, var(--lw-warning));
+  --danger-bg: color-mix(in oklab, var(--lw-night-blue) 78%, var(--lw-danger));
+  --info-bg: color-mix(in oklab, var(--lw-night-blue) 78%, var(--lw-info));
+  --destructive: color-mix(in oklab, var(--lw-danger) 70%, var(--lw-white));
+  --destructive-foreground: var(--lw-night-blue);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-signal: var(--signal);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger-bg: var(--danger-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-strong: var(--strong);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-night: var(--lw-night-blue);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+
+  --font-sans: var(--lw-font-sans);
+  --font-display: var(--lw-font-display);
+  --font-mono: var(--lw-font-mono);
+
+  --radius-xs: var(--lw-r-xs);
+  --radius-sm: var(--lw-r-xs);
+  --radius-md: var(--lw-r-sm);
+  --radius-lg: var(--lw-r-md);
+  --radius-xl: var(--lw-r-lg);
+  --radius-2xl: var(--lw-r-xl);
+
+  --shadow-xs: var(--lw-el-1);
+  --shadow-sm: var(--lw-el-1);
+  --shadow-md: var(--lw-el-2);
+  --shadow-lg: var(--lw-el-3);
+  --shadow-xl: var(--lw-el-4);
+
+  --ease-standard: var(--lw-ease-standard);
+}
+
+@layer base {
+  /* Lichtwart icon style: 1.5 px strokes (lucide's default is 2). */
+  .lucide {
+    stroke-width: 1.5;
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: var(--lw-fs-body-sm);
+    line-height: var(--lw-lh-body);
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--lw-focus-ring);
+  }
+}

@@ -1,0 +1,1284 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    {
+      "kind": "dali",
+      "id": "light-1",
+      "index": 1,
+      "title": {
+        "de": "Totem Licht",
+        "en": "Totem light"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:lighting",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-2",
+      "index": 2,
+      "title": {
+        "de": "Drive-Panel Licht",
+        "en": "Drive panel light"
+      },
+      "tags": [
+        "restaurant",
+        "category:lighting",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-3",
+      "index": 3,
+      "title": {
+        "de": "Eingangsschriftzug",
+        "en": "Entrance lettering"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:lighting",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-4",
+      "index": 4,
+      "title": {
+        "de": "Gastraum Fenster",
+        "en": "Dining windows"
+      },
+      "tags": [
+        "restaurant",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-5",
+      "index": 5,
+      "title": {
+        "de": "Gastraum Decke",
+        "en": "Dining ceiling"
+      },
+      "tags": [
+        "restaurant",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-6",
+      "index": 6,
+      "title": {
+        "de": "Küchenlicht",
+        "en": "Kitchen lights"
+      },
+      "tags": [
+        "restaurant",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-7",
+      "index": 7,
+      "title": {
+        "de": "Spülküchenlicht",
+        "en": "Scullery lights"
+      },
+      "tags": [
+        "restaurant",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-8",
+      "index": 8,
+      "title": {
+        "de": "Personalraum Licht",
+        "en": "Crew room light"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-9",
+      "index": 9,
+      "title": {
+        "de": "Manager Licht",
+        "en": "Manager light"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-10",
+      "index": 10,
+      "title": {
+        "de": "Support Licht",
+        "en": "Support light"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-11",
+      "index": 11,
+      "title": {
+        "de": "Vorraum Nord",
+        "en": "Vestibule north"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-12",
+      "index": 12,
+      "title": {
+        "de": "Vorraum Ost",
+        "en": "Vestibule east"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-13",
+      "index": 13,
+      "title": {
+        "de": "WC Licht",
+        "en": "Restroom light"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-14",
+      "index": 14,
+      "title": {
+        "de": "Trockenlager Licht",
+        "en": "Dry storage light"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-15",
+      "index": 15,
+      "title": {
+        "de": "Tankstellendach 1",
+        "en": "Canopy 1"
+      },
+      "tags": [
+        "gas-station",
+        "category:lighting",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-16",
+      "index": 16,
+      "title": {
+        "de": "Tankstellendach 2",
+        "en": "Canopy 2"
+      },
+      "tags": [
+        "gas-station",
+        "category:lighting",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-17",
+      "index": 17,
+      "title": {
+        "de": "Tankstellendach 3",
+        "en": "Canopy 3"
+      },
+      "tags": [
+        "gas-station",
+        "category:lighting",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-18",
+      "index": 18,
+      "title": {
+        "de": "Tankstellendach 4",
+        "en": "Canopy 4"
+      },
+      "tags": [
+        "gas-station",
+        "category:lighting",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-19",
+      "index": 19,
+      "title": {
+        "de": "Verkaufsraum 1",
+        "en": "Sales floor 1"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-20",
+      "index": 20,
+      "title": {
+        "de": "Verkaufsraum 2",
+        "en": "Sales floor 2"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-21",
+      "index": 21,
+      "title": {
+        "de": "Verkaufsraum 3",
+        "en": "Sales floor 3"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-22",
+      "index": 22,
+      "title": {
+        "de": "Verkaufsraum 4",
+        "en": "Sales floor 4"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:lighting",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-23",
+      "index": 23,
+      "title": {
+        "de": "Licht 23",
+        "en": "Light 23"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-24",
+      "index": 24,
+      "title": {
+        "de": "Licht 24",
+        "en": "Light 24"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-25",
+      "index": 25,
+      "title": {
+        "de": "Licht 25",
+        "en": "Light 25"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-26",
+      "index": 26,
+      "title": {
+        "de": "Licht 26",
+        "en": "Light 26"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-27",
+      "index": 27,
+      "title": {
+        "de": "Licht 27",
+        "en": "Light 27"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-28",
+      "index": 28,
+      "title": {
+        "de": "Licht 28",
+        "en": "Light 28"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-29",
+      "index": 29,
+      "title": {
+        "de": "Licht 29",
+        "en": "Light 29"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-30",
+      "index": 30,
+      "title": {
+        "de": "Licht 30",
+        "en": "Light 30"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-31",
+      "index": 31,
+      "title": {
+        "de": "Licht 31",
+        "en": "Light 31"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-32",
+      "index": 32,
+      "title": {
+        "de": "Licht 32",
+        "en": "Light 32"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-33",
+      "index": 33,
+      "title": {
+        "de": "Licht 33",
+        "en": "Light 33"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-34",
+      "index": 34,
+      "title": {
+        "de": "Licht 34",
+        "en": "Light 34"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-35",
+      "index": 35,
+      "title": {
+        "de": "Licht 35",
+        "en": "Light 35"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-36",
+      "index": 36,
+      "title": {
+        "de": "Licht 36",
+        "en": "Light 36"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-37",
+      "index": 37,
+      "title": {
+        "de": "Licht 37",
+        "en": "Light 37"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-38",
+      "index": 38,
+      "title": {
+        "de": "Licht 38",
+        "en": "Light 38"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-39",
+      "index": 39,
+      "title": {
+        "de": "Licht 39",
+        "en": "Light 39"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-40",
+      "index": 40,
+      "title": {
+        "de": "Licht 40",
+        "en": "Light 40"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-41",
+      "index": 41,
+      "title": {
+        "de": "Licht 41",
+        "en": "Light 41"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-42",
+      "index": 42,
+      "title": {
+        "de": "Licht 42",
+        "en": "Light 42"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-43",
+      "index": 43,
+      "title": {
+        "de": "Licht 43",
+        "en": "Light 43"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-44",
+      "index": 44,
+      "title": {
+        "de": "Licht 44",
+        "en": "Light 44"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-45",
+      "index": 45,
+      "title": {
+        "de": "Licht 45",
+        "en": "Light 45"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-46",
+      "index": 46,
+      "title": {
+        "de": "Licht 46",
+        "en": "Light 46"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-47",
+      "index": 47,
+      "title": {
+        "de": "Licht 47",
+        "en": "Light 47"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-48",
+      "index": 48,
+      "title": {
+        "de": "Licht 48",
+        "en": "Light 48"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-49",
+      "index": 49,
+      "title": {
+        "de": "Licht 49",
+        "en": "Light 49"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-50",
+      "index": 50,
+      "title": {
+        "de": "Licht 50",
+        "en": "Light 50"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-51",
+      "index": 51,
+      "title": {
+        "de": "Licht 51",
+        "en": "Light 51"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-52",
+      "index": 52,
+      "title": {
+        "de": "Licht 52",
+        "en": "Light 52"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-53",
+      "index": 53,
+      "title": {
+        "de": "Licht 53",
+        "en": "Light 53"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-54",
+      "index": 54,
+      "title": {
+        "de": "Licht 54",
+        "en": "Light 54"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-55",
+      "index": 55,
+      "title": {
+        "de": "Licht 55",
+        "en": "Light 55"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-56",
+      "index": 56,
+      "title": {
+        "de": "Licht 56",
+        "en": "Light 56"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-57",
+      "index": 57,
+      "title": {
+        "de": "Licht 57",
+        "en": "Light 57"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-58",
+      "index": 58,
+      "title": {
+        "de": "Licht 58",
+        "en": "Light 58"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-59",
+      "index": 59,
+      "title": {
+        "de": "Licht 59",
+        "en": "Light 59"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-60",
+      "index": 60,
+      "title": {
+        "de": "Licht 60",
+        "en": "Light 60"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-61",
+      "index": 61,
+      "title": {
+        "de": "Licht 61",
+        "en": "Light 61"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-62",
+      "index": 62,
+      "title": {
+        "de": "Licht 62",
+        "en": "Light 62"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-63",
+      "index": 63,
+      "title": {
+        "de": "Licht 63",
+        "en": "Light 63"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    },
+    {
+      "kind": "dali",
+      "id": "light-64",
+      "index": 64,
+      "title": {
+        "de": "Licht 64",
+        "en": "Light 64"
+      },
+      "tags": [
+        "category:lighting"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "default": 50
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1810" height="1177" viewBox="0 0 1810 1177">
+<title>Grundriss Restaurant: Küche, Gastraum, Lager, Technik und Drive-Through</title>
+<rect width="1810" height="1177" fill="#f7f7f8"/>
+<rect x="40" y="40" width="800" height="403" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="54" y="72" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Küche</text>
+<rect x="840" y="40" width="300" height="403" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="854" y="72" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Spülküche</text>
+<rect x="1140" y="40" width="330" height="403" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="1154" y="72" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Personal</text>
+<rect x="1470" y="40" width="300" height="403" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="1484" y="72" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">WC</text>
+<rect x="40" y="443" width="800" height="347" fill="#f1f2f3" stroke="#8a9098" stroke-width="3"/>
+<text x="54" y="475" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Gastraum</text>
+<rect x="840" y="443" width="300" height="347" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="854" y="475" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Bestellung</text>
+<rect x="1140" y="443" width="330" height="347" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="1154" y="475" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Kühlung</text>
+<rect x="1470" y="443" width="280" height="347" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="1484" y="475" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Trockenlager</text>
+<rect x="40" y="790" width="560" height="347" fill="#eceef0" stroke="#8a9098" stroke-width="3"/>
+<text x="54" y="822" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Technikraum</text>
+<rect x="600" y="790" width="1150" height="347" fill="#eef0f2" stroke="#8a9098" stroke-width="3"/>
+<text x="614" y="822" font-family="Manrope, Arial, sans-serif" font-size="22" fill="#5a6068">Drive-Through</text>
+<rect x="615" y="1067" width="120" height="52" rx="4" fill="#d9dcdf" stroke="#9aa0a6" stroke-width="2"/>
+<text x="675" y="1098" font-family="Manrope, Arial, sans-serif" font-size="15" fill="#5a6068" text-anchor="middle">Ausgabefenster</text>
+<rect x="747" y="1067" width="120" height="52" rx="4" fill="#d9dcdf" stroke="#9aa0a6" stroke-width="2"/>
+<text x="807" y="1098" font-family="Manrope, Arial, sans-serif" font-size="15" fill="#5a6068" text-anchor="middle">Drive-Panel</text>
+</svg>

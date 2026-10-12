@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      tauri-js:
+        patterns: ["@tauri-apps/*"]
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: weekly
+    groups:
+      tauri-rust:
+        patterns: ["tauri", "tauri-*"]

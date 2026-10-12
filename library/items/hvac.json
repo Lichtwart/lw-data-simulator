@@ -1,0 +1,836 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "slaves": [
+    {
+      "key": "klima_kueche",
+      "name": "Klima Kueche",
+      "requestInterval": 60,
+      "alarms": [
+        {
+          "name": "ac_kit_alarm",
+          "text": "Klima Küche: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "klima_gastraum",
+      "name": "Klima Gastraum",
+      "requestInterval": 60,
+      "alarms": [
+        {
+          "name": "ac_din_alarm",
+          "text": "Klima Gastraum: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "klima_wc",
+      "name": "Klima WC",
+      "requestInterval": 60,
+      "alarms": [
+        {
+          "name": "ac_wc_alarm",
+          "text": "Klima WC: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "klima_trocken",
+      "name": "Klima Trockenlager",
+      "requestInterval": 60,
+      "alarms": [
+        {
+          "name": "ac_dry_alarm",
+          "text": "Klima Trockenlager: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "klima_manager",
+      "name": "Klima Manager",
+      "requestInterval": 60,
+      "alarms": [
+        {
+          "name": "ac_mgr_alarm",
+          "text": "Klima Manager: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "klima_crew",
+      "name": "Klima Crew",
+      "requestInterval": 60,
+      "alarms": [
+        {
+          "name": "ac_crew_alarm",
+          "text": "Klima Crew: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "kind": "modbus",
+      "id": "ac_kit_set",
+      "slave": "klima_kueche",
+      "registerType": "holding",
+      "unit": "°C",
+      "writable": true,
+      "title": {
+        "de": "Klima Soll Küche",
+        "en": "AC setpoint kitchen"
+      },
+      "tags": [
+        "restaurant",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "default": 21
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_kit_act",
+      "slave": "klima_kueche",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Klima Ist Küche",
+        "en": "AC actual kitchen"
+      },
+      "tags": [
+        "restaurant",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 40,
+        "step": 0.5,
+        "default": 22
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 22,
+        "spread": 1.5,
+        "step": 0.3
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_kit_mode",
+      "slave": "klima_kueche",
+      "registerType": "holding",
+      "datatype": "uint16",
+      "writable": true,
+      "title": {
+        "de": "Klima Modus Küche",
+        "en": "AC mode kitchen"
+      },
+      "tags": [
+        "restaurant",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "select",
+        "default": 1,
+        "options": [
+          {
+            "value": 0,
+            "label": {
+              "de": "Heizen",
+              "en": "Heating"
+            }
+          },
+          {
+            "value": 1,
+            "label": {
+              "de": "Automatik",
+              "en": "Automatic"
+            }
+          },
+          {
+            "value": 2,
+            "label": {
+              "de": "Kühlen",
+              "en": "Cooling"
+            }
+          },
+          {
+            "value": 3,
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dry"
+            }
+          },
+          {
+            "value": 4,
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidification"
+            }
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "event",
+          "type": "lw_demo_ac_kit_mode",
+          "text": "Klima Küche Modus: {label}"
+        },
+        {
+          "kind": "inventory",
+          "property": "lw_demo_ac_kit_mode"
+        }
+      ]
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_din_set",
+      "slave": "klima_gastraum",
+      "registerType": "holding",
+      "unit": "°C",
+      "writable": true,
+      "title": {
+        "de": "Klima Soll Gastraum",
+        "en": "AC setpoint dining area"
+      },
+      "tags": [
+        "restaurant",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "default": 21
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_din_act",
+      "slave": "klima_gastraum",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Klima Ist Gastraum",
+        "en": "AC actual dining area"
+      },
+      "tags": [
+        "restaurant",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 40,
+        "step": 0.5,
+        "default": 22
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 22,
+        "spread": 1.5,
+        "step": 0.3
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_din_mode",
+      "slave": "klima_gastraum",
+      "registerType": "holding",
+      "datatype": "uint16",
+      "writable": true,
+      "title": {
+        "de": "Klima Modus Gastraum",
+        "en": "AC mode dining area"
+      },
+      "tags": [
+        "restaurant",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "select",
+        "default": 1,
+        "options": [
+          {
+            "value": 0,
+            "label": {
+              "de": "Heizen",
+              "en": "Heating"
+            }
+          },
+          {
+            "value": 1,
+            "label": {
+              "de": "Automatik",
+              "en": "Automatic"
+            }
+          },
+          {
+            "value": 2,
+            "label": {
+              "de": "Kühlen",
+              "en": "Cooling"
+            }
+          },
+          {
+            "value": 3,
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dry"
+            }
+          },
+          {
+            "value": 4,
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidification"
+            }
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "event",
+          "type": "lw_demo_ac_din_mode",
+          "text": "Klima Gastraum Modus: {label}"
+        },
+        {
+          "kind": "inventory",
+          "property": "lw_demo_ac_din_mode"
+        }
+      ]
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_wc_set",
+      "slave": "klima_wc",
+      "registerType": "holding",
+      "unit": "°C",
+      "writable": true,
+      "title": {
+        "de": "Klima Soll WC",
+        "en": "AC setpoint restrooms"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "default": 21
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_wc_act",
+      "slave": "klima_wc",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Klima Ist WC",
+        "en": "AC actual restrooms"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 40,
+        "step": 0.5,
+        "default": 22
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 22,
+        "spread": 1.5,
+        "step": 0.3
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_wc_mode",
+      "slave": "klima_wc",
+      "registerType": "holding",
+      "datatype": "uint16",
+      "writable": true,
+      "title": {
+        "de": "Klima Modus WC",
+        "en": "AC mode restrooms"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "select",
+        "default": 1,
+        "options": [
+          {
+            "value": 0,
+            "label": {
+              "de": "Heizen",
+              "en": "Heating"
+            }
+          },
+          {
+            "value": 1,
+            "label": {
+              "de": "Automatik",
+              "en": "Automatic"
+            }
+          },
+          {
+            "value": 2,
+            "label": {
+              "de": "Kühlen",
+              "en": "Cooling"
+            }
+          },
+          {
+            "value": 3,
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dry"
+            }
+          },
+          {
+            "value": 4,
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidification"
+            }
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "event",
+          "type": "lw_demo_ac_wc_mode",
+          "text": "Klima WC Modus: {label}"
+        },
+        {
+          "kind": "inventory",
+          "property": "lw_demo_ac_wc_mode"
+        }
+      ]
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_dry_set",
+      "slave": "klima_trocken",
+      "registerType": "holding",
+      "unit": "°C",
+      "writable": true,
+      "title": {
+        "de": "Klima Soll Trockenlager",
+        "en": "AC setpoint dry storage"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "default": 21
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_dry_act",
+      "slave": "klima_trocken",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Klima Ist Trockenlager",
+        "en": "AC actual dry storage"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 40,
+        "step": 0.5,
+        "default": 22
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 22,
+        "spread": 1.5,
+        "step": 0.3
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_dry_mode",
+      "slave": "klima_trocken",
+      "registerType": "holding",
+      "datatype": "uint16",
+      "writable": true,
+      "title": {
+        "de": "Klima Modus Trockenlager",
+        "en": "AC mode dry storage"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "select",
+        "default": 1,
+        "options": [
+          {
+            "value": 0,
+            "label": {
+              "de": "Heizen",
+              "en": "Heating"
+            }
+          },
+          {
+            "value": 1,
+            "label": {
+              "de": "Automatik",
+              "en": "Automatic"
+            }
+          },
+          {
+            "value": 2,
+            "label": {
+              "de": "Kühlen",
+              "en": "Cooling"
+            }
+          },
+          {
+            "value": 3,
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dry"
+            }
+          },
+          {
+            "value": 4,
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidification"
+            }
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "event",
+          "type": "lw_demo_ac_dry_mode",
+          "text": "Klima Trockenlager Modus: {label}"
+        },
+        {
+          "kind": "inventory",
+          "property": "lw_demo_ac_dry_mode"
+        }
+      ]
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_mgr_set",
+      "slave": "klima_manager",
+      "registerType": "holding",
+      "unit": "°C",
+      "writable": true,
+      "title": {
+        "de": "Klima Soll Manager",
+        "en": "AC setpoint manager"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "default": 21
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_mgr_act",
+      "slave": "klima_manager",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Klima Ist Manager",
+        "en": "AC actual manager"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 40,
+        "step": 0.5,
+        "default": 22
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 22,
+        "spread": 1.5,
+        "step": 0.3
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_mgr_mode",
+      "slave": "klima_manager",
+      "registerType": "holding",
+      "datatype": "uint16",
+      "writable": true,
+      "title": {
+        "de": "Klima Modus Manager",
+        "en": "AC mode manager"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "select",
+        "default": 1,
+        "options": [
+          {
+            "value": 0,
+            "label": {
+              "de": "Heizen",
+              "en": "Heating"
+            }
+          },
+          {
+            "value": 1,
+            "label": {
+              "de": "Automatik",
+              "en": "Automatic"
+            }
+          },
+          {
+            "value": 2,
+            "label": {
+              "de": "Kühlen",
+              "en": "Cooling"
+            }
+          },
+          {
+            "value": 3,
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dry"
+            }
+          },
+          {
+            "value": 4,
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidification"
+            }
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "event",
+          "type": "lw_demo_ac_mgr_mode",
+          "text": "Klima Manager Modus: {label}"
+        },
+        {
+          "kind": "inventory",
+          "property": "lw_demo_ac_mgr_mode"
+        }
+      ]
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_crew_set",
+      "slave": "klima_crew",
+      "registerType": "holding",
+      "unit": "°C",
+      "writable": true,
+      "title": {
+        "de": "Klima Soll Personalraum",
+        "en": "AC setpoint crew room"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "default": 21
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_crew_act",
+      "slave": "klima_crew",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Klima Ist Personalraum",
+        "en": "AC actual crew room"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 40,
+        "step": 0.5,
+        "default": 22
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 22,
+        "spread": 1.5,
+        "step": 0.3
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "ac_crew_mode",
+      "slave": "klima_crew",
+      "registerType": "holding",
+      "datatype": "uint16",
+      "writable": true,
+      "title": {
+        "de": "Klima Modus Personalraum",
+        "en": "AC mode crew room"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:climate",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "select",
+        "default": 1,
+        "options": [
+          {
+            "value": 0,
+            "label": {
+              "de": "Heizen",
+              "en": "Heating"
+            }
+          },
+          {
+            "value": 1,
+            "label": {
+              "de": "Automatik",
+              "en": "Automatic"
+            }
+          },
+          {
+            "value": 2,
+            "label": {
+              "de": "Kühlen",
+              "en": "Cooling"
+            }
+          },
+          {
+            "value": 3,
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dry"
+            }
+          },
+          {
+            "value": 4,
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidification"
+            }
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "event",
+          "type": "lw_demo_ac_crew_mode",
+          "text": "Klima Personalraum Modus: {label}"
+        },
+        {
+          "kind": "inventory",
+          "property": "lw_demo_ac_crew_mode"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.ref_name }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Tagged commit must be on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::Tag $TAG is not on main"
+            exit 1
+          }
+      - id: v
+        name: Check tag matches app version and updater config
+        run: |
+          node scripts/release-check.mjs "$TAG"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          case "$TAG" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
+      - name: Extract release notes
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: node scripts/release-notes.mjs "$V" > release-notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  # One draft release, created once. The build jobs only upload into it.
+  create-release:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      id: ${{ steps.create.outputs.id }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+      - id: create
+        name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          id=$(gh api "repos/${GITHUB_REPOSITORY}/releases" \
+            -f tag_name="$TAG" \
+            -f name="Lichtwart Demo Simulator $TAG" \
+            -F body=@release-notes.md \
+            -F draft=true \
+            -F prerelease="$PRERELEASE" \
+            -f make_latest=false \
+            --jq .id)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: [verify, create-release]
+    # Signing secrets live in the "release" environment (add required reviewers there).
+    environment: release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+          - platform: windows-latest
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: src-tauri
+          save-if: false
+
+      - run: npm ci
+
+      # Apple signing is optional: with all six Apple secrets the app is signed and notarized,
+      # with none it is ad-hoc signed (Gatekeeper warns on first open; in-app updates still work,
+      # they are verified with the updater key). A partial set is an error.
+      - name: Check secrets and select macOS signing
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          : "${TAURI_SIGNING_PRIVATE_KEY:?secret TAURI_SIGNING_PRIVATE_KEY missing}"
+          [ "$RUNNER_OS" = "macOS" ] || exit 0
+          names="APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_API_KEY APPLE_API_ISSUER APPLE_API_KEY_P8"
+          set_count=0
+          for n in $names; do [ -n "${!n}" ] && set_count=$((set_count + 1)); done
+          if [ "$set_count" -eq 0 ]; then
+            echo "::warning::No Apple signing secrets: the macOS build is ad-hoc signed and not notarized."
+            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [ "$set_count" -ne 6 ]; then
+            for n in $names; do [ -n "${!n}" ] || echo "::error::secret $n missing"; done
+            exit 1
+          fi
+          # The Tauri bundler imports APPLE_CERTIFICATE (base64 .p12) into a temporary keychain itself.
+          for n in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_API_KEY APPLE_API_ISSUER; do
+            { echo "$n<<__EOF__"; echo "${!n}"; echo "__EOF__"; } >> "$GITHUB_ENV"
+          done
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          key_path="$RUNNER_TEMP/private_keys/AuthKey_${APPLE_API_KEY}.p8"
+          echo -n "$APPLE_API_KEY_P8" | base64 --decode > "$key_path"
+          echo "APPLE_API_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.id }}
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          # The overlay turns on signed updater artifacts (needs TAURI_SIGNING_PRIVATE_KEY);
+          # a local `npm run tauri build` works without keys.
+          args: --config src-tauri/tauri.release.conf.json ${{ matrix.args }}
+
+  # Runs only when every platform built: the release goes public with a complete latest.json.
+  publish:
+    needs: [verify, create-release, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.create-release.outputs.id }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          # A pre-release must not become "latest" (the updater reads releases/latest).
+          if [ "$PRERELEASE" = "true" ]; then latest=false; else latest=true; fi
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            -F draft=false -f make_latest="$latest"

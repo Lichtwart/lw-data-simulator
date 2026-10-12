@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.lichtwart.io/demo-simulator/common.schema.json",
+  "title": "Shared definitions of the demo library",
+  "description": "Referenced by items/demo/floorplan schemas. Mirror of src-tauri/src/model/library.rs.",
+  "$defs": {
+    "schemaVersion": { "const": 1 },
+    "localizedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["de", "en"],
+      "properties": {
+        "de": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      }
+    },
+    "severity": { "enum": ["CRITICAL", "MAJOR", "MINOR", "WARNING"] },
+    "itemId": {
+      "description": "Globally unique item id; becomes the Modbus register name (<= 19 chars).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,19}$"
+    },
+    "slaveKey": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$" },
+    "alarmName": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$" },
+    "alarmType": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$" },
+    "tag": {
+      "description": "Plain client tag (gas-station), category:* or zone:*.",
+      "type": "string",
+      "pattern": "^((category|zone):)?[a-z0-9][a-z0-9-]*$"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tag" },
+      "uniqueItems": true
+    },
+    "groupMode": { "enum": ["on", "off", "auto"] },
+    "selectOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": {
+        "value": { "type": "number" },
+        "label": { "$ref": "#/$defs/localizedText" }
+      }
+    },
+    "control": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "enum": ["slider", "switch", "select", "counter"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "slider" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "min", "max", "step", "default"],
+            "properties": {
+              "kind": true,
+              "min": { "type": "number" },
+              "max": { "type": "number" },
+              "step": { "type": "number", "exclusiveMinimum": 0 },
+              "default": { "type": "number" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "switch" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "default"],
+            "properties": { "kind": true, "default": { "enum": [0, 1] } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "select" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "options", "default"],
+            "properties": {
+              "kind": true,
+              "options": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/selectOption" }
+              },
+              "default": { "type": "number" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "counter" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "default"],
+            "properties": { "kind": true, "default": { "type": "number", "minimum": 0 } }
+          }
+        }
+      ]
+    },
+    "generator": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "enum": ["randomWalk", "sine", "dailyProfile", "counter"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "randomWalk" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "center", "spread"],
+            "properties": {
+              "kind": true,
+              "center": { "type": "number" },
+              "spread": { "type": "number", "minimum": 0 },
+              "step": {
+                "description": "Max change per tick; default spread / 5. The band center ± spread should stay inside the control range.",
+                "type": ["number", "null"],
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "sine" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "period", "amplitude"],
+            "properties": {
+              "kind": true,
+              "period": {
+                "description": "Seconds.",
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "amplitude": { "type": "number" },
+              "center": {
+                "description": "Default: the control default.",
+                "type": ["number", "null"]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "dailyProfile" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "points"],
+            "properties": {
+              "kind": true,
+              "points": {
+                "description": "24 hourly values (00:00 … 23:00) in the device's time zone (lw_configCore.timeZone, default Europe/Berlin, DST-aware), linearly interpolated.",
+                "type": "array",
+                "minItems": 24,
+                "maxItems": 24,
+                "items": { "type": "number" }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "counter" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "ratePerHour"],
+            "properties": {
+              "kind": true,
+              "ratePerHour": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      ]
+    },
+    "effect": {
+      "description": "Extra output of a multi-effect item (PRD §8).",
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "enum": ["event", "inventory", "alarm"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "event" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "type", "text"],
+            "properties": {
+              "kind": true,
+              "type": {
+                "description": "Use a lw_demo* type; the firmware's own events cannot be faked.",
+                "type": "string",
+                "minLength": 1,
+                "not": { "enum": ["lw_daliGroupChange", "lw_alarm", "lw_modbus"] }
+              },
+              "text": {
+                "description": "May contain {value} and {label}.",
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "inventory" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "property"],
+            "properties": {
+              "kind": true,
+              "property": {
+                "description": "Use a lw_demo* property; firmware config fragments, device identity and managed-object core fields are reserved.",
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                "not": {
+                  "pattern": "^(lw_config|c8y_)|^(lw_demo|lw_floorplan|name|type|id|owner|self|description|lastUpdated|creationTime)$"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "alarm" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "type", "severity", "text", "threshold"],
+            "properties": {
+              "kind": true,
+              "type": { "$ref": "#/$defs/alarmType" },
+              "severity": { "$ref": "#/$defs/severity" },
+              "text": { "type": "string", "minLength": 1 },
+              "threshold": { "type": "number" }
+            }
+          }
+        }
+      ]
+    },
+    "faultTarget": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["daliLamp", "daliBus", "slaveTimeout", "slaveAlarm", "customAlarm", "sensor"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "sensor" } } },
+          "then": {
+            "description": "Native alarm of a DALI brightness / motion sensor, e.g. lw_brightness_1_02_lost.",
+            "additionalProperties": false,
+            "required": ["kind", "sensorKind", "index", "alarm"],
+            "properties": {
+              "kind": true,
+              "sensorKind": { "enum": ["brightness", "motion"] },
+              "index": { "type": "integer", "minimum": 1, "maximum": 10 },
+              "alarm": { "$ref": "#/$defs/alarmType" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "daliLamp" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "lamp", "alarmType"],
+            "properties": {
+              "kind": true,
+              "lamp": { "type": "integer", "minimum": 1, "maximum": 64 },
+              "alarmType": { "$ref": "#/$defs/alarmType" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "daliBus" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "alarmType"],
+            "properties": { "kind": true, "alarmType": { "$ref": "#/$defs/alarmType" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "slaveTimeout" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "slaveKey"],
+            "properties": { "kind": true, "slaveKey": { "$ref": "#/$defs/slaveKey" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "slaveAlarm" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "slaveKey", "alarmName"],
+            "properties": {
+              "kind": true,
+              "slaveKey": { "$ref": "#/$defs/slaveKey" },
+              "alarmName": { "$ref": "#/$defs/alarmName" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "customAlarm" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "itemId"],
+            "properties": { "kind": true, "itemId": { "$ref": "#/$defs/itemId" } }
+          }
+        }
+      ]
+    }
+  }
+}

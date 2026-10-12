@@ -1,0 +1,50 @@
+{
+  "type": "lw-demo-floorplan",
+  "schemaVersion": 1,
+  "name": "Erdgeschoss",
+  "description": "Testdemo: Shop",
+  "icon": "map",
+  "image": "ground.svg",
+  "imageWidth": 800,
+  "imageHeight": 400,
+  "widgets": [
+    { "id": "w-freezer", "kind": "sensor", "x": 100, "y": 120, "locked": true,
+      "icon": "snowflake-o", "title": "Tiefkühler",
+      "measurement": { "itemId": "freezer_temp" }, "decimals": 1,
+      "ranges": [
+        { "min": null, "max": -15, "level": "good" },
+        { "min": -15, "max": -12, "level": "warning" },
+        { "min": -12, "max": null, "level": "alarm" }
+      ],
+      "alarms": [{ "kind": "item", "itemId": "doorOpen" }],
+      "staleAfterMin": 15 },
+    { "id": "w-lamp-1", "kind": "sensor", "x": 200, "y": 50, "icon": "light-bulb",
+      "measurement": { "itemId": "light-1", "series": "Brightness" }, "decimals": 0 },
+    { "id": "w-door", "kind": "sensor", "x": 300, "y": 50, "icon": "door-open",
+      "measurement": { "itemId": "di-door" },
+      "display": { "kind": "boolean", "onValue": 1, "offValue": 0, "onLabel": "Offen",
+                   "offLabel": "Geschlossen", "onLevel": "warning", "offLevel": "good" } },
+    { "id": "w-co2", "kind": "alarm", "x": 400, "y": 200, "icon": "air-quality",
+      "text": "CO2-Tank", "note": "Leck: Hintertür öffnen",
+      "alarms": [
+        { "kind": "slaveAlarm", "slaveKey": "kuehlung", "alarmName": "co2Leakage" },
+        { "kind": "type", "alarmType": "lw_powerFailure" }
+      ] },
+    { "id": "w-hoodfan", "kind": "control", "x": 500, "y": 300, "icon": "fan", "confirm": false,
+      "control": { "type": "modbus", "itemId": "hood_fan", "valueType": "boolean",
+                   "onLabel": "An", "offLabel": "Aus", "invert": false } },
+    { "id": "w-ac-set", "kind": "control", "x": 600, "y": 300, "icon": "thermometer-half",
+      "title": "Klima Soll", "confirm": true,
+      "control": { "type": "modbus", "itemId": "ac_setpoint", "valueType": "number",
+                   "min": 16, "max": 28, "step": 1, "unit": "°C" } },
+    { "id": "w-ac-mode", "kind": "control", "x": 650, "y": 200, "icon": "air-conditioner",
+      "control": { "type": "modbus", "itemId": "ac_mode", "valueType": "multi",
+                   "options": [
+                     { "value": 0, "label": "Aus", "icon": "power-off" },
+                     { "value": 1, "label": "Kühlen", "icon": "snowflake-o" },
+                     { "value": 2, "label": "Heizen", "icon": "fire" }
+                   ] } },
+    { "id": "w-dali-shop", "kind": "control", "x": 700, "y": 100, "icon": "light-bulb",
+      "control": { "type": "dali", "group": 1, "modes": ["off", "on", "auto"] } }
+  ]
+}

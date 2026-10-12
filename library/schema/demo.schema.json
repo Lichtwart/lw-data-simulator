@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.lichtwart.io/demo-simulator/demo.schema.json",
+  "title": "Demo pack (library/demos/*.json)",
+  "description": "PRD §11.4, DECISIONS D1, D6. Mirror of DemoPack in src-tauri/src/model/library.rs. Selection = items matching tags ∪ includes − excludes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schemaVersion",
+    "id",
+    "name",
+    "description",
+    "sendIntervalSec"
+  ],
+  "properties": {
+    "type": { "const": "lw-demo" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "name": { "$ref": "common.schema.json#/$defs/localizedText" },
+    "description": { "$ref": "common.schema.json#/$defs/localizedText" },
+    "tags": { "$ref": "common.schema.json#/$defs/tags" },
+    "includes": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/itemId" },
+      "uniqueItems": true
+    },
+    "excludes": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/itemId" },
+      "uniqueItems": true
+    },
+    "daliLampCount": {
+      "description": "Optional: default = the highest converter number in daliGroups or selected lamp index (at least 1).",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+    },
+    "daliGroups": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/daliGroup" } },
+    "digitalInputs": {
+      "type": "array",
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/digitalInput" }
+    },
+    "sendIntervalSec": {
+      "description": "Periodic send of all values; < 900 s (floorplan stale threshold).",
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 899
+    },
+    "scenarios": { "type": "array", "items": { "$ref": "#/$defs/scenario" } },
+    "floorplans": {
+      "description": "Paths relative to library/, e.g. floorplans/gas-station/ground-floor.json.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^floorplans/[a-z0-9-]+/[A-Za-z0-9_.-]+\\.json$" }
+    }
+  },
+  "$defs": {
+    "daliGroup": {
+      "description": "Entry of lw_configGroups (firmware-core-v2.md §5.3).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "converters", "minLevel", "maxLevel"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1, "maximum": 16 },
+        "name": { "type": "string", "minLength": 1 },
+        "converters": {
+          "description": "Lamp numbers (NN of LW Dali Control Gear 1-NN). Only grouped lamps send measurements.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 64 }
+        },
+        "minLevel": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "maxLevel": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "luxThreshold": { "type": "integer", "minimum": 0, "maximum": 200000 },
+        "slaveOf": { "type": "integer", "minimum": 1, "maximum": 16 },
+        "dynamicControl": { "type": "boolean" },
+        "automaticSwitch": { "type": "boolean" }
+      }
+    },
+    "digitalInput": {
+      "description": "Entry of lw_configDigitalInputs; the referenced item's German title becomes the title.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["itemId", "type"],
+      "properties": {
+        "index": {
+          "description": "Optional: default = the index of the referenced item (a mismatch is an error).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "itemId": { "$ref": "common.schema.json#/$defs/itemId" },
+        "type": { "enum": ["daliAction", "impulseCounter", "measurement"] },
+        "isActive": { "type": "boolean" },
+        "initCount": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "increment": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "unit": {
+          "description": "Must equal the impulseCounter item's unit. Firmware buffer: 19 UTF-8 bytes.",
+          "type": "string",
+          "maxLength": 19
+        },
+        "highLevelAction": { "$ref": "common.schema.json#/$defs/groupMode" },
+        "lowLevelAction": { "$ref": "common.schema.json#/$defs/groupMode" },
+        "groups": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 16 }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "daliAction" } } },
+          "then": {
+            "properties": { "initCount": false, "increment": false, "unit": false }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "impulseCounter" } } },
+          "then": {
+            "properties": { "highLevelAction": false, "lowLevelAction": false, "groups": false }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "measurement" } } },
+          "then": {
+            "properties": {
+              "initCount": false,
+              "increment": false,
+              "unit": false,
+              "highLevelAction": false,
+              "lowLevelAction": false,
+              "groups": false
+            }
+          }
+        }
+      ]
+    },
+    "scenarioStep": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "enum": ["value", "generator", "fault"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "value" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "itemId", "value"],
+            "properties": {
+              "kind": true,
+              "itemId": { "$ref": "common.schema.json#/$defs/itemId" },
+              "value": { "type": "number" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "generator" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "itemId", "generator"],
+            "properties": {
+              "kind": true,
+              "itemId": { "$ref": "common.schema.json#/$defs/itemId" },
+              "generator": { "$ref": "common.schema.json#/$defs/generator" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "fault" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "target", "active"],
+            "properties": {
+              "kind": true,
+              "target": { "$ref": "common.schema.json#/$defs/faultTarget" },
+              "active": {
+                "description": "true fires the alarm (again, if open); false clears it in Cumulocity, which ends the fault (DECISIONS D9).",
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "set"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+        "name": { "$ref": "common.schema.json#/$defs/localizedText" },
+        "start": {
+          "description": "Applied on session start; at most one per demo.",
+          "type": "boolean"
+        },
+        "set": { "type": "array", "items": { "$ref": "#/$defs/scenarioStep" } }
+      }
+    }
+  }
+}

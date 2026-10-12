@@ -1,0 +1,736 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "slaves": [
+    {
+      "key": "energie_shop",
+      "name": "Energie Shop",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "en_cms_alarm",
+          "text": "Energie Crew/Manager/Support: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_wc_alarm",
+          "text": "Energie WC: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "energie_kueche",
+      "name": "Energie Kueche",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "en_kit_alarm",
+          "text": "Energie Küche: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_ord_alarm",
+          "text": "Energie Bestellung: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_din_alarm",
+          "text": "Energie Gastraum: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "energie_aussen",
+      "name": "Energie Aussen",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "en_sign_alarm",
+          "text": "Energie Außenwerbung: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_totem_alarm",
+          "text": "Energie Totem: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "energie_gesamt",
+      "name": "Energie Gesamt",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "ev_power_alarm",
+          "text": "Ladeinfrastruktur: Leistungsalarm",
+          "severity": "MAJOR"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "kind": "modbus",
+      "id": "en_kit_kwh",
+      "slave": "energie_kueche",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Küche",
+        "en": "Energy kitchen"
+      },
+      "tags": [
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 6800
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 3.5
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_kit_peak",
+      "slave": "energie_kueche",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Küche",
+        "en": "Peak current kitchen"
+      },
+      "tags": [
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          8,
+          7,
+          6,
+          6,
+          7,
+          9,
+          12,
+          14,
+          16,
+          17,
+          19,
+          24,
+          27,
+          23,
+          16,
+          15,
+          16,
+          22,
+          26,
+          25,
+          18,
+          13,
+          10,
+          9
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_cms_kwh",
+      "slave": "energie_shop",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Crew/Manager/Support",
+        "en": "Energy crew/manager/support"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 3100
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 1.2
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_cms_peak",
+      "slave": "energie_shop",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Crew/Manager/Support",
+        "en": "Peak current crew/manager/support"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          7,
+          8,
+          10,
+          11,
+          12,
+          12,
+          12,
+          12,
+          11,
+          11,
+          12,
+          12,
+          11,
+          9,
+          8,
+          6,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_ord_kwh",
+      "slave": "energie_kueche",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Bestellung",
+        "en": "Energy order"
+      },
+      "tags": [
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 2400
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 1
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_ord_peak",
+      "slave": "energie_kueche",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Bestellung",
+        "en": "Peak current order"
+      },
+      "tags": [
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          10,
+          9,
+          7,
+          6,
+          7,
+          9,
+          10,
+          9,
+          7,
+          5,
+          4,
+          4
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_wc_kwh",
+      "slave": "energie_shop",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie WC",
+        "en": "Energy restrooms"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 1500
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 0.6
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_wc_peak",
+      "slave": "energie_shop",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom WC",
+        "en": "Peak current restrooms"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          5,
+          4,
+          3,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_din_kwh",
+      "slave": "energie_kueche",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Gastraum",
+        "en": "Energy dining"
+      },
+      "tags": [
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 4100
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 2
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_din_peak",
+      "slave": "energie_kueche",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Gastraum",
+        "en": "Peak current dining"
+      },
+      "tags": [
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          5,
+          5,
+          4,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          13,
+          15,
+          16,
+          14,
+          11,
+          10,
+          11,
+          14,
+          16,
+          15,
+          12,
+          9,
+          7,
+          6
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_sign_kwh",
+      "slave": "energie_aussen",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Außenwerbung",
+        "en": "Energy outside signage"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 4800
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 1.5
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_sign_peak",
+      "slave": "energie_aussen",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Außenwerbung",
+        "en": "Peak current outside signage"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          7,
+          8,
+          10,
+          11,
+          12,
+          12,
+          12,
+          12,
+          11,
+          11,
+          12,
+          12,
+          11,
+          9,
+          8,
+          6,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_totem_kwh",
+      "slave": "energie_aussen",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Totem",
+        "en": "Energy totem"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 2900
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 1
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_totem_peak",
+      "slave": "energie_aussen",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Totem",
+        "en": "Peak current totem"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          6,
+          7,
+          7,
+          8,
+          8,
+          8,
+          8,
+          7,
+          7,
+          8,
+          8,
+          7,
+          6,
+          5,
+          4,
+          4,
+          3
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "energy_total",
+      "slave": "energie_gesamt",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie gesamt",
+        "en": "Total energy"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 90000
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 40
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "current_peak_total",
+      "slave": "energie_gesamt",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom gesamt",
+        "en": "Total peak current"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 300,
+        "step": 1,
+        "default": 50
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          35,
+          33,
+          32,
+          32,
+          33,
+          40,
+          58,
+          78,
+          84,
+          72,
+          66,
+          70,
+          76,
+          70,
+          66,
+          70,
+          82,
+          88,
+          78,
+          64,
+          52,
+          44,
+          40,
+          37
+        ]
+      }
+    }
+  ]
+}

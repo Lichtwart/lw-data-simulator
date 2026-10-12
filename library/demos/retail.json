@@ -1,0 +1,758 @@
+{
+  "type": "lw-demo",
+  "schemaVersion": 1,
+  "id": "retail",
+  "name": {
+    "de": "Einzelhandel",
+    "en": "Retail"
+  },
+  "description": {
+    "de": "Markt mit Verkaufsraum, Kühlung, Trockenlager, Ladeplätzen, Beleuchtung und Energiezählern.",
+    "en": "Store with sales floor, cooling, dry storage, EV charging, lighting and energy meters."
+  },
+  "tags": [
+    "retail"
+  ],
+  "includes": [],
+  "excludes": [],
+  "daliLampCount": 22,
+  "daliGroups": [
+    {
+      "id": 1,
+      "name": "Außen",
+      "converters": [
+        1,
+        3
+      ],
+      "minLevel": 0,
+      "maxLevel": 100,
+      "luxThreshold": 5000,
+      "automaticSwitch": true,
+      "dynamicControl": false
+    },
+    {
+      "id": 2,
+      "name": "Verkaufsraum",
+      "converters": [
+        19,
+        20,
+        21,
+        22
+      ],
+      "minLevel": 0,
+      "maxLevel": 100
+    },
+    {
+      "id": 3,
+      "name": "Personal",
+      "converters": [
+        8,
+        9,
+        10
+      ],
+      "minLevel": 0,
+      "maxLevel": 100
+    },
+    {
+      "id": 4,
+      "name": "WC und Lager",
+      "converters": [
+        13,
+        14
+      ],
+      "minLevel": 0,
+      "maxLevel": 100
+    },
+    {
+      "id": 5,
+      "name": "Eingang",
+      "converters": [
+        11,
+        12
+      ],
+      "minLevel": 0,
+      "maxLevel": 100
+    }
+  ],
+  "digitalInputs": [
+    {
+      "index": 1,
+      "itemId": "ev_slot_1",
+      "type": "measurement"
+    },
+    {
+      "index": 2,
+      "itemId": "ev_slot_2",
+      "type": "measurement"
+    },
+    {
+      "index": 3,
+      "itemId": "ev_slot_3",
+      "type": "measurement"
+    },
+    {
+      "index": 4,
+      "itemId": "freezer_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 5,
+      "itemId": "cooler_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 7,
+      "itemId": "crew_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 8,
+      "itemId": "support_occ",
+      "type": "measurement"
+    },
+    {
+      "index": 9,
+      "itemId": "restroom_leak",
+      "type": "measurement"
+    },
+    {
+      "index": 10,
+      "itemId": "dry_leak",
+      "type": "measurement"
+    }
+  ],
+  "sendIntervalSec": 30,
+  "scenarios": [
+    {
+      "id": "normal",
+      "name": {
+        "de": "Normalbetrieb",
+        "en": "Normal operation"
+      },
+      "start": true,
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "light-1",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-3",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-19",
+          "value": 90
+        },
+        {
+          "kind": "value",
+          "itemId": "light-20",
+          "value": 90
+        },
+        {
+          "kind": "value",
+          "itemId": "light-21",
+          "value": 90
+        },
+        {
+          "kind": "value",
+          "itemId": "light-22",
+          "value": 90
+        },
+        {
+          "kind": "value",
+          "itemId": "light-11",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-12",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-8",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-9",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-10",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-13",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "light-14",
+          "value": 80
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_wc_set",
+          "value": 21
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_dry_set",
+          "value": 21
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_1",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_2",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_3",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "crew_occ",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "support_occ",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "restroom_leak",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "dry_leak",
+          "value": 0
+        },
+        {
+          "kind": "generator",
+          "itemId": "lux-1",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              250,
+              1500,
+              5000,
+              12000,
+              20000,
+              27000,
+              31000,
+              33000,
+              31000,
+              27000,
+              20000,
+              12000,
+              5000,
+              1500,
+              250,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "freezer_temp",
+          "generator": {
+            "kind": "randomWalk",
+            "center": -18,
+            "spread": 1,
+            "step": 0.2
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "cooler_temp",
+          "generator": {
+            "kind": "randomWalk",
+            "center": 3,
+            "spread": 1,
+            "step": 0.2
+          }
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "kuehlung",
+            "alarmName": "en_clr_alarm"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fuse_cooler"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveTimeout",
+            "slaveKey": "kuehlung"
+          },
+          "active": false
+        },
+        {
+          "kind": "generator",
+          "itemId": "en_ev1_peak",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              2,
+              6,
+              12,
+              19,
+              24,
+              27,
+              28,
+              28,
+              27,
+              25,
+              25,
+              27,
+              28,
+              26,
+              20,
+              12,
+              6,
+              3,
+              1
+            ]
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "en_ev2_peak",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              3,
+              8,
+              14,
+              21,
+              26,
+              30,
+              30,
+              29,
+              27,
+              26,
+              26,
+              29,
+              30,
+              27,
+              19,
+              11,
+              5,
+              2
+            ]
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "en_ev3_peak",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              1,
+              1,
+              0,
+              0,
+              0,
+              3,
+              9,
+              15,
+              20,
+              22,
+              23,
+              24,
+              23,
+              22,
+              20,
+              22,
+              24,
+              24,
+              22,
+              16,
+              9,
+              4,
+              2,
+              1
+            ]
+          }
+        },
+        {
+          "kind": "generator",
+          "itemId": "current_peak_total",
+          "generator": {
+            "kind": "dailyProfile",
+            "points": [
+              35,
+              33,
+              32,
+              32,
+              33,
+              40,
+              58,
+              78,
+              84,
+              72,
+              66,
+              70,
+              76,
+              70,
+              66,
+              70,
+              82,
+              88,
+              78,
+              64,
+              52,
+              44,
+              40,
+              37
+            ]
+          }
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "energie_gesamt",
+            "alarmName": "ev_power_alarm"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 20,
+            "alarmType": "lw_lampFailure_1_20_generic"
+          },
+          "active": false
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 13,
+            "alarmType": "lw_converter_1_13_lost"
+          },
+          "active": false
+        }
+      ]
+    },
+    {
+      "id": "night",
+      "name": {
+        "de": "Nacht",
+        "en": "Night"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "light-1",
+          "value": 100
+        },
+        {
+          "kind": "value",
+          "itemId": "light-3",
+          "value": 100
+        },
+        {
+          "kind": "value",
+          "itemId": "light-19",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-20",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-21",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-22",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "light-11",
+          "value": 40
+        },
+        {
+          "kind": "value",
+          "itemId": "light-12",
+          "value": 40
+        },
+        {
+          "kind": "value",
+          "itemId": "light-8",
+          "value": 10
+        },
+        {
+          "kind": "value",
+          "itemId": "light-9",
+          "value": 10
+        },
+        {
+          "kind": "value",
+          "itemId": "light-10",
+          "value": 10
+        },
+        {
+          "kind": "value",
+          "itemId": "light-13",
+          "value": 10
+        },
+        {
+          "kind": "value",
+          "itemId": "light-14",
+          "value": 10
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_wc_set",
+          "value": 17
+        },
+        {
+          "kind": "value",
+          "itemId": "ac_dry_set",
+          "value": 17
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_1",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_2",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_3",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "crew_occ",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "support_occ",
+          "value": 0
+        },
+        {
+          "kind": "value",
+          "itemId": "lux-1",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "cooling-fault",
+      "name": {
+        "de": "Störung Kühlung",
+        "en": "Cooling fault"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "freezer_temp",
+          "value": -9
+        },
+        {
+          "kind": "value",
+          "itemId": "cooler_temp",
+          "value": 11
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "kuehlung",
+            "alarmName": "en_clr_alarm"
+          },
+          "active": true
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "customAlarm",
+            "itemId": "fuse_cooler"
+          },
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "comm-loss",
+      "name": {
+        "de": "Kommunikationsausfall Kühlung",
+        "en": "Cooling communication loss"
+      },
+      "set": [
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveTimeout",
+            "slaveKey": "kuehlung"
+          },
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "peak-load",
+      "name": {
+        "de": "Spitzenlast",
+        "en": "Peak load"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "ev_slot_1",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_2",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "ev_slot_3",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "en_ev1_peak",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "en_ev2_peak",
+          "value": 30
+        },
+        {
+          "kind": "value",
+          "itemId": "en_ev3_peak",
+          "value": 30
+        },
+        {
+          "kind": "generator",
+          "itemId": "current_peak_total",
+          "generator": {
+            "kind": "randomWalk",
+            "center": 250,
+            "spread": 20,
+            "step": 5
+          }
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "slaveAlarm",
+            "slaveKey": "energie_gesamt",
+            "alarmName": "ev_power_alarm"
+          },
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "lamp-fault",
+      "name": {
+        "de": "Leuchtenausfall",
+        "en": "Lamp failure"
+      },
+      "set": [
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 20,
+            "alarmType": "lw_lampFailure_1_20_generic"
+          },
+          "active": true
+        },
+        {
+          "kind": "fault",
+          "target": {
+            "kind": "daliLamp",
+            "lamp": 13,
+            "alarmType": "lw_converter_1_13_lost"
+          },
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "water-damage",
+      "name": {
+        "de": "Wasserschaden",
+        "en": "Water damage"
+      },
+      "set": [
+        {
+          "kind": "value",
+          "itemId": "restroom_leak",
+          "value": 1
+        },
+        {
+          "kind": "value",
+          "itemId": "dry_leak",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "floorplans": [
+    "floorplans/retail/ground-floor.json"
+  ]
+}

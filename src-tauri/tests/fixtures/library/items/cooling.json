@@ -1,0 +1,40 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "slaves": [
+    { "key": "kuehlung", "name": "Kuehlung", "requestInterval": 30,
+      "alarms": [
+        { "name": "co2Leakage", "text": "CO2 Leckage", "severity": "CRITICAL" },
+        { "name": "freezerDoor", "text": "Tiefkühlertür offen", "severity": "MINOR" }
+      ] },
+    { "key": "klima", "name": "Klima Shop", "requestInterval": 60 }
+  ],
+  "items": [
+    { "kind": "modbus", "id": "freezer_temp", "slave": "kuehlung", "registerType": "input",
+      "title": { "de": "Tiefkühler Temperatur", "en": "Freezer temperature" },
+      "tags": ["fixture", "category:cooling", "zone:shop"],
+      "unit": "°C", "datatype": "float32", "writable": false,
+      "control": { "kind": "slider", "min": -30, "max": 0, "step": 0.5, "default": -18 },
+      "generator": { "kind": "randomWalk", "center": -18, "spread": 1, "step": 0.2 } },
+    { "kind": "modbus", "id": "hood_fan", "slave": "kuehlung", "writable": true,
+      "title": { "de": "Abluft", "en": "Hood fan" },
+      "tags": ["fixture", "category:cooling"],
+      "control": { "kind": "switch", "default": 0 } },
+    { "kind": "modbus", "id": "ac_mode", "slave": "klima", "writable": true, "datatype": "uint16",
+      "title": { "de": "Klima Modus", "en": "AC mode" },
+      "tags": ["fixture", "category:hvac"],
+      "control": { "kind": "select", "default": 0, "options": [
+        { "value": 0, "label": { "de": "Aus", "en": "Off" } },
+        { "value": 1, "label": { "de": "Kühlen", "en": "Cool" } },
+        { "value": 2, "label": { "de": "Heizen", "en": "Heat" } }
+      ] },
+      "effects": [
+        { "kind": "event", "type": "lw_demo_acMode", "text": "Klima Modus: {label}" },
+        { "kind": "inventory", "property": "lw_demoAcMode" }
+      ] },
+    { "kind": "modbus", "id": "ac_setpoint", "slave": "klima", "writable": true, "unit": "°C",
+      "title": { "de": "Klima Soll", "en": "AC setpoint" },
+      "tags": ["fixture", "category:hvac"],
+      "control": { "kind": "slider", "min": 16, "max": 28, "step": 1, "default": 21 } }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    { "kind": "digitalInput", "id": "di-pump-1", "index": 1,
+      "title": { "de": "Zapfsäule 1", "en": "Pump 1" },
+      "tags": ["fixture", "category:fuel"],
+      "control": { "kind": "switch", "default": 0 } },
+    { "kind": "digitalInput", "id": "di-door", "index": 2,
+      "title": { "de": "Tür offen", "en": "Door open" },
+      "tags": ["fixture", "zone:shop"],
+      "control": { "kind": "switch", "default": 0 } },
+    { "kind": "impulseCounter", "id": "gas-meter", "index": 3, "unit": "m3",
+      "title": { "de": "Gaszähler", "en": "Gas meter" },
+      "tags": ["fixture", "category:energy"],
+      "control": { "kind": "counter", "default": 1000 },
+      "generator": { "kind": "counter", "ratePerHour": 12 } }
+  ]
+}

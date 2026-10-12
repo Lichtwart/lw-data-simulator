@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lichtwart Demo Simulator",
+  "version": "../package.json",
+  "identifier": "io.lichtwart.demo-simulator",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Lichtwart Demo Simulator",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 640
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "dmg",
+      "nsis",
+      "app"
+    ],
+    "createUpdaterArtifacts": false,
+    "resources": {
+      "../library/": "library/"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": true
+    },
+    "publisher": "Lichtwart GmbH",
+    "category": "DeveloperTool",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "German",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwNEVCQjM0MUNGODBCRDAKUldUUUMvZ2NOTHRPUUp2bzFtWjRtWWlBaSsxcGJNZFNtMXRpZis3b21DeTY4NkkrSDg4TFV5Sm8K",
+      "endpoints": [
+        "https://github.com/Lichtwart/lw-data-simulator/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

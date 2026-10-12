@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.lichtwart.io/demo-simulator/floorplan.schema.json",
+  "title": "Floorplan layout (library/floorplans/<demoId>/<name>.json)",
+  "description": "The plugin's lw_floorplan (docs/research/floorplan-plugin.md §1, §3) with item references instead of fragments, alarm types and Modbus targets; resolved when the demo is applied. Mirror of FloorplanLayout in src-tauri/src/model/library.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "schemaVersion", "name", "image", "imageWidth", "imageHeight"],
+  "properties": {
+    "type": { "const": "lw-demo-floorplan" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "icon": { "type": "string", "minLength": 1 },
+    "image": {
+      "description": "Image file next to this JSON.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+\\.(png|jpg|jpeg|svg)$"
+    },
+    "imageWidth": { "type": "integer", "minimum": 1 },
+    "imageHeight": { "type": "integer", "minimum": 1 },
+    "imageOpacity": { "type": "number", "minimum": 0.1, "maximum": 1 },
+    "widgets": { "type": "array", "items": { "$ref": "#/$defs/widget" } }
+  },
+  "$defs": {
+    "level": { "enum": ["good", "warning", "alarm"] },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level"],
+      "properties": {
+        "min": { "type": ["number", "null"] },
+        "max": { "type": ["number", "null"] },
+        "level": { "$ref": "#/$defs/level" }
+      }
+    },
+    "display": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "enum": ["number", "boolean"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "number" } } },
+          "then": { "additionalProperties": false, "properties": { "kind": true } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "boolean" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "onValue", "offValue", "onLabel", "offLabel"],
+            "properties": {
+              "kind": true,
+              "onValue": { "type": "number" },
+              "offValue": { "type": "number" },
+              "onLabel": { "type": "string" },
+              "offLabel": { "type": "string" },
+              "onLevel": { "$ref": "#/$defs/level" },
+              "offLevel": { "$ref": "#/$defs/level" },
+              "stateIcons": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["on", "off"],
+                "properties": { "on": { "type": "string" }, "off": { "type": "string" } }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "alarmRef": {
+      "description": "item = all alarms of an item (DALI lamp alarms, slave timeout + all slave alarms, lw_demo_<id>); slaveTimeout; slaveAlarm; type = literal alarm type.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "enum": ["item", "slaveTimeout", "slaveAlarm", "type"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "item" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "itemId"],
+            "properties": {
+              "kind": true,
+              "itemId": { "$ref": "common.schema.json#/$defs/itemId" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "slaveTimeout" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "slaveKey"],
+            "properties": {
+              "kind": true,
+              "slaveKey": { "$ref": "common.schema.json#/$defs/slaveKey" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "slaveAlarm" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "slaveKey", "alarmName"],
+            "properties": {
+              "kind": true,
+              "slaveKey": { "$ref": "common.schema.json#/$defs/slaveKey" },
+              "alarmName": { "$ref": "common.schema.json#/$defs/alarmName" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "type" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["kind", "alarmType"],
+            "properties": {
+              "kind": true,
+              "alarmType": { "$ref": "common.schema.json#/$defs/alarmType" }
+            }
+          }
+        }
+      ]
+    },
+    "alarmRefs": { "type": "array", "items": { "$ref": "#/$defs/alarmRef" } },
+    "control": {
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "enum": ["dali", "modbus"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "dali" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["type", "group", "modes"],
+            "properties": {
+              "type": true,
+              "group": {
+                "description": "Id of one of the demo's daliGroups.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
+              },
+              "modes": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 3,
+                "uniqueItems": true,
+                "items": { "$ref": "common.schema.json#/$defs/groupMode" }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "modbus" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["type", "itemId", "valueType"],
+            "properties": {
+              "type": true,
+              "itemId": {
+                "description": "A writable modbus item (coil or holding).",
+                "$ref": "common.schema.json#/$defs/itemId"
+              },
+              "readback": {
+                "description": "Add the item's measurement as readback (default true).",
+                "type": "boolean"
+              },
+              "valueType": { "enum": ["boolean", "number", "multi"] },
+              "onLabel": { "type": "string" },
+              "offLabel": { "type": "string" },
+              "invert": { "type": "boolean" },
+              "min": { "type": "number", "minimum": 0, "maximum": 65535 },
+              "max": { "type": "number", "minimum": 0, "maximum": 65535 },
+              "step": { "type": "number", "exclusiveMinimum": 0 },
+              "unit": { "type": "string" },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["value", "label", "icon"],
+                  "properties": {
+                    "value": { "type": "integer", "minimum": 0, "maximum": 65535 },
+                    "label": { "type": "string", "minLength": 1 },
+                    "icon": { "type": "string", "minLength": 1 }
+                  }
+                }
+              }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "valueType": { "const": "boolean" } } },
+                "then": {
+                  "required": ["onLabel", "offLabel"],
+                  "properties": { "min": false, "max": false, "step": false, "options": false }
+                }
+              },
+              {
+                "if": { "properties": { "valueType": { "const": "number" } } },
+                "then": {
+                  "required": ["min", "max", "step"],
+                  "properties": {
+                    "onLabel": false,
+                    "offLabel": false,
+                    "invert": false,
+                    "options": false
+                  }
+                }
+              },
+              {
+                "if": { "properties": { "valueType": { "const": "multi" } } },
+                "then": {
+                  "required": ["options"],
+                  "properties": {
+                    "onLabel": false,
+                    "offLabel": false,
+                    "invert": false,
+                    "min": false,
+                    "max": false,
+                    "step": false,
+                    "options": { "minItems": 2 }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "widget": {
+      "type": "object",
+      "required": ["kind", "id", "x", "y", "icon"],
+      "properties": {
+        "kind": { "enum": ["sensor", "alarm", "control"] },
+        "id": { "type": "string", "minLength": 1 },
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 },
+        "locked": { "type": "boolean" },
+        "icon": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "sensor" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["measurement"],
+            "properties": {
+              "kind": true,
+              "id": true,
+              "x": true,
+              "y": true,
+              "locked": true,
+              "icon": true,
+              "title": {
+                "description": "Default: the item's German title.",
+                "type": "string",
+                "minLength": 1
+              },
+              "measurement": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["itemId"],
+                "properties": {
+                  "itemId": { "$ref": "common.schema.json#/$defs/itemId" },
+                  "series": {
+                    "description": "Only for dali items; default Brightness.",
+                    "enum": ["Brightness", "Lamp Status", "Converter Status", "Converter Runtime"]
+                  }
+                }
+              },
+              "unit": { "type": "string" },
+              "decimals": { "type": "integer", "minimum": 0, "maximum": 6 },
+              "display": { "$ref": "#/$defs/display" },
+              "ranges": { "type": "array", "items": { "$ref": "#/$defs/range" } },
+              "autoAlarms": {
+                "description": "Watch the measured item's alarms automatically (default true).",
+                "type": "boolean"
+              },
+              "alarms": { "$ref": "#/$defs/alarmRefs" },
+              "staleAfterMin": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "alarm" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["text", "alarms"],
+            "properties": {
+              "kind": true,
+              "id": true,
+              "x": true,
+              "y": true,
+              "locked": true,
+              "icon": true,
+              "text": { "type": "string", "minLength": 1 },
+              "note": { "type": "string" },
+              "alarms": { "allOf": [{ "$ref": "#/$defs/alarmRefs" }, { "minItems": 1 }] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "control" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["control"],
+            "properties": {
+              "kind": true,
+              "id": true,
+              "x": true,
+              "y": true,
+              "locked": true,
+              "icon": true,
+              "title": { "type": "string", "minLength": 1 },
+              "confirm": { "type": "boolean" },
+              "control": { "$ref": "#/$defs/control" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

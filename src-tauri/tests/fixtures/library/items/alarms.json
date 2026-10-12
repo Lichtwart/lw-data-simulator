@@ -1,0 +1,10 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    { "kind": "customAlarm", "id": "doorOpen",
+      "title": { "de": "Hintertür offen", "en": "Back door open" },
+      "tags": ["fixture", "category:security"],
+      "severity": "MAJOR", "text": "Hintertür offen" }
+  ]
+}

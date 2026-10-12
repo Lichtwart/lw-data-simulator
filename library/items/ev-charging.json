@@ -1,0 +1,305 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "slaves": [
+    {
+      "key": "lade_1",
+      "name": "Ladesaeule 1",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "ev_slot_1_alarm",
+          "text": "Ladeplatz 1: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_ev1_alarm",
+          "text": "Energie Ladesäule 1: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "lade_2",
+      "name": "Ladesaeule 2",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "ev_slot_2_alarm",
+          "text": "Ladeplatz 2: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_ev2_alarm",
+          "text": "Energie Ladesäule 2: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    },
+    {
+      "key": "lade_3",
+      "name": "Ladesaeule 3",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "ev_slot_3_alarm",
+          "text": "Ladeplatz 3: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_ev3_alarm",
+          "text": "Energie Ladesäule 3: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "kind": "modbus",
+      "id": "en_ev1_kwh",
+      "slave": "lade_1",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Ladesäule 1",
+        "en": "Energy EV charger 1"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 1
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 5
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_ev1_peak",
+      "slave": "lade_1",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Ladesäule 1",
+        "en": "Peak current EV charger 1"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          2,
+          6,
+          12,
+          19,
+          24,
+          27,
+          28,
+          28,
+          27,
+          25,
+          25,
+          27,
+          28,
+          26,
+          20,
+          12,
+          6,
+          3,
+          1
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_ev2_kwh",
+      "slave": "lade_2",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Ladesäule 2",
+        "en": "Energy EV charger 2"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 1
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 6
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_ev2_peak",
+      "slave": "lade_2",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Ladesäule 2",
+        "en": "Peak current EV charger 2"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          3,
+          8,
+          14,
+          21,
+          26,
+          30,
+          30,
+          29,
+          27,
+          26,
+          26,
+          29,
+          30,
+          27,
+          19,
+          11,
+          5,
+          2
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_ev3_kwh",
+      "slave": "lade_3",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Ladesäule 3",
+        "en": "Energy EV charger 3"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 1
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 7
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_ev3_peak",
+      "slave": "lade_3",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Ladesäule 3",
+        "en": "Peak current EV charger 3"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          3,
+          9,
+          15,
+          20,
+          22,
+          23,
+          24,
+          23,
+          22,
+          20,
+          22,
+          24,
+          24,
+          22,
+          16,
+          9,
+          4,
+          2,
+          1
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,259 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "slaves": [
+    {
+      "key": "kuehlung",
+      "name": "Kuehlung",
+      "requestInterval": 30,
+      "alarms": [
+        {
+          "name": "en_frz_alarm",
+          "text": "Energie Tiefkühler: Störung",
+          "severity": "MAJOR"
+        },
+        {
+          "name": "en_clr_alarm",
+          "text": "Energie Kühlzelle: Störung",
+          "severity": "MAJOR"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "kind": "modbus",
+      "id": "freezer_temp",
+      "slave": "kuehlung",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Tiefkühler Temperatur",
+        "en": "Freezer temperature"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:cooling",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": -20,
+        "max": 0,
+        "step": 0.5,
+        "default": -18
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": -18,
+        "spread": 1,
+        "step": 0.2
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "cooler_temp",
+      "slave": "kuehlung",
+      "registerType": "input",
+      "datatype": "float32",
+      "unit": "°C",
+      "writable": false,
+      "title": {
+        "de": "Kühlzelle Temperatur",
+        "en": "Cooler temperature"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:cooling",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": -5,
+        "max": 16,
+        "step": 0.5,
+        "default": 3
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 3,
+        "spread": 1,
+        "step": 0.2
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_frz_kwh",
+      "slave": "kuehlung",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Tiefkühler",
+        "en": "Energy freezer"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 1
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 3
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_frz_peak",
+      "slave": "kuehlung",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Tiefkühler",
+        "en": "Peak current freezer"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          8,
+          9,
+          11,
+          12,
+          13,
+          14,
+          14,
+          14,
+          14,
+          13,
+          13,
+          14,
+          14,
+          13,
+          12,
+          10,
+          9,
+          8,
+          8
+        ]
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_clr_kwh",
+      "slave": "kuehlung",
+      "registerType": "input",
+      "datatype": "uint32",
+      "unit": "kWh",
+      "writable": false,
+      "title": {
+        "de": "Energie Kühlzelle",
+        "en": "Energy cooler"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "counter",
+        "default": 1
+      },
+      "generator": {
+        "kind": "counter",
+        "ratePerHour": 2
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "en_clr_peak",
+      "slave": "kuehlung",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "A",
+      "writable": false,
+      "title": {
+        "de": "Spitzenstrom Kühlzelle",
+        "en": "Peak current cooler"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:energy",
+        "zone:tech-room"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 16
+      },
+      "generator": {
+        "kind": "dailyProfile",
+        "points": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          6,
+          8,
+          9,
+          9,
+          10,
+          10,
+          10,
+          10,
+          9,
+          9,
+          10,
+          10,
+          9,
+          8,
+          7,
+          6,
+          6,
+          5
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+/* Bundled fonts (offline-safe, no Google Fonts at runtime).
+   - FT Polar: brand display face, Light 300 only for UI use (never below 28px,
+     never fake bold/italic). Regular 400 is not bundled.
+   - Manrope (UI/body) and JetBrains Mono (data, ids, timestamps) via @fontsource (Latin + Latin Extended only). */
+@import "@fontsource/manrope/latin-300.css";
+@import "@fontsource/manrope/latin-ext-300.css";
+@import "@fontsource/manrope/latin-400.css";
+@import "@fontsource/manrope/latin-ext-400.css";
+@import "@fontsource/manrope/latin-500.css";
+@import "@fontsource/manrope/latin-ext-500.css";
+@import "@fontsource/manrope/latin-600.css";
+@import "@fontsource/manrope/latin-ext-600.css";
+@import "@fontsource/manrope/latin-700.css";
+@import "@fontsource/manrope/latin-ext-700.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-ext-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+@import "@fontsource/jetbrains-mono/latin-ext-500.css";
+
+@font-face {
+  font-family: "FT Polar";
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src:
+    url("../assets/fonts/FTPolar-Light.woff2") format("woff2"),
+    url("../assets/fonts/FTPolar-Light.woff") format("woff");
+}

@@ -1,0 +1,107 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "slaves": [
+    {
+      "key": "tankanlage",
+      "name": "Tankanlage",
+      "requestInterval": 60,
+      "alarms": [
+        {
+          "name": "tank_leak",
+          "text": "Tankanlage: Leckage",
+          "severity": "CRITICAL"
+        },
+        {
+          "name": "tank_low",
+          "text": "Tankanlage: Füllstand niedrig",
+          "severity": "MINOR"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "kind": "modbus",
+      "id": "tank_super",
+      "slave": "tankanlage",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "%",
+      "writable": false,
+      "title": {
+        "de": "Tank Super Füllstand",
+        "en": "Super tank level"
+      },
+      "tags": [
+        "gas-station",
+        "category:fuel",
+        "zone:forecourt"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "default": 70
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 65,
+        "spread": 15,
+        "step": 0.05
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "tank_diesel",
+      "slave": "tankanlage",
+      "registerType": "input",
+      "datatype": "uint16",
+      "unit": "%",
+      "writable": false,
+      "title": {
+        "de": "Tank Diesel Füllstand",
+        "en": "Diesel tank level"
+      },
+      "tags": [
+        "gas-station",
+        "category:fuel",
+        "zone:forecourt"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "default": 60
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": 60,
+        "spread": 15,
+        "step": 0.05
+      }
+    },
+    {
+      "kind": "modbus",
+      "id": "pump_release",
+      "slave": "tankanlage",
+      "registerType": "coil",
+      "writable": true,
+      "title": {
+        "de": "Zapfsäulen Freigabe",
+        "en": "Pump release"
+      },
+      "tags": [
+        "gas-station",
+        "category:fuel",
+        "zone:forecourt"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 1
+      }
+    }
+  ]
+}

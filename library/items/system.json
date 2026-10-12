@@ -1,0 +1,62 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    {
+      "kind": "system",
+      "id": "rssi",
+      "system": "rssi",
+      "title": {
+        "de": "Signalstärke",
+        "en": "Signal strength"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:system"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": -110,
+        "max": -40,
+        "step": 1,
+        "default": -67
+      },
+      "generator": {
+        "kind": "randomWalk",
+        "center": -67,
+        "spread": 4,
+        "step": 1
+      }
+    },
+    {
+      "kind": "system",
+      "id": "board_temp",
+      "system": "temperature",
+      "title": {
+        "de": "Gerätetemperatur",
+        "en": "Device temperature"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:system"
+      ],
+      "control": {
+        "kind": "slider",
+        "min": 0,
+        "max": 80,
+        "step": 0.1,
+        "default": 38
+      },
+      "generator": {
+        "kind": "sine",
+        "period": 3600,
+        "amplitude": 2,
+        "center": 38
+      }
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+/* Copied from "Lichtwart Design System-handoff/lichtwart-design-system/project/tokens.css".
+   Changes vs. source: the base64 @font-face blocks and the Google Fonts @import were
+   removed — fonts are bundled locally (see ./fonts.css). Do not edit token values here;
+   update from the design system instead. */
+/* ============================================================
+   LICHTWART DESIGN TOKENS
+   ---
+   Source of truth for color, type, spacing, radii, elevation,
+   motion. Import this stylesheet anywhere a Lichtwart surface
+   is rendered — marketing, product, slides, docs.
+   ============================================================ */
+
+/* Brand typography
+   ---
+   FT Polar is our editorial display face — a soft, humanist
+   sans with generous apertures and a poetic lilt. We use its
+   Light weight for hero, display and long-form headline
+   moments. Manrope supports it as a workhorse sans for UI,
+   body copy and dense data surfaces where Polar Light would
+   lose contrast. */
+
+:root {
+  /* -------- Core brand palette (from the 2025 brand doc) -------- */
+  --lw-night-blue: #101221;     /* Primary — ink, type, backgrounds */
+  --lw-warm-gray:  #EBEAE4;     /* Surface — soft neutral canvas   */
+  --lw-white:      #FFFFFF;     /* Surface — pure                  */
+  --lw-olive:      #A2902A;     /* Secondary — deep, calm accent   */
+  --lw-orange:     #FFA400;     /* Secondary — alert, CTA, energy  */
+
+  /* -------- Night Blue scale (primary) -------- */
+  --lw-blue-100: #101221;                /* 100% */
+  --lw-blue-50:  color-mix(in oklab, var(--lw-night-blue) 50%, var(--lw-warm-gray));
+  --lw-blue-30:  color-mix(in oklab, var(--lw-night-blue) 30%, var(--lw-warm-gray));
+  --lw-blue-10:  color-mix(in oklab, var(--lw-night-blue) 10%, var(--lw-warm-gray));
+  --lw-blue-ink: #101221;
+
+  /* -------- Orange scale (signal / action) -------- */
+  --lw-orange-100: #FFA400;
+  --lw-orange-60:  #FFC047;   /* hover / glow */
+  --lw-orange-30:  #FFE2A8;   /* bg tint      */
+  --lw-orange-10:  #FFF6E3;   /* subtle tint  */
+
+  /* -------- Olive scale (secondary) -------- */
+  --lw-olive-100: #A2902A;
+  --lw-olive-60:  #C9B663;
+  --lw-olive-30:  #E4D8A3;
+  --lw-olive-10:  #F5EFD6;
+
+  /* -------- Warm gray scale (surfaces) -------- */
+  --lw-surface-raised:  #FFFFFF;
+  --lw-surface-page:    #F5F4EE;   /* shade under warm-gray */
+  --lw-surface-sunken:  #EBEAE4;   /* warm gray 100         */
+  --lw-surface-line:    #D9D7CE;   /* hairline              */
+  --lw-surface-border:  #BEBBAF;   /* strong divider        */
+
+  /* -------- Text on light -------- */
+  --lw-text-strong:  #101221;
+  --lw-text-body:    #2A2C3C;
+  --lw-text-muted:   #5C5E6D;
+  --lw-text-subtle:  #8A8C98;
+  --lw-text-on-dark: #F5F4EE;
+  --lw-text-on-dark-muted: #9A9CAD;
+
+  /* -------- Semantic (tuned to brand) -------- */
+  --lw-success: #4C7D3B;
+  --lw-warning: #FFA400;   /* == brand orange */
+  --lw-danger:  #C84435;
+  --lw-info:    #3457A6;
+
+  /* Status tints (light bg) */
+  --lw-success-bg: #E8F1E0;
+  --lw-warning-bg: #FFF1CC;
+  --lw-danger-bg:  #F8E2DE;
+  --lw-info-bg:    #E2EAF6;
+
+  /* -------- Typography -------- */
+  --lw-font-display: 'FT Polar', 'Manrope', ui-sans-serif, -apple-system,
+                   BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --lw-font-sans: 'Manrope', ui-sans-serif, -apple-system, BlinkMacSystemFont,
+                   'Segoe UI', Helvetica, Arial, sans-serif;
+  --lw-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+                   Consolas, monospace;
+
+  /* Type scale — modular, anchored on 16px.
+     Display is used for hero moments; never below 40px.
+     Body min is 14px. */
+  --lw-fs-display-2xl: clamp(56px, 7.5vw, 112px);
+  --lw-fs-display-xl:  clamp(44px, 5.5vw, 80px);
+  --lw-fs-display-lg:  clamp(36px, 4vw, 56px);
+  --lw-fs-h1:          40px;
+  --lw-fs-h2:          32px;
+  --lw-fs-h3:          24px;
+  --lw-fs-h4:          20px;
+  --lw-fs-h5:          17px;
+  --lw-fs-body-lg:     18px;
+  --lw-fs-body:        16px;
+  --lw-fs-body-sm:     14px;
+  --lw-fs-caption:     12px;
+  --lw-fs-overline:    12px;
+
+  /* Leading + tracking */
+  --lw-lh-display: 1.04;
+  --lw-lh-heading: 1.12;
+  --lw-lh-body:    1.55;
+  --lw-lh-tight:   1.25;
+
+  --lw-tr-display: -0.02em;
+  --lw-tr-heading: -0.012em;
+  --lw-tr-body:     0em;
+  --lw-tr-overline: 0.14em;
+
+  /* Weights (Manrope) */
+  --lw-fw-light:    300;
+  --lw-fw-regular:  400;
+  --lw-fw-medium:   500;
+  --lw-fw-semi:     600;
+  --lw-fw-bold:     700;
+  --lw-fw-heavy:    800;
+
+  /* -------- Spacing scale (4px base) -------- */
+  --lw-sp-0:   0;
+  --lw-sp-1:   4px;
+  --lw-sp-2:   8px;
+  --lw-sp-3:   12px;
+  --lw-sp-4:   16px;
+  --lw-sp-5:   20px;
+  --lw-sp-6:   24px;
+  --lw-sp-8:   32px;
+  --lw-sp-10:  40px;
+  --lw-sp-12:  48px;
+  --lw-sp-16:  64px;
+  --lw-sp-20:  80px;
+  --lw-sp-24:  96px;
+  --lw-sp-32:  128px;
+
+  /* -------- Radii -------- */
+  --lw-r-xs:   4px;
+  --lw-r-sm:   8px;
+  --lw-r-md:   12px;
+  --lw-r-lg:   16px;
+  --lw-r-xl:   24px;
+  --lw-r-2xl:  32px;
+  --lw-r-full: 999px;
+
+  /* -------- Elevation --------
+     Soft, warm shadows that feel at home on the cream surface. */
+  --lw-el-0: none;
+  --lw-el-1: 0 1px 2px rgba(16, 18, 33, 0.06),
+             0 1px 3px rgba(16, 18, 33, 0.04);
+  --lw-el-2: 0 2px 4px rgba(16, 18, 33, 0.06),
+             0 4px 12px rgba(16, 18, 33, 0.06);
+  --lw-el-3: 0 4px 8px rgba(16, 18, 33, 0.06),
+             0 12px 28px rgba(16, 18, 33, 0.10);
+  --lw-el-4: 0 8px 16px rgba(16, 18, 33, 0.08),
+             0 24px 48px rgba(16, 18, 33, 0.14);
+
+  /* Glow — used sparingly for signal/orange moments */
+  --lw-glow-orange: 0 0 0 4px rgba(255, 164, 0, 0.18);
+  --lw-glow-blue:   0 0 0 4px rgba(16, 18, 33, 0.14);
+
+  /* -------- Focus -------- */
+  --lw-focus-ring: 0 0 0 3px rgba(255, 164, 0, 0.45);
+
+  /* -------- Motion -------- */
+  --lw-ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --lw-ease-enter:    cubic-bezier(0.0, 0.0, 0.2, 1);
+  --lw-ease-exit:     cubic-bezier(0.4, 0.0, 1, 1);
+  --lw-dur-fast: 120ms;
+  --lw-dur-base: 220ms;
+  --lw-dur-slow: 420ms;
+
+  /* -------- Grid -------- */
+  --lw-container-narrow: 720px;
+  --lw-container-prose:  880px;
+  --lw-container-wide:   1200px;
+  --lw-container-xl:     1440px;
+}
+
+/* Opacity tokens (from the brand doc) — use ONLY on the
+   night blue and orange tokens, to produce the official
+   tints. */
+[data-lw-tint="night-blue-50"] { color: color-mix(in oklab, #101221 50%, transparent); }
+[data-lw-tint="night-blue-10"] { color: color-mix(in oklab, #101221 10%, transparent); }
+[data-lw-tint="orange-60"]     { color: color-mix(in oklab, #FFA400 60%, transparent); }
+[data-lw-tint="orange-30"]     { color: color-mix(in oklab, #FFA400 30%, transparent); }

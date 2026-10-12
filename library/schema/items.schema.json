@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.lichtwart.io/demo-simulator/items.schema.json",
+  "title": "Item library (library/items/*.json)",
+  "description": "Reusable items and Modbus slave definitions (PRD §11.3, DECISIONS D1, D2, D6). Mirror of ItemLibraryFile in src-tauri/src/model/library.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "schemaVersion", "items"],
+  "properties": {
+    "type": { "const": "lw-demo-items" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "slaves": { "type": "array", "items": { "$ref": "#/$defs/slave" } },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+  },
+  "$defs": {
+    "slaveAlarm": {
+      "description": "Custom alarm of a slave; Cumulocity type lw_demo_<slave id:02>_<name>.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "text", "severity"],
+      "properties": {
+        "name": { "$ref": "common.schema.json#/$defs/alarmName" },
+        "text": { "type": "string", "minLength": 1 },
+        "severity": { "$ref": "common.schema.json#/$defs/severity" }
+      }
+    },
+    "slave": {
+      "description": "Modbus slave = one functional group. Id / address are assigned per device (20/240 counting down).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "requestInterval"],
+      "properties": {
+        "key": { "$ref": "common.schema.json#/$defs/slaveKey" },
+        "name": {
+          "description": "Firmware buffer: 19 UTF-8 bytes (validation is the byte gate; maxLength counts code points).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 19
+        },
+        "requestInterval": {
+          "description": "Seconds.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99999
+        },
+        "alarms": { "type": "array", "items": { "$ref": "#/$defs/slaveAlarm" } }
+      }
+    },
+    "nativeItem": {
+      "description": "Fields shared by dali, daliBrightness, daliMotion, digitalInput. These kinds take no unit (fixed by the firmware).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "index", "title"],
+      "properties": {
+        "kind": true,
+        "id": { "$ref": "common.schema.json#/$defs/itemId" },
+        "index": { "type": "integer", "minimum": 1 },
+        "title": { "$ref": "common.schema.json#/$defs/localizedText" },
+        "tags": { "$ref": "common.schema.json#/$defs/tags" },
+        "control": { "$ref": "common.schema.json#/$defs/control" },
+        "generator": { "$ref": "common.schema.json#/$defs/generator" },
+        "effects": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/effect" } }
+      }
+    },
+    "counterItem": {
+      "description": "impulseCounter: like nativeItem plus the counter unit (must equal the demo's digital input unit). The firmware buffer holds 19 UTF-8 bytes; maxLength counts code points, so validation (cargo test) is the byte gate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "index", "title"],
+      "properties": {
+        "kind": true,
+        "id": { "$ref": "common.schema.json#/$defs/itemId" },
+        "index": { "type": "integer", "minimum": 1 },
+        "title": { "$ref": "common.schema.json#/$defs/localizedText" },
+        "tags": { "$ref": "common.schema.json#/$defs/tags" },
+        "unit": { "type": "string", "maxLength": 19 },
+        "control": { "$ref": "common.schema.json#/$defs/control" },
+        "generator": { "$ref": "common.schema.json#/$defs/generator" },
+        "effects": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/effect" } }
+      }
+    },
+    "systemItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "system", "title"],
+      "properties": {
+        "kind": true,
+        "id": { "$ref": "common.schema.json#/$defs/itemId" },
+        "system": {
+          "description": "rssi = c8y_SignalStrength.rssi (dBm), temperature = c8y_TemperatureMeasurement.T (C).",
+          "enum": ["rssi", "temperature"]
+        },
+        "title": { "$ref": "common.schema.json#/$defs/localizedText" },
+        "tags": { "$ref": "common.schema.json#/$defs/tags" },
+        "control": { "$ref": "common.schema.json#/$defs/control" },
+        "generator": { "$ref": "common.schema.json#/$defs/generator" }
+      }
+    },
+    "modbusItem": {
+      "description": "Register on a slave. Register name = id. Measurement LW_Modbus_Slave_<id:02>_<addr:03>.<id>.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "slave", "title"],
+      "properties": {
+        "kind": true,
+        "id": { "$ref": "common.schema.json#/$defs/itemId" },
+        "slave": { "$ref": "common.schema.json#/$defs/slaveKey" },
+        "title": { "$ref": "common.schema.json#/$defs/localizedText" },
+        "tags": { "$ref": "common.schema.json#/$defs/tags" },
+        "registerType": {
+          "description": "Default holding, coil for a switch control. Only coil/holding can be writable.",
+          "enum": ["coil", "holding", "input"]
+        },
+        "unit": {
+          "description": "Firmware buffer: 7 UTF-8 bytes (validation is the byte gate).",
+          "type": "string",
+          "maxLength": 7
+        },
+        "datatype": { "enum": ["int16", "uint16", "int32", "uint32", "float32"] },
+        "writable": { "type": "boolean" },
+        "control": { "$ref": "common.schema.json#/$defs/control" },
+        "generator": { "$ref": "common.schema.json#/$defs/generator" },
+        "effects": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/effect" } }
+      }
+    },
+    "customAlarmItem": {
+      "description": "Device-level custom alarm, type lw_demo_<id>. The id must not start with two digits plus _.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "title", "severity", "text"],
+      "properties": {
+        "kind": true,
+        "id": {
+          "allOf": [
+            { "$ref": "common.schema.json#/$defs/itemId" },
+            { "not": { "pattern": "^[0-9]{2}_" } }
+          ]
+        },
+        "title": { "$ref": "common.schema.json#/$defs/localizedText" },
+        "tags": { "$ref": "common.schema.json#/$defs/tags" },
+        "severity": { "$ref": "common.schema.json#/$defs/severity" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "dali",
+            "daliBrightness",
+            "daliMotion",
+            "digitalInput",
+            "impulseCounter",
+            "system",
+            "modbus",
+            "customAlarm"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "dali" } } },
+          "then": {
+            "$ref": "#/$defs/nativeItem",
+            "properties": { "index": { "maximum": 64 } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": { "enum": ["daliBrightness", "daliMotion", "digitalInput"] }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/nativeItem",
+            "properties": { "index": { "maximum": 10 } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "impulseCounter" } } },
+          "then": {
+            "$ref": "#/$defs/counterItem",
+            "properties": { "index": { "maximum": 10 } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "system" } } },
+          "then": { "$ref": "#/$defs/systemItem" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "modbus" } } },
+          "then": { "$ref": "#/$defs/modbusItem" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "customAlarm" } } },
+          "then": { "$ref": "#/$defs/customAlarmItem" }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,437 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    {
+      "kind": "customAlarm",
+      "id": "fry_oil_exchange",
+      "title": {
+        "de": "Fritteuse Ölwechsel",
+        "en": "Fry station oil exchange"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Fritteuse: Ölwechsel fällig"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "flurry_cleaning",
+      "title": {
+        "de": "Flurry-Station Reinigung",
+        "en": "Flurry station cleaning"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Flurry-Station: Reinigung fällig"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "grill_1",
+      "title": {
+        "de": "Grill 1",
+        "en": "Grill 1"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Grill 1: Störung"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "grill_2",
+      "title": {
+        "de": "Grill 2",
+        "en": "Grill 2"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Grill 2: Störung"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "presenter_1",
+      "title": {
+        "de": "Presenter 1",
+        "en": "Presenter 1"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Presenter 1: Störung"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "presenter_2",
+      "title": {
+        "de": "Presenter 2",
+        "en": "Presenter 2"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Presenter 2: Störung"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "orderpanel_1",
+      "title": {
+        "de": "Bestellterminal 1",
+        "en": "Order panel 1"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Bestellterminal 1: Störung"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "orderpanel_2",
+      "title": {
+        "de": "Bestellterminal 2",
+        "en": "Order panel 2"
+      },
+      "tags": [
+        "restaurant",
+        "category:kitchen",
+        "zone:building"
+      ],
+      "severity": "MAJOR",
+      "text": "Bestellterminal 2: Störung"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "co2_leakage",
+      "title": {
+        "de": "CO₂-Leckage",
+        "en": "CO₂ leakage"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "CO₂-Leckage erkannt"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_kitchen",
+      "title": {
+        "de": "Sicherung Küche",
+        "en": "Kitchen fuse"
+      },
+      "tags": [
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Küche ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_dining",
+      "title": {
+        "de": "Sicherung Gastraum",
+        "en": "Dining fuse"
+      },
+      "tags": [
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Gastraum ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_co2",
+      "title": {
+        "de": "Sicherung CO₂",
+        "en": "CO₂ fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung CO₂ ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_parking",
+      "title": {
+        "de": "Sicherung Parkplatz",
+        "en": "Parking fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Parkplatz ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_scullery",
+      "title": {
+        "de": "Sicherung Spülküche",
+        "en": "Scullery fuse"
+      },
+      "tags": [
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Spülküche ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_presenters",
+      "title": {
+        "de": "Sicherung Presenter",
+        "en": "Presenters fuse"
+      },
+      "tags": [
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Presenter ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_vestibules",
+      "title": {
+        "de": "Sicherung Vorräume",
+        "en": "Vestibules fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Vorräume ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_restroom",
+      "title": {
+        "de": "Sicherung WC",
+        "en": "Restroom fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung WC ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_dry_storage",
+      "title": {
+        "de": "Sicherung Trockenlager",
+        "en": "Dry storage fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Trockenlager ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_freezer",
+      "title": {
+        "de": "Sicherung Tiefkühler",
+        "en": "Freezer fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Tiefkühler ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_cooler",
+      "title": {
+        "de": "Sicherung Kühlzelle",
+        "en": "Cooler fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Kühlzelle ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_crew",
+      "title": {
+        "de": "Sicherung Personalraum",
+        "en": "Crew fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Personalraum ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_manager",
+      "title": {
+        "de": "Sicherung Manager",
+        "en": "Manager fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Manager ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_support",
+      "title": {
+        "de": "Sicherung Support",
+        "en": "Support fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Support ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_order",
+      "title": {
+        "de": "Sicherung Bestellung",
+        "en": "Order fuse"
+      },
+      "tags": [
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Bestellung ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_drive",
+      "title": {
+        "de": "Sicherung Drive-In",
+        "en": "Drive-in fuse"
+      },
+      "tags": [
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Drive ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_totem",
+      "title": {
+        "de": "Sicherung Totem",
+        "en": "Totem fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Totem ausgelöst"
+    },
+    {
+      "kind": "customAlarm",
+      "id": "fuse_signages",
+      "title": {
+        "de": "Sicherung Beschilderung",
+        "en": "Signages fuse"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:tech-room"
+      ],
+      "severity": "CRITICAL",
+      "text": "Sicherung Beschilderung ausgelöst"
+    }
+  ]
+}

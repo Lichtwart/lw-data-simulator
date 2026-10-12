@@ -1,0 +1,896 @@
+{
+  "type": "lw-demo-floorplan",
+  "schemaVersion": 1,
+  "name": "Erdgeschoss",
+  "description": "Restaurant: Küche, Gastraum, Bestellung, Technikraum und Drive-Through",
+  "icon": "map",
+  "image": "ground-floor.svg",
+  "imageWidth": 1810,
+  "imageHeight": 1177,
+  "widgets": [
+    {
+      "id": "w-dali-kitchen",
+      "kind": "control",
+      "x": 185,
+      "y": 120,
+      "icon": "light-bulb",
+      "title": "Küche",
+      "confirm": false,
+      "control": {
+        "type": "dali",
+        "group": 3,
+        "modes": [
+          "off",
+          "on",
+          "auto"
+        ]
+      }
+    },
+    {
+      "id": "w-ac-kit-set",
+      "kind": "control",
+      "x": 445,
+      "y": 120,
+      "icon": "thermometer-half",
+      "title": "Klima Küche",
+      "confirm": false,
+      "control": {
+        "type": "modbus",
+        "itemId": "ac_kit_set",
+        "valueType": "number",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "unit": "°C"
+      }
+    },
+    {
+      "id": "w-ac-kit-mode",
+      "kind": "control",
+      "x": 185,
+      "y": 176,
+      "icon": "fan",
+      "title": "Klima Küche Modus",
+      "confirm": false,
+      "control": {
+        "type": "modbus",
+        "itemId": "ac_kit_mode",
+        "valueType": "multi",
+        "options": [
+          {
+            "value": 0,
+            "label": "Heizen",
+            "icon": "fire"
+          },
+          {
+            "value": 1,
+            "label": "Automatik",
+            "icon": "rotate-right"
+          },
+          {
+            "value": 2,
+            "label": "Kühlen",
+            "icon": "snowflake-o"
+          },
+          {
+            "value": 3,
+            "label": "Entfeuchten",
+            "icon": "air-quality"
+          },
+          {
+            "value": 4,
+            "label": "Befeuchten",
+            "icon": "tint"
+          }
+        ]
+      }
+    },
+    {
+      "id": "w-ac-kit-act",
+      "kind": "sensor",
+      "x": 380,
+      "y": 192,
+      "icon": "thermometer-half",
+      "measurement": {
+        "itemId": "ac_kit_act"
+      },
+      "title": "Küche Ist",
+      "unit": "°C",
+      "decimals": 1,
+      "ranges": [
+        {
+          "min": null,
+          "max": 26,
+          "level": "good"
+        },
+        {
+          "min": 26,
+          "max": 30,
+          "level": "warning"
+        },
+        {
+          "min": 30,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-kit-kwh",
+      "kind": "sensor",
+      "x": 510,
+      "y": 192,
+      "icon": "bolt",
+      "measurement": {
+        "itemId": "en_kit_kwh"
+      },
+      "title": "Energie Küche",
+      "unit": "kWh",
+      "decimals": 0,
+      "locked": true
+    },
+    {
+      "id": "w-kit-peak",
+      "kind": "sensor",
+      "x": 640,
+      "y": 192,
+      "icon": "plug",
+      "measurement": {
+        "itemId": "en_kit_peak"
+      },
+      "title": "Spitzenstrom Küche",
+      "unit": "A",
+      "decimals": 0,
+      "ranges": [
+        {
+          "min": null,
+          "max": 24,
+          "level": "good"
+        },
+        {
+          "min": 24,
+          "max": 30,
+          "level": "warning"
+        },
+        {
+          "min": 30,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-l6",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-6"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 120,
+      "y": 332
+    },
+    {
+      "id": "w-fry",
+      "kind": "alarm",
+      "x": 250,
+      "y": 332,
+      "icon": "warning",
+      "text": "Fritteuse",
+      "note": "Ölwechsel fällig",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "fry_oil_exchange"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-flurry",
+      "kind": "alarm",
+      "icon": "warning",
+      "text": "Flurry",
+      "note": "Reinigung fällig",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "flurry_cleaning"
+        }
+      ],
+      "locked": true,
+      "x": 380,
+      "y": 332
+    },
+    {
+      "id": "w-grills",
+      "kind": "alarm",
+      "x": 510,
+      "y": 332,
+      "icon": "fire",
+      "text": "Grills",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "grill_1"
+        },
+        {
+          "kind": "item",
+          "itemId": "grill_2"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-presenters",
+      "kind": "alarm",
+      "x": 640,
+      "y": 332,
+      "icon": "warning",
+      "text": "Presenter",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "presenter_1"
+        },
+        {
+          "kind": "item",
+          "itemId": "presenter_2"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-l7",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-7"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 920,
+      "y": 136
+    },
+    {
+      "id": "w-crew-occ",
+      "kind": "sensor",
+      "x": 1220,
+      "y": 136,
+      "icon": "user",
+      "measurement": {
+        "itemId": "crew_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-support-occ",
+      "kind": "sensor",
+      "x": 1350,
+      "y": 136,
+      "icon": "user",
+      "measurement": {
+        "itemId": "support_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-l8",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-8"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 1220,
+      "y": 276
+    },
+    {
+      "id": "w-wc-leak",
+      "kind": "sensor",
+      "x": 1550,
+      "y": 136,
+      "icon": "tint",
+      "measurement": {
+        "itemId": "restroom_leak"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Wasser",
+        "offLabel": "Trocken",
+        "onLevel": "alarm",
+        "offLevel": "good"
+      },
+      "locked": true,
+      "alarms": [
+        {
+          "kind": "type",
+          "alarmType": "lw_demo_restroom_leak"
+        }
+      ]
+    },
+    {
+      "id": "w-dali-dining",
+      "kind": "control",
+      "x": 185,
+      "y": 523,
+      "icon": "light-bulb",
+      "title": "Gastraum",
+      "confirm": false,
+      "control": {
+        "type": "dali",
+        "group": 2,
+        "modes": [
+          "off",
+          "on",
+          "auto"
+        ]
+      }
+    },
+    {
+      "id": "w-ac-din-set",
+      "kind": "control",
+      "x": 445,
+      "y": 523,
+      "icon": "thermometer-half",
+      "title": "Klima Gastraum",
+      "confirm": false,
+      "control": {
+        "type": "modbus",
+        "itemId": "ac_din_set",
+        "valueType": "number",
+        "min": 16,
+        "max": 24,
+        "step": 1,
+        "unit": "°C"
+      }
+    },
+    {
+      "id": "w-ac-din-mode",
+      "kind": "control",
+      "x": 185,
+      "y": 579,
+      "icon": "fan",
+      "title": "Klima Gastraum Modus",
+      "confirm": false,
+      "control": {
+        "type": "modbus",
+        "itemId": "ac_din_mode",
+        "valueType": "multi",
+        "options": [
+          {
+            "value": 0,
+            "label": "Heizen",
+            "icon": "fire"
+          },
+          {
+            "value": 1,
+            "label": "Automatik",
+            "icon": "rotate-right"
+          },
+          {
+            "value": 2,
+            "label": "Kühlen",
+            "icon": "snowflake-o"
+          },
+          {
+            "value": 3,
+            "label": "Entfeuchten",
+            "icon": "air-quality"
+          },
+          {
+            "value": 4,
+            "label": "Befeuchten",
+            "icon": "tint"
+          }
+        ]
+      }
+    },
+    {
+      "id": "w-ac-din-act",
+      "kind": "sensor",
+      "x": 380,
+      "y": 595,
+      "icon": "thermometer-half",
+      "measurement": {
+        "itemId": "ac_din_act"
+      },
+      "title": "Gastraum Ist",
+      "unit": "°C",
+      "decimals": 1,
+      "ranges": [
+        {
+          "min": null,
+          "max": 26,
+          "level": "good"
+        },
+        {
+          "min": 26,
+          "max": 30,
+          "level": "warning"
+        },
+        {
+          "min": 30,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-l4",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-4"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 510,
+      "y": 595
+    },
+    {
+      "id": "w-l5",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-5"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 640,
+      "y": 595
+    },
+    {
+      "id": "w-order-occ",
+      "kind": "sensor",
+      "x": 920,
+      "y": 539,
+      "icon": "user",
+      "measurement": {
+        "itemId": "order_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-orderpanels",
+      "kind": "alarm",
+      "x": 1050,
+      "y": 539,
+      "icon": "warning",
+      "text": "Bestellterminals",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "orderpanel_1"
+        },
+        {
+          "kind": "item",
+          "itemId": "orderpanel_2"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-freezer",
+      "kind": "sensor",
+      "x": 1220,
+      "y": 539,
+      "icon": "snowflake-o",
+      "measurement": {
+        "itemId": "freezer_temp"
+      },
+      "title": "Tiefkühler",
+      "decimals": 1,
+      "staleAfterMin": 15,
+      "ranges": [
+        {
+          "min": null,
+          "max": -15,
+          "level": "good"
+        },
+        {
+          "min": -15,
+          "max": -12,
+          "level": "warning"
+        },
+        {
+          "min": -12,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "fuse_freezer"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-cooler",
+      "kind": "sensor",
+      "x": 1350,
+      "y": 539,
+      "icon": "thermometer-half",
+      "measurement": {
+        "itemId": "cooler_temp"
+      },
+      "title": "Kühlzelle",
+      "decimals": 1,
+      "staleAfterMin": 15,
+      "ranges": [
+        {
+          "min": null,
+          "max": 5,
+          "level": "good"
+        },
+        {
+          "min": 5,
+          "max": 8,
+          "level": "warning"
+        },
+        {
+          "min": 8,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "fuse_cooler"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-freezer-occ",
+      "kind": "sensor",
+      "x": 1220,
+      "y": 679,
+      "icon": "user",
+      "measurement": {
+        "itemId": "freezer_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-cooler-occ",
+      "kind": "sensor",
+      "x": 1350,
+      "y": 679,
+      "icon": "user",
+      "measurement": {
+        "itemId": "cooler_occ"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Belegt",
+        "offLabel": "Frei",
+        "onLevel": "warning",
+        "offLevel": "good"
+      },
+      "locked": true
+    },
+    {
+      "id": "w-dry-leak",
+      "kind": "sensor",
+      "x": 1550,
+      "y": 539,
+      "icon": "tint",
+      "measurement": {
+        "itemId": "dry_leak"
+      },
+      "display": {
+        "kind": "boolean",
+        "onValue": 1,
+        "offValue": 0,
+        "onLabel": "Wasser",
+        "offLabel": "Trocken",
+        "onLevel": "alarm",
+        "offLevel": "good"
+      },
+      "locked": true,
+      "alarms": [
+        {
+          "kind": "type",
+          "alarmType": "lw_demo_dry_leak_alarm"
+        }
+      ]
+    },
+    {
+      "id": "w-co2",
+      "kind": "alarm",
+      "x": 120,
+      "y": 886,
+      "icon": "air-quality",
+      "text": "CO₂-Tank",
+      "note": "Leck: Raum lüften",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "co2_leakage"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_co2"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-fuses",
+      "kind": "alarm",
+      "x": 250,
+      "y": 886,
+      "icon": "bell",
+      "text": "Sicherungen",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "fuse_kitchen"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_dining"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_scullery"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_presenters"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_order"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_drive"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_crew"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_manager"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_support"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_totem"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_signages"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_co2"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_parking"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_vestibules"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_restroom"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_dry_storage"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_freezer"
+        },
+        {
+          "kind": "item",
+          "itemId": "fuse_cooler"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-subdist",
+      "kind": "alarm",
+      "icon": "warning",
+      "text": "Unterverteilung",
+      "note": "Energiezähler Störung",
+      "alarms": [
+        {
+          "kind": "item",
+          "itemId": "en_cms_kwh"
+        },
+        {
+          "kind": "item",
+          "itemId": "en_sign_kwh"
+        },
+        {
+          "kind": "item",
+          "itemId": "en_kit_kwh"
+        }
+      ],
+      "locked": true,
+      "x": 380,
+      "y": 886
+    },
+    {
+      "id": "w-energy",
+      "kind": "sensor",
+      "x": 510,
+      "y": 886,
+      "icon": "bolt",
+      "measurement": {
+        "itemId": "energy_total"
+      },
+      "title": "Energie gesamt",
+      "unit": "kWh",
+      "decimals": 0,
+      "locked": true
+    },
+    {
+      "id": "w-peak",
+      "kind": "sensor",
+      "x": 120,
+      "y": 1026,
+      "icon": "plug",
+      "measurement": {
+        "itemId": "current_peak_total"
+      },
+      "title": "Spitzenstrom",
+      "unit": "A",
+      "decimals": 0,
+      "ranges": [
+        {
+          "min": null,
+          "max": 100,
+          "level": "good"
+        },
+        {
+          "min": 100,
+          "max": 200,
+          "level": "warning"
+        },
+        {
+          "min": 200,
+          "max": null,
+          "level": "alarm"
+        }
+      ],
+      "locked": true
+    },
+    {
+      "id": "w-dali-outside",
+      "kind": "control",
+      "x": 745,
+      "y": 870,
+      "icon": "light-bulb",
+      "title": "Außen und Drive",
+      "confirm": false,
+      "control": {
+        "type": "dali",
+        "group": 1,
+        "modes": [
+          "off",
+          "on",
+          "auto"
+        ]
+      }
+    },
+    {
+      "id": "w-lux",
+      "kind": "sensor",
+      "x": 940,
+      "y": 886,
+      "icon": "sun-o",
+      "measurement": {
+        "itemId": "lux-1"
+      },
+      "title": "Außenhelligkeit",
+      "unit": "lx",
+      "decimals": 0,
+      "locked": true
+    },
+    {
+      "id": "w-l1",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-1"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 1070,
+      "y": 886
+    },
+    {
+      "id": "w-l2",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-2"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 1200,
+      "y": 886
+    },
+    {
+      "id": "w-l3",
+      "kind": "sensor",
+      "icon": "light-bulb",
+      "measurement": {
+        "itemId": "light-3"
+      },
+      "unit": "%",
+      "decimals": 0,
+      "locked": true,
+      "x": 1330,
+      "y": 886
+    }
+  ]
+}

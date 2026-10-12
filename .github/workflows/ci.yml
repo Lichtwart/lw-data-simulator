@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Never cancel runs on main: every commit on main should get a result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: src-tauri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install Linux Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - run: npm ci
+      - name: Cargo.lock is up to date
+        run: cargo fetch --locked --manifest-path src-tauri/Cargo.toml
+      - name: Tauri crate / npm version pairs
+        run: node scripts/check-tauri-versions.mjs
+      - name: Version files agree (no tag)
+        run: node scripts/release-check.mjs
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run validate:library
+      - run: npm test
+
+      - name: Rust format
+        run: npm run rust:fmt
+      - name: Rust clippy
+        run: npm run rust:clippy
+      # Also regenerates src/lib/bindings.ts (tests::export_bindings).
+      - name: Rust tests
+        run: npm run rust:test
+
+      - name: Bindings drift check
+        run: |
+          test -z "$(git status --porcelain -- src/lib/bindings.ts)" || {
+            git status --short -- src/lib/bindings.ts
+            git diff -- src/lib/bindings.ts
+            echo "::error::src/lib/bindings.ts is not up to date. Run npm run gen:types and commit it."
+            exit 1
+          }
+
+  rust-platforms:
+    name: clippy + test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          components: clippy
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: src-tauri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: npm ci
+      - run: npm run build
+      - name: Cargo.lock is up to date
+        run: cargo fetch --locked --manifest-path src-tauri/Cargo.toml
+      - run: npm run rust:clippy
+      - run: npm run rust:test
+      # Same command as the release (without bundling or signing): catches release-only failures.
+      - name: Tauri debug build (no bundle)
+        if: matrix.os == 'macos-latest'
+        run: npx tauri build --debug --no-bundle

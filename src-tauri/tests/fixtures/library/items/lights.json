@@ -1,0 +1,25 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    { "kind": "dali", "id": "light-1", "index": 1, "title": { "de": "Licht 1", "en": "Light 1" },
+      "tags": ["fixture", "category:light", "zone:shop"],
+      "control": { "kind": "slider", "min": 0, "max": 100, "step": 1, "default": 80 } },
+    { "kind": "dali", "id": "light-2", "index": 2, "title": { "de": "Licht 2", "en": "Light 2" },
+      "tags": ["fixture", "category:light", "zone:shop"],
+      "control": { "kind": "slider", "min": 0, "max": 100, "step": 1, "default": 80 } },
+    { "kind": "dali", "id": "light-3", "index": 3, "title": { "de": "Licht 3", "en": "Light 3" },
+      "tags": ["fixture", "category:light", "zone:forecourt"] },
+    { "kind": "dali", "id": "light-64", "index": 64, "title": { "de": "Licht 64", "en": "Light 64" },
+      "tags": ["other-demo", "category:light"] },
+    { "kind": "daliBrightness", "id": "lux-1", "index": 1,
+      "title": { "de": "Helligkeit Shop", "en": "Brightness shop" },
+      "tags": ["fixture", "category:sensor", "zone:shop"],
+      "generator": { "kind": "dailyProfile",
+        "points": [0, 0, 0, 0, 0, 50, 300, 900, 2000, 4000, 6000, 7000, 7500, 7000, 6000, 4500, 3000, 1500, 600, 100, 0, 0, 0, 0] } },
+    { "kind": "daliMotion", "id": "motion-1", "index": 1,
+      "title": { "de": "Bewegung Shop", "en": "Motion shop" },
+      "tags": ["fixture", "category:sensor", "zone:shop"],
+      "control": { "kind": "switch", "default": 0 } }
+  ]
+}

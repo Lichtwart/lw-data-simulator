@@ -1,0 +1,219 @@
+{
+  "type": "lw-demo-items",
+  "schemaVersion": 1,
+  "items": [
+    {
+      "kind": "digitalInput",
+      "id": "ev_slot_1",
+      "index": 1,
+      "title": {
+        "de": "Ladeplatz 1 belegt",
+        "en": "EV slot 1 occupied"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "ev_slot_2",
+      "index": 2,
+      "title": {
+        "de": "Ladeplatz 2 belegt",
+        "en": "EV slot 2 occupied"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "ev_slot_3",
+      "index": 3,
+      "title": {
+        "de": "Ladeplatz 3 belegt",
+        "en": "EV slot 3 occupied"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "category:ev-charging",
+        "zone:outside"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "freezer_occ",
+      "index": 4,
+      "title": {
+        "de": "Tiefkühler belegt",
+        "en": "Freezer occupied"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:occupancy",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "cooler_occ",
+      "index": 5,
+      "title": {
+        "de": "Kühlzelle belegt",
+        "en": "Cooler occupied"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:occupancy",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "order_occ",
+      "index": 6,
+      "title": {
+        "de": "Bestellsäule belegt",
+        "en": "Order column occupied"
+      },
+      "tags": [
+        "restaurant",
+        "category:occupancy",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "crew_occ",
+      "index": 7,
+      "title": {
+        "de": "Personalraum belegt",
+        "en": "Crew room occupied"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:occupancy",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "support_occ",
+      "index": 8,
+      "title": {
+        "de": "Support belegt",
+        "en": "Support occupied"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:occupancy",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      }
+    },
+    {
+      "kind": "digitalInput",
+      "id": "restroom_leak",
+      "index": 9,
+      "title": {
+        "de": "Wassermelder WC",
+        "en": "Restroom water leak"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      },
+      "effects": [
+        {
+          "kind": "alarm",
+          "type": "lw_demo_restroom_leak",
+          "severity": "MAJOR",
+          "text": "WC: Wasseraustritt",
+          "threshold": 1
+        }
+      ]
+    },
+    {
+      "kind": "digitalInput",
+      "id": "dry_leak",
+      "index": 10,
+      "title": {
+        "de": "Wassermelder Lager",
+        "en": "Dry storage water leak"
+      },
+      "tags": [
+        "retail",
+        "gas-station",
+        "restaurant",
+        "category:safety",
+        "zone:building"
+      ],
+      "control": {
+        "kind": "switch",
+        "default": 0
+      },
+      "effects": [
+        {
+          "kind": "alarm",
+          "type": "lw_demo_dry_leak_alarm",
+          "severity": "MAJOR",
+          "text": "Trockenlager: Wasseraustritt",
+          "threshold": 1
+        }
+      ]
+    }
+  ]
+}

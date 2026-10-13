@@ -4,11 +4,11 @@
 //! - [`crud`]: list (only `c8y_DeviceTypes` ∋ `demo`, grouped by parent
 //!   `c8y_DeviceGroup`), create (§6.1 skeleton), edit, reset, delete.
 //! - [`demo_state`]: read / write `lw_demo` (setup on change, values on snapshot),
-//!   advisory lock (10 min TTL), device config edits (D6).
+//!   advisory lock (10 min TTL), DALI group / digital input edits in `lw_demo` (D6, D10).
 //! - [`setup`]: resolve a setup (library + custom items / slaves), slave / register assignment,
-//!   lenient parsing of `lw_config*`, digests, version compare.
-//! - [`apply`]: apply a demo pack (slave assignment, `lw_config*`, `lw_demo`,
-//!   floorplans).
+//!   the device's groups / inputs, digests, version compare.
+//! - [`apply`]: apply a demo pack (slave assignment, `lw_demo`, removal of old `lw_config*`
+//!   fragments, floorplans).
 //! - [`floorplan`]: upload image binary, create `lw_floorplan`, link as child
 //!   addition, delete app-created floorplans.
 //! - [`export`]: device → `library/`-shaped folder (§13).

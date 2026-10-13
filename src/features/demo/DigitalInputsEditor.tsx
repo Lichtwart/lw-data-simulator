@@ -102,7 +102,7 @@ function rowsToEntries(rows: readonly Row[]): DigitalInputEntry_Deserialize[] | 
   return out;
 }
 
-/** Edit `lw_configDigitalInputs` incl. titles (≤ 10 inputs; D1, D6). */
+/** Edit the device's digital inputs incl. titles (`lw_demo.digitalInputs`, ≤ 10 inputs; D1, D6, D10). */
 export function DigitalInputsEditor({
   inputs,
   onSaved,

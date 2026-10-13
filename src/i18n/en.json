@@ -383,7 +383,7 @@
     },
     "groups": {
       "title": "DALI groups",
-      "description": "Up to 16 groups (lw_configGroups). A lamp is only measured if it belongs to a group.",
+      "description": "Up to 16 groups. A lamp is only measured if it belongs to a group.",
       "add": "Add group",
       "empty": "No groups.",
       "id": "Group id",
@@ -395,7 +395,7 @@
     },
     "inputs": {
       "title": "Digital inputs",
-      "description": "Up to 10 inputs (lw_configDigitalInputs). The title is the label, it is not part of the series name.",
+      "description": "Up to 10 inputs. The title is the measurement's name in Cumulocity (fragment), the series is the item id.",
       "add": "Add input",
       "empty": "No inputs.",
       "index": "Number",

@@ -393,7 +393,8 @@ fn schema_accepts_derived_fields() {
     assert_eq!(parsed.digital_inputs[1].index, 0);
 }
 
-/// Device-side `lw_configDigitalInputs` entries are strict too (`flatten` would hide typos).
+/// Device-side digital input entries (`lw_demo.digitalInputs`) are strict too (`flatten` would
+/// hide typos).
 #[test]
 fn device_di_entries_reject_unknown_fields() {
     use crate::model::{DigitalInputConfig, DigitalInputEntry};

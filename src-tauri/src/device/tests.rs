@@ -267,12 +267,21 @@ async fn apply_writes_config_and_floorplan_with_child_addition() {
     assert_eq!(res.floorplans_created.len(), 1);
     let fp_id = res.floorplans_created[0].id.clone();
     let m = mo(&fake, &id);
-    assert_eq!(m["lw_configGroups"].as_array().unwrap().len(), 2);
-    assert_eq!(m["lw_configDigitalInputs"][0]["title"], "Zapfsäule 1");
-    let slaves = m["lw_configModbusSlaves"].as_array().unwrap();
-    assert_eq!(slaves[0]["name"], "Kuehlung");
-    assert_eq!(slaves[0]["writeRegisters"][0]["name"], "hood_fan");
+    // D10: groups and inputs live in `lw_demo`, no `lw_config*` fragment is written.
+    assert!(
+        m.as_object()
+            .unwrap()
+            .keys()
+            .all(|k| !k.starts_with("lw_config")),
+        "{m}"
+    );
     let demo = demo_state::read(&m).unwrap().unwrap();
+    assert_eq!(demo.dali_groups.as_ref().unwrap().len(), 2);
+    assert_eq!(
+        demo.digital_inputs.as_ref().unwrap()[0].title,
+        "Zapfsäule 1"
+    );
+    assert_eq!(demo.slaves[0].key, "kuehlung");
     assert_eq!(demo.demo_id.as_deref(), Some("fixture"));
     assert_eq!(demo.library_version.as_deref(), Some("1.0.0"));
     assert_eq!(demo.floorplan_ids, vec![fp_id.clone()]);
@@ -288,7 +297,10 @@ async fn apply_writes_config_and_floorplan_with_child_addition() {
     assert!(fake.state().binaries.contains_key(&bin));
     assert_eq!(fake.state().child_additions[&id], vec![fp_id.clone()]);
     let w = &fp["lw_floorplan"]["widgets"][0];
-    assert_eq!(w["measurement"]["fragment"], "LW_Modbus_Slave_20_240");
+    assert_eq!(
+        w["measurement"],
+        json!({"fragment": "Tiefkühler Temperatur", "series": "freezer_temp"})
+    );
     assert_eq!(res.device.floorplans.len(), 1);
 
     // Re-apply without confirmation: kept, warning.
@@ -354,6 +366,66 @@ async fn apply_writes_config_and_floorplan_with_child_addition() {
     crud::delete(&client, &id).await.unwrap();
     assert!(fake.state().managed_objects.is_empty());
     assert!(fake.state().binaries.is_empty());
+}
+
+/// D10: an apply removes the `lw_config*` fragments an older app version wrote; groups and
+/// inputs are read and written in `lw_demo` (a device without them gets the library demo's).
+#[tokio::test]
+async fn apply_removes_old_config_fragments_and_config_lives_in_lw_demo() {
+    let fake = FakeC8y::start().await;
+    let client = fake.client();
+    let lib = fixture("1.0.0");
+    let id = new_device(&client, &lib, "Alt").await;
+    apply::apply(&client, &lib, &id, &req("fixture", false, false))
+        .await
+        .unwrap();
+    // As an older app version left it: `lw_config*` fragments, no groups / inputs in `lw_demo`.
+    {
+        let mut s = fake.state();
+        let m = s
+            .managed_objects
+            .iter_mut()
+            .find(|m| m["id"] == id.as_str())
+            .unwrap();
+        for f in ["lw_configCore", "lw_configRs485", "lw_configModbusSlaves"] {
+            m[f] = json!({});
+        }
+        m["lw_configGroups"] = json!([{ "id": 9, "name": "Alt", "converters": [1] }]);
+        m["lw_configDigitalInputs"] = json!([{ "id": 1, "title": "Alt", "type": "measurement" }]);
+        let demo = m["lw_demo"].as_object_mut().unwrap();
+        demo.remove("daliGroups");
+        demo.remove("digitalInputs");
+    }
+    // Not read any more: the library demo's groups / inputs apply.
+    let cfg = demo_state::get_config(&client, &lib, &id).await.unwrap();
+    assert_eq!(cfg.groups, lib.demo("fixture").unwrap().dali_groups);
+    assert_eq!(cfg.digital_inputs[0].title, "Zapfsäule 1");
+
+    apply::apply(&client, &lib, &id, &req("fixture", false, false))
+        .await
+        .unwrap();
+    let no_config = |m: &Value| {
+        m.as_object()
+            .unwrap()
+            .keys()
+            .all(|k| !k.starts_with("lw_config"))
+    };
+    assert!(no_config(&mo(&fake, &id)), "{}", mo(&fake, &id));
+
+    // Edits land in `lw_demo` and are read back.
+    let mut groups = cfg.groups.clone();
+    groups[0].name = "Laden".into();
+    demo_state::set_groups(&client, &id, &groups).await.unwrap();
+    let mut inputs = cfg.digital_inputs.clone();
+    inputs[0].title = "Säule A".into();
+    demo_state::set_digital_inputs(&client, &id, &inputs)
+        .await
+        .unwrap();
+    assert_eq!(demo_of(&fake, &id).dali_groups.unwrap()[0].name, "Laden");
+    let cfg = demo_state::get_config(&client, &lib, &id).await.unwrap();
+    assert_eq!(cfg.groups[0].name, "Laden");
+    assert_eq!(cfg.digital_inputs[0].title, "Säule A");
+    assert!(no_config(&mo(&fake, &id)));
 }
 
 fn custom_slave_patch() -> DemoSetupPatch {
@@ -427,7 +499,8 @@ async fn patch_setup_assigns_custom_slaves_without_renumbering() {
         ]
     );
     let m = mo(&fake, &id);
-    assert_eq!(m["lw_configModbusSlaves"].as_array().unwrap().len(), 3);
+    assert_eq!(demo_state::read(&m).unwrap().unwrap().slaves.len(), 3);
+    assert!(m.get("lw_configModbusSlaves").is_none());
     // A colliding custom id is rejected.
     let mut bad = custom_slave_patch();
     if let Some(items) = &mut bad.custom_items
@@ -502,13 +575,13 @@ async fn export_round_trips_through_apply() {
         .await
         .unwrap();
     let (ma, mb) = (mo(&fake, &a), mo(&fake, &b));
-    for frag in [
-        "lw_configModbusSlaves",
-        "lw_configGroups",
-        "lw_configDigitalInputs",
-    ] {
-        assert_eq!(ma[frag], mb[frag], "{frag}");
-    }
+    let (da, db) = (
+        demo_state::read(&ma).unwrap().unwrap(),
+        demo_state::read(&mb).unwrap().unwrap(),
+    );
+    assert_eq!(da.slaves, db.slaves);
+    assert_eq!(da.dali_groups, db.dali_groups);
+    assert_eq!(da.digital_inputs, db.digital_inputs);
     let fp = |dev: &str| {
         let id = fake.state().child_additions[dev][0].clone();
         let mut f = mo(&fake, &id)["lw_floorplan"].clone();
@@ -700,7 +773,9 @@ async fn every_writer_refuses_a_real_device() {
         "set_digital_inputs",
     );
     invalid(
-        demo_state::get_config(&client, &real).await.map(|_| ()),
+        demo_state::get_config(&client, &lib, &real)
+            .await
+            .map(|_| ()),
         "get_config",
     );
     invalid(
@@ -1048,7 +1123,7 @@ async fn upgrade_merges_demo_level_fields_per_field() {
         "local override kept"
     );
     for d in [&a, &b] {
-        assert_eq!(mo(&fake, d)["lw_configGroups"][0]["name"], "Laden");
+        assert_eq!(demo_of(&fake, d).dali_groups.unwrap()[0].name, "Laden");
         assert_eq!(demo_of(&fake, d).library_version.as_deref(), Some("1.1.0"));
     }
     // The next upgrade still sees B's override.
@@ -1107,13 +1182,7 @@ async fn released_export_does_not_break_the_source_device() {
         "the item stays selected"
     );
     assert_eq!(st.slaves.iter().find(|s| s.key == "extra").unwrap().id, 18);
-    assert_eq!(
-        mo(&fake, &id)["lw_configModbusSlaves"]
-            .as_array()
-            .unwrap()
-            .len(),
-        3
-    );
+    assert_eq!(demo_of(&fake, &id).slaves.len(), 3);
     // A NEW custom item that collides with the library is still an error.
     let mut bad = custom_slave_patch();
     if let Some(items) = &mut bad.custom_items
@@ -1169,13 +1238,7 @@ async fn deselected_slaves_keep_their_numbers() {
         .unwrap();
     assert_eq!((retired.id, retired.address), (19, 239));
     assert_eq!(retired.registers, klima.registers);
-    assert_eq!(
-        mo(&fake, &id)["lw_configModbusSlaves"]
-            .as_array()
-            .unwrap()
-            .len(),
-        1
-    );
+    assert_eq!(demo_of(&fake, &id).slaves.len(), 1);
 
     // A new slave must not take the retired numbers.
     let with_extra = demo_state::patch_setup(&client, &lib, &id, &custom_slave_patch())
@@ -1352,14 +1415,19 @@ async fn counter_is_seeded_from_the_newest_stored_value() {
             ("2026-10-12T11:00:00.000Z", 1300),
         ] {
             s.measurements.push(json!({
-                "source": { "id": id }, "type": "digitalInput", "time": t,
-                "LW Digital Input": { "ImpulseCounter03": { "value": v } }
+                "source": { "id": id }, "type": "impulseCounter", "time": t,
+                "Gaszähler": { "gas-meter": { "value": v } }
             }));
         }
-        // A different series of the same fragment must not be picked up.
+        // A different series of the same fragment must not be picked up, nor the old
+        // firmware naming (D10).
+        s.measurements.push(json!({
+            "source": { "id": id }, "type": "impulseCounter", "time": "2026-10-12T13:00:00.000Z",
+            "Gaszähler": { "other": { "value": 9999 } }
+        }));
         s.measurements.push(json!({
             "source": { "id": id }, "type": "digitalInput", "time": "2026-10-12T13:00:00.000Z",
-            "LW Digital Input": { "Value01": { "value": 9999 } }
+            "LW Digital Input": { "ImpulseCounter03": { "value": 8888 } }
         }));
     }
     let prepared = crate::sim::session::prepare(
@@ -1380,7 +1448,7 @@ async fn counter_is_seeded_from_the_newest_stored_value() {
             .iter()
             .any(|r| r.path == "/measurement/measurements"
                 && r.query.contains("revert=true")
-                && r.query.contains("valueFragmentSeries=ImpulseCounter03"))
+                && r.query.contains("valueFragmentSeries=gas-meter"))
     );
     // prepare takes the lock last; a failed prepare (unknown demo item) leaves none behind.
     assert_eq!(mo(&fake, &id)["lw_demoLock"]["user"], "demo");

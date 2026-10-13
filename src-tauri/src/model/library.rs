@@ -27,22 +27,23 @@ pub enum Severity {
     Warning,
 }
 
-/// What an item simulates; decides the native naming (PRD §7, §11.3).
+/// What an item simulates; decides the measurement type and units (PRD §7, §11.3). Every
+/// measurement is named `<German title>.<item id>` (D10).
 /// Discriminator of [`LibraryItem`] (use [`LibraryItem::kind`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemKind {
-    /// DALI lamp (`LW Dali Control Gear 1-NN`), uses `index` 1–64.
+    /// DALI lamp, uses `index` 1–64.
     Dali,
-    /// DALI brightness sensor (`LW Dali Brightness.Lux<N>`, unit `Lux`), uses `index` 1–10.
+    /// DALI brightness sensor (unit `Lux`), uses `index` 1–10.
     DaliBrightness,
-    /// DALI motion sensor (`LW Motion.State<N>`, no unit), uses `index` 1–10.
+    /// DALI motion sensor (no unit), uses `index` 1–10.
     DaliMotion,
-    /// Digital input value (`LW Digital Input.Value<NN>`, D1), uses `index` 1–10.
+    /// Digital input value (0 / 1), uses `index` 1–10.
     DigitalInput,
-    /// Digital input impulse counter (`LW Digital Input.ImpulseCounter<NN>`, D1), uses `index` 1–10.
+    /// Digital input impulse counter, uses `index` 1–10.
     ImpulseCounter,
-    /// System measurement (`c8y_SignalStrength.rssi` / `c8y_TemperatureMeasurement.T`).
+    /// System measurement (type `c8y_SignalStrength` / `c8y_TemperatureMeasurement`).
     System,
     /// Modbus register on a slave; uses `slave`.
     Modbus,
@@ -54,13 +55,13 @@ pub enum ItemKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum SystemKind {
-    /// `c8y_SignalStrength.rssi`, unit `dBm`.
+    /// Signal strength, unit `dBm`.
     Rssi,
-    /// `c8y_TemperatureMeasurement.T`, unit `C`.
+    /// Device temperature, unit `C`.
     Temperature,
 }
 
-/// Modbus register type (`lw_configModbusSlaves[].registers[].type`).
+/// Modbus register type (firmware register types).
 /// `discrete` exists in the firmware but is not simulated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -210,7 +211,7 @@ pub enum ItemEffect {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
 #[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
 pub enum LibraryItem {
-    /// DALI lamp `LW Dali Control Gear 1-NN`; the item value is its `Brightness`.
+    /// DALI lamp; the item value is its brightness (series = item id, D10).
     Dali {
         /// Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars.
         id: String,
@@ -229,7 +230,7 @@ pub enum LibraryItem {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         effects: Vec<ItemEffect>,
     },
-    /// DALI brightness sensor `LW Dali Brightness.Lux<N>` (unit `Lux`).
+    /// DALI brightness sensor (unit `Lux`).
     DaliBrightness {
         /// Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars.
         id: String,
@@ -248,7 +249,7 @@ pub enum LibraryItem {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         effects: Vec<ItemEffect>,
     },
-    /// DALI motion sensor `LW Motion.State<N>` (no unit).
+    /// DALI motion sensor (no unit).
     DaliMotion {
         /// Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars.
         id: String,
@@ -267,13 +268,13 @@ pub enum LibraryItem {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         effects: Vec<ItemEffect>,
     },
-    /// Digital input value `LW Digital Input.Value<NN>` (D1).
+    /// Digital input value (0 / 1).
     DigitalInput {
         /// Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars.
         id: String,
         /// Sensor / input number: DI 1–10, brightness / motion sensor 1–10.
         index: u32,
-        /// For digital inputs the German title is written to `lw_configDigitalInputs[].title` (D1).
+        /// For digital inputs the German title becomes the device's input title (D1).
         title: LocalizedText,
         #[serde(default)]
         tags: Vec<String>,
@@ -286,13 +287,13 @@ pub enum LibraryItem {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         effects: Vec<ItemEffect>,
     },
-    /// Digital input impulse counter `LW Digital Input.ImpulseCounter<NN>` (D1); `unit` is the counter unit (≤ 19 bytes).
+    /// Digital input impulse counter; `unit` is the counter unit (≤ 19 bytes).
     ImpulseCounter {
         /// Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars.
         id: String,
         /// Sensor / input number: DI 1–10, brightness / motion sensor 1–10.
         index: u32,
-        /// For digital inputs the German title is written to `lw_configDigitalInputs[].title` (D1).
+        /// For digital inputs the German title becomes the device's input title (D1).
         title: LocalizedText,
         #[serde(default)]
         tags: Vec<String>,
@@ -520,7 +521,7 @@ pub struct SlaveDefinition {
     pub key: String,
     /// ≤ 19 UTF-8 bytes (firmware buffer).
     pub name: String,
-    /// Request interval in seconds (written to `lw_configModbusSlaves`).
+    /// Request interval in seconds.
     pub request_interval: u32,
     /// Custom alarms of this slave (D2).
     #[serde(default)]
@@ -539,8 +540,9 @@ pub struct ItemLibraryFile {
     pub items: Vec<LibraryItem>,
 }
 
-/// DALI group (→ `lw_configGroups`, firmware-core-v2.md §5.3). Used in demo packs and
-/// as the device-side group entry edited by `set_dali_groups`.
+/// DALI group (fields as in the firmware's group config, firmware-core-v2.md §5.3). Used in
+/// demo packs and as the device-side group entry (`lw_demo.daliGroups`, D10) edited by
+/// `set_dali_groups`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DaliGroup {
@@ -565,19 +567,19 @@ pub struct DaliGroup {
     pub automatic_switch: bool,
 }
 
-/// Digital input mode (`lw_configDigitalInputs[].type`; `none` is rejected by the firmware).
+/// Digital input mode (as in the firmware's input config; `none` is not offered).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum DigitalInputType {
-    /// Switches DALI groups (`highLevelAction` / `lowLevelAction` / `groups`); sends `Value<NN>`.
+    /// Switches DALI groups (`highLevelAction` / `lowLevelAction` / `groups`); sends its value.
     DaliAction,
-    /// Counts pulses; sends `ImpulseCounter<NN>` (`initCount`, `increment`, `unit`).
+    /// Counts pulses (`initCount`, `increment`, `unit`); type `impulseCounter`.
     ImpulseCounter,
-    /// Plain input; sends `Value<NN>`.
+    /// Plain input; sends its value.
     Measurement,
 }
 
-/// Settings of one digital input that map 1:1 to `lw_configDigitalInputs[]`
+/// Settings of one digital input, as in the firmware's input config
 /// (firmware-core-v2.md §5.4). Which fields apply depends on `type`:
 /// `daliAction` → `highLevelAction`, `lowLevelAction`, `groups`;
 /// `impulseCounter` → `initCount`, `increment`, `unit`; `measurement` → none.
@@ -615,8 +617,8 @@ fn default_true() -> bool {
 }
 
 /// Digital input in a demo pack. The title is **not** stored here: the entry references
-/// the `digitalInput` / `impulseCounter` item, whose German title is written to
-/// `lw_configDigitalInputs[].title` (D1, single source of truth).
+/// the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
+/// title (D1, single source of truth).
 ///
 /// Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
 /// would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -632,8 +634,8 @@ pub struct DigitalInputConfig {
     pub settings: DigitalInputSettings,
 }
 
-/// Digital input as stored on the device (`lw_configDigitalInputs[]`, incl. the extra
-/// `title` field of D1). Read / edited via `get_device_config` / `set_digital_inputs`.
+/// Digital input as stored on the device (`lw_demo.digitalInputs[]`, D10, incl. the `title` of
+/// D1). Read / edited via `get_device_config` / `set_digital_inputs`.
 ///
 /// Deserialization is hand-written (see [`DigitalInputConfig`]): unknown fields are errors.
 #[derive(Debug, Clone, PartialEq, Serialize, Type)]
@@ -641,7 +643,7 @@ pub struct DigitalInputConfig {
 pub struct DigitalInputEntry {
     /// 1–10 (the firmware `id`).
     pub index: u32,
-    /// Display title (D1); the floorplan widget label falls back to the input number if empty.
+    /// Display title (D1) and fragment of the input's measurement (D10); empty = the item title.
     pub title: String,
     #[serde(flatten)]
     pub settings: DigitalInputSettings,
@@ -965,7 +967,7 @@ pub enum FloorplanWidget {
         #[serde(default)]
         locked: bool,
         icon: String,
-        /// Default: the item's German title (DI: the `lw_configDigitalInputs` title).
+        /// Default: the item's German title (DI: the device's input title).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         title: Option<String>,
         measurement: WidgetMeasurement,

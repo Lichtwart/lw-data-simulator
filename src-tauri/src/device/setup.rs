@@ -1,5 +1,5 @@
 //! Resolving a device setup (`lw_demo` + library) into items and slaves, slave / register
-//! assignment, lenient parsing of the device's `lw_config*` fragments, digests and versions.
+//! assignment, the device's DALI groups / digital inputs (`lw_demo`, D10), digests and versions.
 //!
 //! Shared by apply, upgrade, export, `update_demo_setup`, the fault catalog and the session, so
 //! every place resolves a device exactly the same way (DECISIONS D6).
@@ -11,10 +11,10 @@ use serde_json::Value;
 use crate::error::{AppError, AppResult};
 use crate::library::{Library, select};
 use crate::model::{
-    DaliGroup, DemoPack, DeviceConfig, DigitalInputEntry, DigitalInputSettings, DigitalInputType,
-    LibraryItem, LwDemoState, ModbusRegisterType, SlaveAssignment, SlaveDefinition,
+    DaliGroup, DemoPack, DeviceConfig, DigitalInputEntry, LibraryItem, LwDemoState,
+    ModbusRegisterType, SlaveAssignment, SlaveDefinition,
 };
-use crate::payload::config::{digital_input_entry, digital_inputs_fragment, groups_fragment};
+use crate::payload::config::digital_input_entry;
 use crate::payload::naming::{assign_registers, assign_slaves};
 
 /// Items and slaves of a device setup (owned, so a session can keep them).
@@ -258,26 +258,29 @@ pub const DEMO_FIELDS: &[&str] = &[
     "sendIntervalSec",
 ];
 
-/// Digests of the demo pack's values as they are written to the device (groups and inputs go
-/// through the `lw_config*` fragment and back, so they compare with what the device returns).
+/// The demo pack's digital inputs as the device stores them (`lw_demo.digitalInputs`, with the
+/// item's German title).
+pub fn demo_inputs(demo: &DemoPack, items: &[&LibraryItem]) -> AppResult<Vec<DigitalInputEntry>> {
+    demo.digital_inputs
+        .iter()
+        .map(|c| digital_input_entry(c, items))
+        .collect()
+}
+
+/// Digests of the demo pack's values as they are written to the device.
 pub fn demo_digests(
     demo: &DemoPack,
     items: &[&LibraryItem],
 ) -> AppResult<BTreeMap<String, String>> {
-    let inputs = demo
-        .digital_inputs
-        .iter()
-        .map(|c| digital_input_entry(c, items))
-        .collect::<AppResult<Vec<_>>>()?;
-    let groups = parse_groups(Some(&groups_fragment(&demo.dali_groups)));
-    let inputs = parse_digital_inputs(Some(&digital_inputs_fragment(&inputs)));
+    let inputs = demo_inputs(demo, items)?;
+    let groups = &demo.dali_groups;
     Ok(device_digests(
         &demo.tags,
         &demo.includes,
         &demo.excludes,
         demo.dali_lamp_count,
         demo.send_interval_sec,
-        &groups,
+        groups,
         &inputs,
     ))
 }
@@ -309,8 +312,8 @@ fn device_digests(
         ("includes", digest(&includes)),
         ("excludes", digest(&excludes)),
         ("daliLampCount", digest(&lamps)),
-        ("daliGroups", digest(&groups)),
-        ("digitalInputs", digest(&inputs)),
+        ("daliGroups", digest(&canonical_groups(groups))),
+        ("digitalInputs", digest(&canonical_inputs(inputs))),
         ("sendIntervalSec", digest(&interval)),
     ]
     .into_iter()
@@ -318,86 +321,95 @@ fn device_digests(
     .collect()
 }
 
-// ───────────────────────────── device fragments ─────────────────────────────
+/// Firmware default `luxThreshold` of a group.
+const DEFAULT_LUX_THRESHOLD: u32 = 4500;
 
-fn u32_of(v: &Value) -> Option<u32> {
-    v.as_u64()
-        .or_else(|| v.as_f64().filter(|f| *f >= 0.0).map(|f| f as u64))
-        .and_then(|n| u32::try_from(n).ok())
-}
-
-/// `lw_configGroups` → [`DaliGroup`]s. Lenient: firmware-only fields (`stdLevel`, `dayState`,
-/// `channel`, `scheduler`) are ignored, malformed entries skipped.
-pub fn parse_groups(v: Option<&Value>) -> Vec<DaliGroup> {
-    let Some(Value::Array(list)) = v else {
-        return Vec::new();
-    };
-    list.iter()
-        .filter_map(|g| {
-            let id = u32_of(g.get("id")?)?;
-            Some(DaliGroup {
-                id,
-                name: g
-                    .get("name")
-                    .and_then(Value::as_str)
-                    .map_or_else(|| format!("Group {id}"), str::to_owned),
-                converters: g
-                    .get("converters")
-                    .and_then(Value::as_array)
-                    .map(|a| a.iter().filter_map(u32_of).collect())
-                    .unwrap_or_default(),
-                min_level: g.get("minLevel").and_then(u32_of).unwrap_or(0),
-                max_level: g.get("maxLevel").and_then(u32_of).unwrap_or(100),
-                lux_threshold: g.get("luxThreshold").and_then(u32_of),
-                slave_of: g.get("slaveOf").and_then(u32_of),
-                dynamic_control: g
-                    .get("dynamicControl")
-                    .and_then(Value::as_bool)
-                    .unwrap_or(false),
-                automatic_switch: g
-                    .get("automaticSwitch")
-                    .and_then(Value::as_bool)
-                    .unwrap_or(false),
-            })
+/// Groups as digests compare them: the firmware default lux threshold filled in. Older app
+/// versions stored groups in `lw_configGroups` and digested them as they came back from there;
+/// the same form keeps their `appliedDemo` digests valid (D10).
+fn canonical_groups(groups: &[DaliGroup]) -> Vec<DaliGroup> {
+    groups
+        .iter()
+        .map(|g| DaliGroup {
+            lux_threshold: Some(g.lux_threshold.unwrap_or(DEFAULT_LUX_THRESHOLD)),
+            ..g.clone()
         })
         .collect()
 }
 
-/// `lw_configDigitalInputs` → [`DigitalInputEntry`]s (`id` → `index`, D1 `title`). Lenient.
-pub fn parse_digital_inputs(v: Option<&Value>) -> Vec<DigitalInputEntry> {
-    let Some(Value::Array(list)) = v else {
-        return Vec::new();
-    };
-    list.iter()
-        .filter_map(|e| {
-            let index = u32_of(e.get("id")?)?;
-            let input_type = match e.get("type").and_then(Value::as_str)? {
-                "daliAction" => DigitalInputType::DaliAction,
-                "impulseCounter" => DigitalInputType::ImpulseCounter,
-                "measurement" => DigitalInputType::Measurement,
-                _ => return None,
+/// Digital inputs as digests compare them: only the fields of the input's type, counter
+/// defaults filled in, the unit cut to the firmware's 19 bytes (the form older app versions read
+/// back from `lw_configDigitalInputs`, see [`canonical_groups`]).
+fn canonical_inputs(inputs: &[DigitalInputEntry]) -> Vec<DigitalInputEntry> {
+    use crate::model::DigitalInputType;
+    use crate::payload::config::{DI_UNIT_MAX_LEN, truncate_bytes};
+    inputs
+        .iter()
+        .map(|e| {
+            let s = &e.settings;
+            let mut c = e.clone();
+            let (counter, action) = match s.input_type {
+                DigitalInputType::ImpulseCounter => (true, false),
+                DigitalInputType::DaliAction => (false, true),
+                DigitalInputType::Measurement => (false, false),
             };
-            let s = |k: &str| e.get(k).and_then(Value::as_str).map(str::to_owned);
-            Some(DigitalInputEntry {
-                index,
-                title: s("title").unwrap_or_default(),
-                settings: DigitalInputSettings {
-                    input_type,
-                    is_active: e.get("isActive").and_then(Value::as_bool).unwrap_or(true),
-                    init_count: e.get("initCount").and_then(u32_of),
-                    increment: e.get("increment").and_then(u32_of),
-                    unit: s("unit"),
-                    high_level_action: s("highLevelAction"),
-                    low_level_action: s("lowLevelAction"),
-                    groups: e
-                        .get("groups")
-                        .and_then(Value::as_array)
-                        .map(|a| a.iter().filter_map(u32_of).collect())
-                        .unwrap_or_default(),
-                },
-            })
+            c.settings.init_count = counter.then(|| s.init_count.unwrap_or(0));
+            c.settings.increment = counter.then(|| s.increment.unwrap_or(1));
+            c.settings.unit = s
+                .unit
+                .as_deref()
+                .filter(|_| counter)
+                .map(|u| truncate_bytes(u, DI_UNIT_MAX_LEN).to_owned());
+            if !action {
+                c.settings.high_level_action = None;
+                c.settings.low_level_action = None;
+                c.settings.groups = Vec::new();
+            }
+            c
         })
         .collect()
+}
+
+// ───────────────────────────── groups and digital inputs (D10) ─────────────────────────────
+
+/// DALI groups and digital inputs of a device: `lw_demo.daliGroups` / `lw_demo.digitalInputs`.
+/// A device set up by an older app version (which kept them in `lw_config*`, no longer read,
+/// D10) has neither: the library demo's groups / inputs are used then (none without a demo).
+pub fn device_config(library: &Library, state: &LwDemoState) -> DeviceConfig {
+    let demo = state.demo_id.as_deref().and_then(|d| library.demo(d));
+    let groups = match &state.dali_groups {
+        Some(g) => g.clone(),
+        None => demo.map(|d| d.dali_groups.clone()).unwrap_or_default(),
+    };
+    let digital_inputs = match (&state.digital_inputs, demo) {
+        (Some(i), _) => i.clone(),
+        (None, Some(d)) => {
+            let items = select_items(library, state);
+            let refs: Vec<&LibraryItem> = items.iter().collect();
+            d.digital_inputs
+                .iter()
+                .filter_map(|c| digital_input_entry(c, &refs).ok())
+                .collect()
+        }
+        (None, None) => Vec::new(),
+    };
+    DeviceConfig {
+        groups,
+        digital_inputs,
+    }
+}
+
+/// Every `lw_config*` fragment of a managed object, set to `null`: the patch that removes them
+/// (D10: the simulator no longer writes or reads them; older app versions did).
+pub fn stale_config_fragments(mo: &Value) -> serde_json::Map<String, Value> {
+    mo.as_object()
+        .map(|o| {
+            o.keys()
+                .filter(|k| k.starts_with("lw_config"))
+                .map(|k| (k.clone(), Value::Null))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 // ───────────────────────────── digests / versions ─────────────────────────────
@@ -471,28 +483,105 @@ mod tests {
     }
 
     #[test]
-    fn groups_parse_leniently() {
-        let v = json!([
-            { "id": 1, "name": "Shop", "minLevel": 0, "maxLevel": 100, "stdLevel": 100,
-              "dayState": false, "channel": 1, "scheduler": [], "converters": [1, 2],
-              "slaveOf": null, "luxThreshold": 4500 },
-            { "name": "no id" }
-        ]);
-        let g = parse_groups(Some(&v));
-        assert_eq!(g.len(), 1);
-        assert_eq!(g[0].converters, vec![1, 2]);
-        assert_eq!(g[0].slave_of, None);
-        assert_eq!(g[0].lux_threshold, Some(4500));
+    fn stale_config_fragments_are_nulled() {
+        let mo = json!({ "name": "d", "lw_demo": {}, "lw_configCore": {}, "lw_configGroups": [],
+                         "lw_configAlarmBlacklist": [], "c8y_IsDevice": {} });
+        let p = stale_config_fragments(&mo);
+        let keys: Vec<&str> = p.keys().map(String::as_str).collect();
+        assert_eq!(
+            keys,
+            vec![
+                "lw_configAlarmBlacklist",
+                "lw_configCore",
+                "lw_configGroups"
+            ]
+        );
+        assert!(p.values().all(Value::is_null));
+        assert!(stale_config_fragments(&json!({ "name": "d" })).is_empty());
     }
 
+    /// Groups / inputs come from `lw_demo`; a device without them gets the library demo's.
     #[test]
-    fn digital_inputs_parse_id_as_index() {
-        let v = json!([{ "id": 3, "isActive": true, "title": "Gas", "type": "impulseCounter",
-                         "initCount": 1000, "increment": 10, "unit": "m3" }]);
-        let d = parse_digital_inputs(Some(&v));
-        assert_eq!(d[0].index, 3);
-        assert_eq!(d[0].title, "Gas");
-        assert_eq!(d[0].settings.init_count, Some(1000));
+    fn device_config_falls_back_to_the_library_demo() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/library");
+        let lib = crate::library::loader::load(&root, "0.0.0").unwrap();
+        let demo = &lib.demos[0];
+        let mut st = crate::device::demo_state::empty_state();
+        st.demo_id = Some(demo.id.clone());
+        st.tags.clone_from(&demo.tags);
+        st.includes.clone_from(&demo.includes);
+        st.excludes.clone_from(&demo.excludes);
+        let c = device_config(&lib, &st);
+        assert_eq!(c.groups, demo.dali_groups);
+        assert_eq!(c.digital_inputs.len(), demo.digital_inputs.len());
+        assert_eq!(c.digital_inputs[0].title, "Zapfsäule 1");
+        st.dali_groups = Some(Vec::new());
+        st.digital_inputs = Some(Vec::new());
+        let c = device_config(&lib, &st);
+        assert!(c.groups.is_empty() && c.digital_inputs.is_empty());
+        let raw = device_config(&lib, &crate::device::demo_state::empty_state());
+        assert!(raw.groups.is_empty() && raw.digital_inputs.is_empty());
+    }
+
+    /// Devices applied by an older app version carry `appliedDemo` digests of groups / inputs as
+    /// they came back from `lw_config*` (defaults filled in): the same values still match (D10).
+    #[test]
+    fn group_and_input_digests_match_the_old_round_trip_form() {
+        use crate::model::{DigitalInputSettings, DigitalInputType};
+        let group = |lux| DaliGroup {
+            id: 1,
+            name: "Shop".into(),
+            converters: vec![1, 2],
+            min_level: 0,
+            max_level: 100,
+            lux_threshold: lux,
+            slave_of: None,
+            dynamic_control: false,
+            automatic_switch: false,
+        };
+        let input = |t, init, inc, unit: Option<&str>| DigitalInputEntry {
+            index: 3,
+            title: "Gas".into(),
+            settings: DigitalInputSettings {
+                input_type: t,
+                is_active: true,
+                init_count: init,
+                increment: inc,
+                unit: unit.map(str::to_owned),
+                high_level_action: None,
+                low_level_action: None,
+                groups: vec![],
+            },
+        };
+        let d = |g: Vec<DaliGroup>, i: Vec<DigitalInputEntry>| {
+            device_digests(&[], &[], &[], 4, 30, &g, &i)
+        };
+        let library_form = d(
+            vec![group(None)],
+            vec![input(
+                DigitalInputType::ImpulseCounter,
+                None,
+                None,
+                Some("m3"),
+            )],
+        );
+        let old_round_trip = d(
+            vec![group(Some(4500))],
+            vec![input(
+                DigitalInputType::ImpulseCounter,
+                Some(0),
+                Some(1),
+                Some("m3"),
+            )],
+        );
+        assert_eq!(library_form, old_round_trip);
+        // A real change still shows.
+        let changed = d(
+            vec![group(Some(100))],
+            vec![input(DigitalInputType::Measurement, None, None, None)],
+        );
+        assert_ne!(changed["daliGroups"], library_form["daliGroups"]);
+        assert_ne!(changed["digitalInputs"], library_form["digitalInputs"]);
     }
 
     #[test]

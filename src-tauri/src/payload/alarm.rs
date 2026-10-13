@@ -57,7 +57,7 @@ const LAMP_CONTROL_GEAR_FAILURE: usize = 0;
 const LAMP_LOST: usize = 11;
 
 /// Per-lamp DALI alarms (firmware §2), all MAJOR. Same set the floorplan plugin suggests for a
-/// `LW Dali Control Gear 1-NN` widget.
+/// DALI lamp widget (firmware naming `LW Dali Control Gear 1-NN`).
 const LAMP_ALARMS: [NumberedAlarm; 14] = [
     numbered(
         "lw_controlGearFailure_1_",

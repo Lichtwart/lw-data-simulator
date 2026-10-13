@@ -587,10 +587,17 @@ fn ordered(mut items: Vec<Value>, q: &HashMap<String, String>, key: &str) -> Vec
 }
 
 /// Shallow merge (PUT on managed objects / alarms / operations).
+/// Top-level fragments of `patch` replace the ones of `target`; a `null` fragment removes it
+/// (as the inventory API does).
 fn merge(target: &mut Value, patch: &Value) {
     if let (Some(t), Some(p)) = (target.as_object_mut(), patch.as_object()) {
         for (k, v) in p {
-            if k != "id" {
+            if k == "id" {
+                continue;
+            }
+            if v.is_null() {
+                t.remove(k);
+            } else {
                 t.insert(k.clone(), v.clone());
             }
         }

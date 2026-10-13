@@ -80,23 +80,16 @@ Demo devices are separate managed objects — the app never simulates on real de
     "lw_fetchTemperatures", "lw_fetchRs485", "lw_switchGroupMode", "lw_switchConverterState",
     "lw_daliReset", "lw_modbusWrite", "lw_daliVendorScan", "lw_daliScan"
   ],
-  "lw_configCore": {
-    "maxControlGears": 55, "measurementIntervalMinutes": 10, "digitalInputsMsgPerMinute": 10,
-    "errorManagerSetThresholdCounts": 3, "errorManagerClearThresholdCounts": 2,
-    "cloudWatchdogRestartTimeoutMinutes": 120, "isDaliScanActive": false,
-    "isDaliScanForNewDevicesActive": true, "daliSchedulerIntervalSeconds": 60,
-    "daliSchedulerDelayMilliseconds": 500, "daliSchedulerErrorIntervalSeconds": 60,
-    "timeZone": "Europe/Berlin", "ntpServer": ""
-  },
-  "lw_configRs485": { "isActive": true, "baudrate": 9600, "parity": "none", "stopBit": 1, "dataBits": 8 },
-  "lw_configGroups": [],
-  "lw_configDigitalInputs": [],
-  "lw_configModbusSlaves": [],
   "lw_demo": {}
 }
 ```
 
-- `maxControlGears` is `max(55, daliLampCount)`, so a device with more than 55 lamps stays valid (changed 2026-10-12, see DECISIONS.md D5); the 55 above is the default.
+- **No `lw_config*` fragments** (changed 2026-10-13, see DECISIONS.md D10): the simulator neither writes nor
+  reads `lw_configCore`, `lw_configRs485`, `lw_configGroups`, `lw_configDigitalInputs` or
+  `lw_configModbusSlaves`. DALI groups, digital inputs, slaves and the time zone live in `lw_demo` (§6.3) and the
+  library. Applying a demo (or an upgrade) removes the `lw_config*` fragments older app versions wrote. The
+  floorplan plugin's DALI group and Modbus write controls read those fragments and do not work on demo devices
+  until the plugin is adapted.
 - **`com_cumulocity_model_Agent`**: the device is its own agent. Cumulocity addresses every
   operation to an agent and rejects operations for a device without one (`422 Agent for device
   '<id>' does not exist in inventory!`). Devices created before this fragment existed are
@@ -104,7 +97,6 @@ Demo devices are separate managed objects — the app never simulates on real de
   fragment and any missing `c8y_SupportedOperations` entry, only when something is missing
   (changed 2026-10-12).
 - **No `c8y_RequiredAvailability`**, so the device never turns "unavailable".
-- `lw_configCore` is always written as the **full 13-field object** (changed 2026-10-12, see DECISIONS.md): the firmware fails `lw_fetchCore` if any field except `timeZone`/`ntpServer` is missing, so a partial object is not valid.
 - The firmware version stays `"V 03.00.02"` (changed 2026-10-12, see DECISIONS.md): the real firmware sends the leading `V `; it must remain parseable as `[V ]NN.NN.NN`.
 - `c8y_Hardware.model` makes the floorplan tab appear; firmware ≥ 01.06.00 enables Modbus
   controls in the floorplan plugin.
@@ -139,6 +131,9 @@ All setup lives on the device, so any laptop restores it.
                "registers": [{ "itemId": "freezer_temp", "registerType": "input", "address": 30001 }] }],
   "customSlaves": [],
   "customItems": [],
+  "daliGroups": [{ "id": 1, "name": "Shop", "converters": [1, 2], "minLevel": 0, "maxLevel": 100 }],
+  "digitalInputs": [{ "index": 1, "title": "Zapfsäule 1", "type": "measurement", "isActive": true }],
+  "timeZone": "Europe/Berlin",
   "generators": { "freezer_temp": { "kind": "randomWalk", "center": -18, "spread": 1.5 } },
   "sendIntervalSec": 30,
   "realisticMode": false,
@@ -150,35 +145,45 @@ All setup lives on the device, so any laptop restores it.
 
 - The snapshot and the lock are **own top-level fragments** next to `lw_demo`, not fields inside it (changed 2026-10-12, see DECISIONS.md D7): Cumulocity replaces a fragment as a whole, so a lock refresh must not rewrite the setup.
 - `slaves[].registers` persist the assigned register addresses, `customSlaves` / `customItems` hold slaves and items created in the demo editor on this device (changed 2026-10-12, see DECISIONS.md D6).
+- `daliGroups` / `digitalInputs` hold the device's DALI groups and digital inputs (incl. titles), `timeZone` the
+  time zone of `dailyProfile` (default `Europe/Berlin`) (changed 2026-10-13, see DECISIONS.md D10). A device set up
+  by an older app version has no `daliGroups` / `digitalInputs` yet: the library demo's values apply until the next
+  apply or edit.
 - Setup is written when it changes. Live values are written only on **"Save snapshot"**.
 - The lock is advisory only. It shows "in use by X since …" and is ignored after 10 min. There is no hard
   locking.
 
-## 7. Native Core v2 simulation
+## 7. Core v2 simulation
 
-Every demo device simulates the standard Core v2 set exactly as the firmware sends it
-(`../firmware-core-v2`).
+Every demo device simulates the standard Core v2 set: values, units, alarms, events and operations as the
+firmware sends them (`../firmware-core-v2`). **Measurement names** are not the firmware's (changed 2026-10-13, see
+DECISIONS.md D10): every measurement is named from the app's own config, **fragment = the item's German title,
+series = the item id**, so the floorplan plugin's measurement picker shows e.g. `Attika 1.light-5` or
+`Zapfsäule 1.di-3`. A title is made safe for a fragment key: `.` and `$` become `_`, leading / trailing spaces are
+trimmed; umlauts and inner spaces stay. Ids are unique, so two items never share a series. Units and value
+ranges stay as the firmware sends them.
 
 ### 7.1 System
 
-- `c8y_SignalStrength.rssi` (dBm)
-- `c8y_TemperatureMeasurement.T` (unit `"C"` in the payload (changed 2026-10-12, see DECISIONS.md))
+- Signal strength: type `c8y_SignalStrength`, `<title>.<id>` (dBm)
+- Device temperature: type `c8y_TemperatureMeasurement`, `<title>.<id>` (unit `"C"` in the payload (changed 2026-10-12, see DECISIONS.md))
 
 ### 7.2 DALI (1 bus, up to 64 lamps)
 
-- **Measurement** type `daliControlGear`, fragment `LW Dali Control Gear 1-NN` (NN = 01–64). Series:
+- **Measurement** type `daliControlGear`, fragment = the lamp item's title. Series (changed 2026-10-13, see
+  DECISIONS.md D10):
 
   | Series | Unit |
   |---|---|
-  | `Brightness` | `%` |
-  | `Lamp Status` | — |
-  | `Converter Status` | — |
-  | `Converter Runtime` | `hr` |
+  | `<id>` (brightness, e.g. `light-5`) | `%` |
+  | `<id> Lamp Status` | — |
+  | `<id> Converter Status` | — |
+  | `<id> Converter Runtime` | `hr` |
 
-  At most 6 lamps per message.
+  A grouped lamp without an item is sent as `DALI Leuchte NN.lamp-NN`. At most 6 lamps per message.
 - **Lamps per demo**: the pack sets `daliLampCount` (1–64). Tags decide which lamps are visible in the
   control panel.
-- **Groups**: 16 groups in `lw_configGroups`, taken from the pack.
+- **Groups**: 16 groups in `lw_demo.daliGroups`, taken from the pack (changed 2026-10-13, see DECISIONS.md D10).
 - **`lw_switchGroupMode` on/off/auto**:
   1. Sets the group's lamps to their max level, to 0, or to the generator value.
   2. Sends event `lw_daliGroupChange` with `groupModeChange {id, previousMode, newMode, reason: "cloud-operation"}`.
@@ -191,18 +196,18 @@ Every demo device simulates the standard Core v2 set exactly as the firmware sen
   - bus-level alarms `lw_daliBusPower*`: like the firmware, every grouped lamp is lost too (`lw_converter_1_NN_lost` + `lw_controlGearFailure_1_NN`, no measurements) and every brightness / motion sensor (`_lost`); bus recovery clears them (DECISIONS D8)
 
   Text and severity match the firmware.
-- **Optional sensors**: `LW Dali Brightness.LuxN` and `LW Motion.StateN`, as items.
+- **Optional sensors**: brightness (type `daliBrightness`, unit `Lux`) and motion (type `daliMotion`), as items,
+  named `<title>.<id>`.
 
-### 7.3 Digital inputs (10) (changed 2026-10-12, see DECISIONS.md)
+### 7.3 Digital inputs (10) (changed 2026-10-12 and 2026-10-13, see DECISIONS.md D1, D10)
 
-- Type `digitalInput`, fragment `LW Digital Input`, **native series names** exactly as the firmware sends them:
-  - `Value<NN>` (0/1), NN = 01-10
-  - `ImpulseCounter<NN>` (counter; unit from `lw_configDigitalInputs[].unit`)
-- The human title (e.g. "Zapfsäule 1") is **not** part of the series name. It is stored in
-  `lw_configDigitalInputs[].title` (extra field, ignored by the firmware) and in the library.
-- The app shows the title as the selectable label. When a floorplan is applied, the widget label uses the title from
-  the config, falling back to the input number if there is no title.
-- `lw_configDigitalInputs` is written to match (`id`, `isActive`, `type`, `title`, and `unit`/`initCount`/`increment` for counters).
+- Fragment = the input's title (e.g. "Zapfsäule 1"), series = the item id:
+  - type `digitalInput`: value 0/1
+  - type `impulseCounter`: counter (unit from the device's input config)
+- The inputs (incl. title, type, `unit` / `initCount` / `increment`, actions) are stored in `lw_demo.digitalInputs`;
+  the title comes from the item's German title and can be edited on the device. A new title is a new fragment
+  (a running session takes it over at once).
+- When a floorplan is applied, the widget label is the input's title (the item title when the input has none).
 
 ### 7.4 Modbus (everything that is not DALI / DI / system)
 
@@ -211,10 +216,11 @@ Every demo device simulates the standard Core v2 set exactly as the firmware sen
     can be created in the app's demo editor.
   - Assigned **IDs count down from 20, addresses from 240** (max 20 slaves, 40 registers per slave).
   - Slave name ≤ 19 chars. Register name = item id, ≤ 19 chars. Unit ≤ 7 chars.
-  - Written to `lw_configModbusSlaves` with `isSavingOnStorage: false` and `description: "lw-demo"`.
-  - Writable items go into **both** `registers[]` (readback series) **and** `writeRegisters[]` (the floorplan's "saved target" picker) (changed 2026-10-12, see DECISIONS.md).
-- **Measurements**: type `modbus`, fragment `LW_Modbus_Slave_<id:02>_<address:03>`, series = register
-  name.
+  - Slaves and their register assignments are stored in `lw_demo.slaves` only; no `lw_configModbusSlaves` is
+    written (changed 2026-10-13, see DECISIONS.md D10). `lw_modbusWrite` operations are matched against these
+    assignments.
+- **Measurements**: type `modbus`, fragment = the item's title, series = item id (= register name) (changed
+  2026-10-13, see DECISIONS.md D10).
 - **Custom alarms** (non-DALI) (changed 2026-10-12, see DECISIONS.md):
   - A slave can carry **several** custom alarms (`alarms[]`): type `lw_demo_<id:02>_<name>`, with text and severity
     from the pack. Example: `lw_demo_19_co2Leakage`.
@@ -252,7 +258,7 @@ The real firmware never clears cloud alarms; it only sends `lw_alarm` "Alarm cle
   - immediately on value change
   - plus a periodic send of all values, every `sendIntervalSec`, adjustable as in davaco; **max 899 s** (changed 2026-10-12, see DECISIONS.md) (the floorplan plugin marks values stale after `measurementIntervalMinutes` + 5 min = 900 s)
   - every measurement, alarm and event carries `time` = now (ISO 8601) (changed 2026-10-12, see DECISIONS.md); the plugin shows the newest by `time`. Values are JSON numbers; series with an empty firmware unit omit `unit`
-  - native fragments are batched into one `measurementCollection` where possible
+  - measurements are batched into one `measurementCollection` where possible
 - **Controls per item**:
 
   | Control | Use |
@@ -351,7 +357,7 @@ library/
 ```
 
 - `kind`: `dali`, `daliBrightness`, `daliMotion`, `digitalInput`, `impulseCounter`, `system`, `modbus`, `customAlarm` (changed 2026-10-12, see DECISIONS.md).
-  Native kinds carry `index` instead of `slave`; a `customAlarm` carries neither (device-level), only `title`, `severity` and `text`; a `digitalInput` also carries its `title` for `lw_configDigitalInputs[].title`.
+  Native kinds carry `index` instead of `slave`; a `customAlarm` carries neither (device-level), only `title`, `severity` and `text`; every item's German `title` is the fragment of its measurement (changed 2026-10-13, see DECISIONS.md D10).
 - Item ids are globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars (they become Modbus register names).
 - **One item = one thing** (light-1 … light-64 exist once and are tagged into many demos). The editor
   has a "generate series" helper.
@@ -380,7 +386,7 @@ Modbus items carry `registerType` (`coil` | `holding` | `input`; default `holdin
 }
 ```
 
-A digital input references its item by `itemId`; the item's German title is written to `lw_configDigitalInputs[].title`. `type` is `daliAction` | `impulseCounter` | `measurement`, plus `isActive`, `initCount`, `increment`, `unit`, `highLevelAction`, `lowLevelAction`, `groups` as the firmware config defines them (changed 2026-10-12, see DECISIONS.md D1, D6).
+A digital input references its item by `itemId`; the item's German title becomes the input's title on the device (`lw_demo.digitalInputs[].title`, changed 2026-10-13, see DECISIONS.md D10). `type` is `daliAction` | `impulseCounter` | `measurement`, plus `isActive`, `initCount`, `increment`, `unit`, `highLevelAction`, `lowLevelAction`, `groups` as the firmware config defines them (changed 2026-10-12, see DECISIONS.md D1, D6).
 
 Demo selection = items matching `tags` ∪ `includes` − `excludes` (8c).
 
@@ -401,10 +407,13 @@ Demo selection = items matching `tags` ∪ `includes` − `excludes` (8c).
   3. `POST /inventory/managedObjects/{device}/childAdditions` links it to the device.
 
   Widget item references are resolved at apply time:
-  - The `measurement {fragment, series}` comes from the resolved native or Modbus naming.
+  - The `measurement {fragment, series}` comes from the item naming: `{fragment: <title>, series: <item id>}`
+    (changed 2026-10-13, see DECISIONS.md D10).
   - `alarmTypes` gets the slave's timeout alarm, **all** its custom alarms (`lw_demo_<id:02>_<name>`), referenced device-level custom alarms (`lw_demo_<name>`) and the DALI lamp alarms filled in automatically (changed 2026-10-12, see DECISIONS.md). Custom types are written literally (the plugin never suggests them).
-  - A digital-input widget is an ordinary sensor widget with `{fragment: "LW Digital Input", series: "Value<NN>"}`; its label is the title from `lw_configDigitalInputs[].title`, falling back to the input number (changed 2026-10-12, see DECISIONS.md).
-  - Modbus control targets come from the assigned slave address.
+  - A digital-input widget is an ordinary sensor widget with `{fragment: <input title>, series: <item id>}`; its label is the input's title (changed 2026-10-13, see DECISIONS.md D10).
+  - Modbus control targets come from the assigned slave address. DALI group and Modbus write controls are still
+    generated, but the plugin reads `lw_configGroups` / `lw_configModbusSlaves` for them, which demo devices no
+    longer have: they stay inactive until the plugin is adapted (DECISIONS.md D10).
 - **Re-applying** the same demo replaces an existing floorplan of the same name, after confirmation.
 - A floorplan is never required: raw simulation works without one.
 
@@ -413,7 +422,8 @@ Demo selection = items matching `tags` ∪ `includes` − `excludes` (8c).
 - **"Export as demo pack"** reads a demo device and writes a folder in the `library/` layout:
   - `lw_demo` setup, slaves and items
   - DALI groups, DI titles, scenarios
-  - floorplans, with widget fragments mapped back to item ids, and their images downloaded
+  - floorplans, with widget measurements mapped back to item ids (the series is the item id, D10), and their
+    images downloaded
 - Workflow:
   1. Tune a device by hand.
   2. Export it, or ask Claude Code to do it with the same format (documented in `AGENTS.md`).
@@ -454,7 +464,7 @@ dashboards built on the old `<name>.value` fragments will break; this is accepte
 
 ## 18. Testing
 
-- Rust unit tests: payload builders (native names, DI config/title mapping (changed 2026-10-12, see DECISIONS.md), slave/address assignment, custom alarm type rules),
+- Rust unit tests: payload builders (measurement names (changed 2026-10-13, see DECISIONS.md D10), DI config/title mapping (changed 2026-10-12, see DECISIONS.md), slave/address assignment, custom alarm type rules),
   generators, operation handling, export ↔ apply round trip.
 - CI: JSON schema validation of `library/**`, Biome, clippy, `cargo test`, frontend type check.
 - An integration test against a recorded/fake Cumulocity API.

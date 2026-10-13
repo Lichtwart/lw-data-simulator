@@ -8,7 +8,7 @@ export interface DeviceContextValue {
   reload: () => void;
   /** Counts config-changing operations (apply / upgrade); the Setup editors reload on change. */
   configRevision: number;
-  /** The device's `lw_config*` changed on the server (apply / upgrade): reload the editors. */
+  /** The device's groups / inputs changed on the server (apply / upgrade): reload the editors. */
   reloadConfig: () => void;
   setDevice: (device: DemoDevice_Serialize) => void;
 }

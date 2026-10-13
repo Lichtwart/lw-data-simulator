@@ -59,7 +59,7 @@ pub fn local_hour(unix_secs: f64, utc_offset_secs: f64) -> f64 {
 
 /// Local hour of day in the IANA time zone `tz` (DST-safe, computed per tick).
 ///
-/// `dailyProfile` runs in the **device's** time zone (`lw_configCore.timeZone`, default
+/// `dailyProfile` runs in the **device's** time zone (`lw_demo.timeZone`, default
 /// `Europe/Berlin`), not the laptop's. Returns `None` for an unknown zone name; callers fall
 /// back to [`DEFAULT_TIME_ZONE`].
 pub fn local_hour_in_zone(unix_secs: f64, tz: &str) -> Option<f64> {
@@ -72,7 +72,7 @@ pub fn local_hour_in_zone(unix_secs: f64, tz: &str) -> Option<f64> {
     Some((secs + (unix_secs - whole)) / 3600.0)
 }
 
-/// Zone used when `lw_configCore.timeZone` is empty or unknown (firmware default).
+/// Zone used when `lw_demo.timeZone` is absent, empty or unknown (firmware default).
 pub const DEFAULT_TIME_ZONE: &str = "Europe/Berlin";
 
 /// Per-item generator state carried between ticks.

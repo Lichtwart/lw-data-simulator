@@ -181,7 +181,7 @@ pub struct SessionParams {
     pub auto_accept: bool,
     /// Newest stored value per counter item (counters never go backwards across restarts).
     pub counter_seeds: BTreeMap<String, f64>,
-    /// `lw_configCore.timeZone` of the device (`dailyProfile` runs in device time).
+    /// `lw_demo.timeZone` of the device (`dailyProfile` runs in device time).
     pub time_zone: String,
     pub seed: u64,
     /// Server clock minus local clock (ms), measured by the client from `Date` headers.
@@ -193,7 +193,8 @@ pub struct SessionParams {
     pub restored_alarms: Vec<RestoredAlarm>,
     /// Newest SUCCESSFUL `lw_modbusWrite` value per writable item (the plugin shows it).
     pub write_seeds: BTreeMap<String, f64>,
-    /// `lw_configRs485.isActive` (a write fails with "RS485 interface inactive" otherwise).
+    /// RS485 bus active (a write fails with "RS485 interface inactive" otherwise). Always `true`
+    /// for a session (D10: no `lw_configRs485`); tests switch it off.
     pub rs485_active: bool,
 }
 
@@ -318,11 +319,12 @@ fn selection_key(demo: &LwDemoState) -> String {
     .unwrap_or_default()
 }
 
-/// Fragment and series names of a naming (what identifies the series on the wire).
+/// Type and series names of a naming (what decides how a value is handled; a changed fragment,
+/// i.e. a new title, D10, or unit is taken over by a running session).
 fn series_names(n: &Option<MeasurementNaming>) -> Option<(&str, Vec<&str>)> {
     n.as_ref().map(|n| {
         (
-            n.fragment.as_str(),
+            n.measurement_type.as_str(),
             n.series.iter().map(|s| s.name.as_str()).collect(),
         )
     })
@@ -366,7 +368,7 @@ pub fn check_value(item: &LibraryItem, value: f64) -> AppResult<()> {
 }
 
 /// Naming of an item: Modbus items follow their slave's assignment, digital inputs the device's
-/// `lw_configDigitalInputs` entry (series and unit).
+/// digital input entry (type, unit and title, D10).
 fn naming_of(
     def: &LibraryItem,
     slaves: &[(SlaveDefinition, SlaveAssignment)],
@@ -1243,7 +1245,7 @@ impl SessionCore {
                     continue;
                 }
                 if series_names(&naming) == series_names(&self.items[idx].naming) {
-                    // Only the unit changed.
+                    // Only the unit or the title (= fragment, D10) changed.
                     self.items[idx].naming = naming;
                     self.ui_changed.insert(idx);
                 } else {

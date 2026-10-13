@@ -1,16 +1,17 @@
-//! Measurement bodies (firmware-core-v2.md §1, "Posting via REST").
+//! Measurement bodies (firmware-core-v2.md §1, "Posting via REST"; names: DECISIONS D10).
 //!
-//! One firmware `201` line = one measurement object. A DALI lamp line carries four series under
-//! `LW Dali Control Gear 1-NN`; every other native line carries one series. Objects are batched
-//! into `measurementCollection` bodies in firmware order: sensors + system, digital inputs, DALI
+//! One measurement object per item value; a DALI lamp's object carries its four series (status,
+//! runtime, brightness) under the lamp's fragment. Objects are batched into
+//! `measurementCollection` bodies in firmware order: sensors + system, digital inputs, DALI
 //! lamps (≤ 6 per collection, `CLOUD_SEND_LIMIT`), Modbus, anything else.
 
 use serde_json::{Map, Value, json};
 
 use super::json_number;
 use super::naming::{
-    DALI_BRIGHTNESS_TYPE, DALI_MEASUREMENT_TYPE, DALI_MOTION_TYPE, DALI_SERIES, DALI_VALUE_SERIES,
-    DI_MEASUREMENT_TYPE, MODBUS_MEASUREMENT_TYPE, RSSI_TYPE, TEMPERATURE_TYPE, dali_fragment,
+    DALI_BRIGHTNESS_TYPE, DALI_MEASUREMENT_TYPE, DALI_MOTION_TYPE, DI_COUNTER_TYPE,
+    DI_MEASUREMENT_TYPE, MODBUS_MEASUREMENT_TYPE, RSSI_TYPE, TEMPERATURE_TYPE, dali_library_series,
+    hidden_lamp_naming,
 };
 use crate::error::{AppError, AppResult};
 use crate::model::MeasurementNaming;
@@ -71,13 +72,14 @@ impl Default for CounterGrid {
 }
 
 /// Make `value` look like what the firmware can send for this series (it only emits `%u`
-/// integers for most series and `%.1f` for the board temperature):
-/// - DALI `Brightness` rounded and clamped to 0-100, `Converter Runtime` rounded and ≥ 0,
+/// integers for most series and `%.1f` for the board temperature). Decided by the measurement
+/// type (and, for a DALI lamp, which of its four series it is):
+/// - DALI brightness rounded and clamped to 0-100, `Converter Runtime` rounded and ≥ 0,
 ///   statuses 0 / 1;
-/// - `Lux<N>` rounded and ≥ 0; motion `State<N>` and DI `Value<NN>` clamped to 0 / 1;
-/// - DI `ImpulseCounter<NN>` floored to `initCount + k·increment` (never below `initCount`);
+/// - brightness sensor rounded and ≥ 0; motion and DI values clamped to 0 / 1;
+/// - DI impulse counters floored to `initCount + k·increment` (never below `initCount`);
 /// - `rssi` rounded; board temperature rounded to 0.1;
-/// - Modbus and unknown series are left raw (the register datatype decides).
+/// - Modbus and unknown types are left raw (the register datatype decides).
 ///
 /// Non-finite values are returned unchanged (the body builder rejects them).
 pub fn quantize(
@@ -91,7 +93,7 @@ pub fn quantize(
     }
     let bit = |v: f64| if v >= 0.5 { 1.0 } else { 0.0 };
     match measurement_type {
-        DALI_MEASUREMENT_TYPE => match series {
+        DALI_MEASUREMENT_TYPE => match dali_library_series(series) {
             "Brightness" => value.round().clamp(0.0, 100.0),
             "Converter Runtime" => value.round().max(0.0),
             _ => bit(value),
@@ -100,7 +102,7 @@ pub fn quantize(
         DALI_MOTION_TYPE => bit(value),
         RSSI_TYPE => value.round(),
         TEMPERATURE_TYPE => (value * 10.0).round() / 10.0,
-        DI_MEASUREMENT_TYPE if series.starts_with("ImpulseCounter") => {
+        DI_COUNTER_TYPE => {
             let g = grid.unwrap_or_default();
             let init = f64::from(g.init_count);
             if value <= init {
@@ -118,7 +120,7 @@ pub fn quantize(
 /// The values an item sends for `value`, quantized to what the firmware emits (see
 /// [`quantize`]; DI counters use the default grid, use [`item_values_with_grid`] for
 /// `initCount` / `increment`). Single-series items give one value; a DALI lamp gives all four
-/// series in firmware order (`value` → `Brightness`, the rest from `dali` or OK / 0 h).
+/// series in firmware order (`value` → brightness, the rest from `dali` or OK / 0 h).
 pub fn item_values(
     naming: &MeasurementNaming,
     value: f64,
@@ -128,7 +130,7 @@ pub fn item_values(
 }
 
 /// [`item_values`] with the DI impulse counter grid (`initCount` / `increment` of the device's
-/// `lw_configDigitalInputs` entry).
+/// digital input entry).
 pub fn item_values_with_grid(
     naming: &MeasurementNaming,
     value: f64,
@@ -148,8 +150,7 @@ pub fn item_values_with_grid(
             .series
             .iter()
             .map(|n| {
-                let v = match n.name.as_str() {
-                    DALI_VALUE_SERIES => value,
+                let v = match dali_library_series(&n.name) {
                     "Converter Status" => f64::from(u8::from(s.converter_ok)),
                     "Lamp Status" => f64::from(u8::from(s.lamp_ok)),
                     "Converter Runtime" => f64::from(s.runtime_hours),
@@ -166,24 +167,19 @@ pub fn item_values_with_grid(
         .collect()
 }
 
-/// The four values of DALI lamp `lamp` (1–64) without a resolved naming.
+/// The four values of DALI lamp `lamp` (1–64) that has no item ([`hidden_lamp_naming`]).
 pub fn dali_lamp_values(
     lamp: u32,
     brightness: f64,
     status: DaliLampStatus,
 ) -> Vec<MeasurementValue> {
-    let naming = MeasurementNaming {
-        measurement_type: DALI_MEASUREMENT_TYPE.to_owned(),
-        fragment: dali_fragment(lamp),
-        series: DALI_SERIES
-            .iter()
-            .map(|(n, u)| crate::model::SeriesNaming {
-                name: (*n).to_owned(),
-                unit: u.map(str::to_owned),
-            })
-            .collect(),
-    };
-    item_values(&naming, brightness, Some(status))
+    item_values(&hidden_lamp_naming(lamp), brightness, Some(status))
+}
+
+/// The lamp a DALI series belongs to: its value series is the lamp's id, the other three are
+/// `<id> <name>` (ids never contain a space).
+fn dali_owner(series: &str) -> &str {
+    series.split_once(' ').map_or(series, |(id, _)| id)
 }
 
 /// One measurement object (single `201` line) for `values` that share type + fragment.
@@ -210,7 +206,7 @@ fn measurement_object(device_id: &str, time: &str, values: &[&MeasurementValue])
 fn bucket(measurement_type: &str) -> usize {
     match measurement_type {
         DALI_BRIGHTNESS_TYPE | DALI_MOTION_TYPE | RSSI_TYPE | TEMPERATURE_TYPE => 0,
-        DI_MEASUREMENT_TYPE => 1,
+        DI_MEASUREMENT_TYPE | DI_COUNTER_TYPE => 1,
         DALI_MEASUREMENT_TYPE => 2,
         MODBUS_MEASUREMENT_TYPE => 3,
         _ => 4,
@@ -231,12 +227,15 @@ pub fn build_measurement_bodies(
             bad.fragment, bad.series, bad.value
         )));
     }
-    // Group into objects: DALI per fragment (first-seen order), everything else one per value.
+    // Group into objects: DALI per lamp (fragment + owner of the series, first-seen order; two
+    // lamps may share a title), everything else one per value.
     let mut objects: Vec<Vec<&MeasurementValue>> = Vec::new();
     for v in values {
         if v.measurement_type == DALI_MEASUREMENT_TYPE
             && let Some(obj) = objects.iter_mut().find(|o| {
-                o[0].measurement_type == v.measurement_type && o[0].fragment == v.fragment
+                o[0].measurement_type == v.measurement_type
+                    && o[0].fragment == v.fragment
+                    && dali_owner(&o[0].series) == dali_owner(&v.series)
             })
         {
             obj.retain(|x| x.series != v.series);
@@ -289,7 +288,16 @@ mod tests {
         }
     }
 
-    /// DALI line (§1.2): one object, four series, empty units omitted, `time` set.
+    fn dali_naming(fragment: &str, id: &str) -> MeasurementNaming {
+        let mut n = hidden_lamp_naming(1);
+        n.fragment = fragment.into();
+        for (s, (lib, _)) in n.series.iter_mut().zip(super::super::naming::DALI_SERIES) {
+            s.name = super::super::naming::dali_series_name(id, lib);
+        }
+        n
+    }
+
+    /// DALI lamp (§1.2): one object, four series, empty units omitted, `time` set.
     #[test]
     fn dali_lamp_is_one_object_with_four_series() {
         let status = DaliLampStatus {
@@ -297,20 +305,49 @@ mod tests {
             lamp_ok: false,
             runtime_hours: 1234,
         };
-        let bodies = build_measurement_bodies("9", T, &dali_lamp_values(3, 80.0, status)).unwrap();
+        let bodies = build_measurement_bodies(
+            "9",
+            T,
+            &item_values(&dali_naming("Attika 1", "light-5"), 80.0, Some(status)),
+        )
+        .unwrap();
         assert_eq!(bodies.len(), 1);
         assert_eq!(
             bodies[0],
             json!({"measurements": [{
                 "source": {"id": "9"}, "type": "daliControlGear", "time": T,
-                "LW Dali Control Gear 1-03": {
-                    "Converter Status": {"value": 1},
-                    "Lamp Status": {"value": 0},
-                    "Converter Runtime": {"value": 1234, "unit": "hr"},
-                    "Brightness": {"value": 80, "unit": "%"}
+                "Attika 1": {
+                    "light-5 Converter Status": {"value": 1},
+                    "light-5 Lamp Status": {"value": 0},
+                    "light-5 Converter Runtime": {"value": 1234, "unit": "hr"},
+                    "light-5": {"value": 80, "unit": "%"}
                 }
             }]})
         );
+        // A lamp without an item.
+        let hidden = build_measurement_bodies(
+            "9",
+            T,
+            &dali_lamp_values(3, 80.0, DaliLampStatus::default()),
+        )
+        .unwrap();
+        assert_eq!(
+            hidden[0]["measurements"][0]["DALI Leuchte 03"]["lamp-03"],
+            json!({"value": 80, "unit": "%"})
+        );
+    }
+
+    /// Two lamps with the same title share the fragment but stay two objects.
+    #[test]
+    fn lamps_with_the_same_title_are_separate_objects() {
+        let mut values = item_values(&dali_naming("Attika", "light-1"), 10.0, None);
+        values.extend(item_values(&dali_naming("Attika", "light-2"), 20.0, None));
+        let bodies = build_measurement_bodies("9", T, &values).unwrap();
+        let list = bodies[0]["measurements"].as_array().unwrap();
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0]["Attika"]["light-1"]["value"], 10);
+        assert_eq!(list[1]["Attika"]["light-2"]["value"], 20);
+        assert_eq!(list[1]["Attika"].as_object().unwrap().len(), 4);
     }
 
     #[test]
@@ -327,72 +364,47 @@ mod tests {
     }
 
     #[test]
-    fn native_names_units_and_batching_order() {
+    fn names_units_and_batching_order() {
         let values = vec![
-            single(
-                "modbus",
-                "LW_Modbus_Slave_20_240",
-                "freezer_temp",
-                -18.2,
-                Some("°C"),
-            ),
-            single("digitalInput", "LW Digital Input", "Value01", 1.0, None),
-            single(
-                "digitalInput",
-                "LW Digital Input",
-                "ImpulseCounter03",
-                1010.0,
-                Some("m3"),
-            ),
-            single(
-                "c8y_SignalStrength",
-                "c8y_SignalStrength",
-                "rssi",
-                -67.0,
-                Some("dBm"),
-            ),
+            single("modbus", "Tiefkühler", "freezer_temp", -18.2, Some("°C")),
+            single("digitalInput", "Zapfsäule 1", "di-1", 1.0, None),
+            single("impulseCounter", "Gaszähler", "gas", 1010.0, Some("m3")),
+            single("c8y_SignalStrength", "Signal", "rssi", -67.0, Some("dBm")),
             single(
                 "c8y_TemperatureMeasurement",
-                "c8y_TemperatureMeasurement",
-                "T",
+                "Temperatur",
+                "temp",
                 38.5,
                 Some("C"),
             ),
-            single(
-                "daliBrightness",
-                "LW Dali Brightness",
-                "Lux1",
-                450.0,
-                Some("Lux"),
-            ),
-            single("daliMotion", "LW Motion", "State1", 1.0, None),
+            single("daliBrightness", "Helligkeit", "lux-1", 450.0, Some("Lux")),
+            single("daliMotion", "Bewegung", "motion-1", 1.0, None),
         ];
         let bodies = build_measurement_bodies("9", T, &values).unwrap();
         assert_eq!(bodies.len(), 3);
         let first = bodies[0]["measurements"].as_array().unwrap();
         assert_eq!(first.len(), 4);
         assert_eq!(
-            first[0]["c8y_SignalStrength"]["rssi"],
+            first[0]["Signal"]["rssi"],
             json!({"value": -67, "unit": "dBm"})
         );
+        assert_eq!(first[0]["type"], "c8y_SignalStrength");
         assert_eq!(
-            first[1]["c8y_TemperatureMeasurement"]["T"],
+            first[1]["Temperatur"]["temp"],
             json!({"value": 38.5, "unit": "C"})
         );
-        assert_eq!(first[2]["LW Dali Brightness"]["Lux1"]["unit"], "Lux");
-        assert_eq!(first[3]["LW Motion"]["State1"], json!({"value": 1}));
-        // DI: one object per series, like one `201` line each.
+        assert_eq!(first[2]["Helligkeit"]["lux-1"]["unit"], "Lux");
+        assert_eq!(first[3]["Bewegung"]["motion-1"], json!({"value": 1}));
+        // DI: one object per series.
         let di = bodies[1]["measurements"].as_array().unwrap();
         assert_eq!(di.len(), 2);
         assert_eq!(di[0]["type"], "digitalInput");
-        assert_eq!(di[0]["LW Digital Input"]["Value01"], json!({"value": 1}));
-        assert_eq!(di[1]["LW Digital Input"]["ImpulseCounter03"]["unit"], "m3");
+        assert_eq!(di[0]["Zapfsäule 1"]["di-1"], json!({"value": 1}));
+        assert_eq!(di[1]["type"], "impulseCounter");
+        assert_eq!(di[1]["Gaszähler"]["gas"]["unit"], "m3");
         let mb = &bodies[2]["measurements"][0];
         assert_eq!(mb["type"], "modbus");
-        assert_eq!(
-            mb["LW_Modbus_Slave_20_240"]["freezer_temp"]["value"],
-            json!(-18.2)
-        );
+        assert_eq!(mb["Tiefkühler"]["freezer_temp"]["value"], json!(-18.2));
         for b in &bodies {
             for m in b["measurements"].as_array().unwrap() {
                 assert_eq!(m["time"], T);
@@ -412,18 +424,18 @@ mod tests {
     fn item_values_follow_naming() {
         let naming = MeasurementNaming {
             measurement_type: "digitalInput".into(),
-            fragment: "LW Digital Input".into(),
+            fragment: "Tür".into(),
             series: vec![SeriesNaming {
-                name: "Value02".into(),
+                name: "di-2".into(),
                 unit: None,
             }],
         };
         let v = item_values(&naming, 1.0, None);
         assert_eq!(v.len(), 1);
-        assert_eq!((v[0].series.as_str(), v[0].value), ("Value02", 1.0));
+        assert_eq!((v[0].series.as_str(), v[0].value), ("di-2", 1.0));
         let lamp = dali_lamp_values(1, 42.0, DaliLampStatus::default());
         assert_eq!(lamp.len(), 4);
-        assert_eq!(lamp[3].series, "Brightness");
+        assert_eq!(lamp[3].series, "lamp-01");
         assert_eq!(lamp[3].value, 42.0);
         assert_eq!(lamp[0].value, 1.0);
     }
@@ -431,23 +443,26 @@ mod tests {
     #[test]
     fn quantize_follows_firmware_types() {
         let q = |t: &str, s: &str, v: f64| quantize(t, s, v, None);
-        // DALI
-        assert_eq!(q("daliControlGear", "Brightness", 57.349), 57.0);
-        assert_eq!(q("daliControlGear", "Brightness", 140.0), 100.0);
-        assert_eq!(q("daliControlGear", "Brightness", -3.0), 0.0);
-        assert_eq!(q("daliControlGear", "Converter Runtime", 12.6), 13.0);
-        assert_eq!(q("daliControlGear", "Lamp Status", 0.7), 1.0);
+        // DALI: the value series is the id, the others carry the firmware name.
+        assert_eq!(q("daliControlGear", "light-5", 57.349), 57.0);
+        assert_eq!(q("daliControlGear", "light-5", 140.0), 100.0);
+        assert_eq!(q("daliControlGear", "light-5", -3.0), 0.0);
+        assert_eq!(
+            q("daliControlGear", "light-5 Converter Runtime", 12.6),
+            13.0
+        );
+        assert_eq!(q("daliControlGear", "light-5 Lamp Status", 0.7), 1.0);
         // Sensors
-        assert_eq!(q("daliBrightness", "Lux1", 450.4), 450.0);
-        assert_eq!(q("daliBrightness", "Lux1", -5.0), 0.0);
-        assert_eq!(q("daliMotion", "State1", 0.4), 0.0);
-        assert_eq!(q("daliMotion", "State1", 3.0), 1.0);
+        assert_eq!(q("daliBrightness", "lux-1", 450.4), 450.0);
+        assert_eq!(q("daliBrightness", "lux-1", -5.0), 0.0);
+        assert_eq!(q("daliMotion", "motion-1", 0.4), 0.0);
+        assert_eq!(q("daliMotion", "motion-1", 3.0), 1.0);
         // System
         assert_eq!(q("c8y_SignalStrength", "rssi", -67.4), -67.0);
-        assert_eq!(q("c8y_TemperatureMeasurement", "T", 38.449), 38.4);
+        assert_eq!(q("c8y_TemperatureMeasurement", "temp", 38.449), 38.4);
         // DI value: only 0 / 1
-        assert_eq!(q("digitalInput", "Value01", 0.3), 0.0);
-        assert_eq!(q("digitalInput", "Value01", 7.0), 1.0);
+        assert_eq!(q("digitalInput", "di-1", 0.3), 0.0);
+        assert_eq!(q("digitalInput", "di-1", 7.0), 1.0);
         // Modbus stays raw
         assert_eq!(q("modbus", "freezer_temp", -18.237), -18.237);
         assert!(q("modbus", "x", f64::NAN).is_nan());
@@ -459,16 +474,13 @@ mod tests {
             init_count: 1000,
             increment: 10,
         });
-        let q = |v| quantize("digitalInput", "ImpulseCounter03", v, g);
+        let q = |v| quantize("impulseCounter", "gas", v, g);
         assert_eq!(q(1000.1), 1000.0);
         assert_eq!(q(1019.9), 1010.0);
         assert_eq!(q(1020.0), 1020.0);
         assert_eq!(q(5.0), 1000.0);
         // No grid: plain integer floor.
-        assert_eq!(
-            quantize("digitalInput", "ImpulseCounter03", 1000.7, None),
-            1000.0
-        );
+        assert_eq!(quantize("impulseCounter", "gas", 1000.7, None), 1000.0);
     }
 
     #[test]
@@ -476,10 +488,10 @@ mod tests {
         let lamp = dali_lamp_values(1, 57.349, DaliLampStatus::default());
         assert_eq!(lamp[3].value, 57.0);
         let naming = MeasurementNaming {
-            measurement_type: "digitalInput".into(),
-            fragment: "LW Digital Input".into(),
+            measurement_type: "impulseCounter".into(),
+            fragment: "Gaszähler".into(),
             series: vec![SeriesNaming {
-                name: "ImpulseCounter03".into(),
+                name: "gas".into(),
                 unit: Some("m3".into()),
             }],
         };

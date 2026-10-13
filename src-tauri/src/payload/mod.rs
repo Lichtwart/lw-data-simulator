@@ -1,17 +1,16 @@
-//! Native Core v2 payloads (PRD §7): pure functions, no I/O.
+//! Core v2 payloads (PRD §7): pure functions, no I/O.
 //!
 //! Everything that decides *how* a value looks in Cumulocity lives here so it can
-//! be unit-tested against the firmware (`docs/research/firmware-core-v2.md`):
-//! - [`naming`]: fragment / series / alarm type names (native DI series, D1), slave id /
-//!   address and register address assignment.
+//! be unit-tested (firmware facts against `docs/research/firmware-core-v2.md`):
+//! - [`naming`]: measurement names (fragment = item title, series = item id, D10), alarm type
+//!   names, slave id / address and register address assignment.
 //! - [`measurement`]: measurement objects and `measurementCollection` bodies (≤ 6 DALI lamps
-//!   per message, batching of native fragments in firmware order).
+//!   per message, batching in firmware order).
 //! - [`alarm`]: alarm bodies, the native fault catalog (DALI lamp / bus, sensors), Modbus
 //!   timeout, per-slave and device-level custom alarms, fault target resolution.
 //! - [`event`]: event bodies (`lw_daliGroupChange`, `lw_modbus`, `lw_alarm` "Alarm cleared").
-//! - [`config`]: the demo device managed object (§6.1) and the `lw_config*` fragments
-//!   (`lw_configCore`, `lw_configGroups`, `lw_configDigitalInputs`, `lw_configModbusSlaves`
-//!   incl. `writeRegisters`).
+//! - [`config`]: the demo device managed object (§6.1, no `lw_config*` fragments, D10) and the
+//!   device-side digital input entry.
 //! - [`floorplan`]: library floorplan layout → `lw_floorplan` managed object (item references
 //!   resolved to fragments / series, alarm types and Modbus targets).
 //!

@@ -2,8 +2,9 @@
 //!
 //! 1. Resolve the selection (`tags ∪ includes − excludes` + the device's custom items) and
 //!    assign slaves / registers, keeping every existing assignment.
-//! 2. Write `lw_configGroups`, `lw_configDigitalInputs`, `lw_configModbusSlaves` and `lw_demo`.
-//!    A fresh advisory lock of another presenter stops an apply (unless `force`).
+//! 2. Write `lw_demo` (incl. the demo's DALI groups and digital inputs) and remove every
+//!    `lw_config*` fragment an older app version left on the device (D10). A fresh advisory
+//!    lock of another presenter stops an apply (unless `force`).
 //! 3. Optionally upload the floorplans (binary → `lw_floorplan` → child addition). A floorplan
 //!    with the same name is replaced only when the request confirms it; otherwise it is skipped
 //!    with a warning. Created ids are recorded in `lw_demo.floorplanIds` **after each
@@ -22,17 +23,15 @@ use crate::model::{
     ApplyDemoPreview, ApplyDemoRequest, ApplyDemoResult, CreateDeviceRequest, CreateDeviceResult,
     DaliGroup, DemoPack, DigitalInputEntry, FloorplanLayout, FloorplanRef, LwDemoState,
 };
-use crate::payload::config::{config_fragments, digital_input_entry};
 use crate::payload::floorplan::FloorplanContext;
 
 /// Everything an apply writes, computed without I/O.
 #[derive(Debug, Clone)]
 pub struct ApplyPlan {
+    /// The new `lw_demo`, incl. `daliGroups` / `digitalInputs` of the demo.
     pub state: LwDemoState,
     pub resolved: ResolvedSetup,
     pub inputs: Vec<DigitalInputEntry>,
-    /// `lw_configGroups` / `lw_configDigitalInputs` / `lw_configModbusSlaves` patch.
-    pub config: Value,
     pub warnings: Vec<String>,
 }
 
@@ -80,12 +79,9 @@ pub fn plan(
     state.applied_items = setup::item_digests(library, &resolved.items);
     let items = resolved.item_refs();
     state.applied_demo = setup::demo_digests(demo, &items)?;
-    let config = config_fragments(demo, &items, &resolved.slave_refs())?;
-    let inputs = demo
-        .digital_inputs
-        .iter()
-        .map(|c| digital_input_entry(c, &items))
-        .collect::<AppResult<Vec<_>>>()?;
+    let inputs = setup::demo_inputs(demo, &items)?;
+    state.dali_groups = Some(demo.dali_groups.clone());
+    state.digital_inputs = Some(inputs.clone());
     for path in &demo.floorplans {
         if library.floorplan(path).is_none() {
             warnings.push(format!("floorplan {path} is missing in the library"));
@@ -95,7 +91,6 @@ pub fn plan(
         state,
         resolved,
         inputs,
-        config,
         warnings,
     })
 }
@@ -309,8 +304,8 @@ pub async fn apply_floorplans(
     Ok(out)
 }
 
-/// Select items, assign slaves, write `lw_config*` + `lw_demo`, apply floorplans.
-/// The caller stops a running session on the device first.
+/// Select items, assign slaves, write `lw_demo` (removing old `lw_config*` fragments), apply
+/// floorplans. The caller stops a running session on the device first.
 pub async fn apply(
     client: &C8yClient,
     library: &Library,
@@ -325,14 +320,12 @@ pub async fn apply(
         demo_state::check_lock(e, client.username(), req.force, chrono::Utc::now())?;
     }
     let mut p = plan(library, demo, existing.as_ref())?;
-    let mut body = p.config.clone();
-    if let (Some(b), Value::Object(demo_patch)) =
-        (body.as_object_mut(), demo_state::patch_body(&p.state)?)
-    {
-        b.extend(demo_patch);
+    let mut body = demo_state::patch_body(&p.state)?;
+    // Devices from older app versions: drop their `lw_config*` fragments (D10) and add the agent
+    // fragment etc. in the same PUT.
+    if let Some(b) = body.as_object_mut() {
+        b.extend(setup::stale_config_fragments(&mo));
     }
-    body["lw_configCore"] = demo_state::core_with_lamps(&mo, p.state.dali_lamp_count);
-    // Devices from older app versions: add the agent fragment etc. in the same PUT.
     if let (Some(b), Some(Value::Object(missing))) = (
         body.as_object_mut(),
         crate::payload::config::missing_required_fragments(&mo),

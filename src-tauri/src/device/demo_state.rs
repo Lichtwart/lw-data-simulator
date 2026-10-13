@@ -5,7 +5,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use super::crud;
-use super::setup::{self, parse_digital_inputs, parse_groups};
+use super::setup;
 use crate::c8y::{C8yClient, now_iso};
 use crate::error::{AppError, AppResult};
 use crate::library::{Library, validate};
@@ -13,11 +13,7 @@ use crate::model::{
     Control, DaliGroup, DemoSetupPatch, DemoSnapshot, DeviceConfig, DigitalInputEntry,
     DigitalInputType, LibraryItem, LockInfo, LwDemoState,
 };
-use crate::payload::config::modbus_slaves_fragment;
-use crate::payload::config::{
-    DI_UNIT_MAX_LEN, config_core_fragment_for, digital_inputs_fragment, groups_fragment,
-    truncate_bytes,
-};
+use crate::payload::config::{DI_UNIT_MAX_LEN, truncate_bytes};
 use crate::sim::scheduler::{
     DEFAULT_SEND_INTERVAL_SEC, MAX_SEND_INTERVAL_SEC, MIN_SEND_INTERVAL_SEC,
 };
@@ -49,6 +45,9 @@ pub fn empty_state() -> LwDemoState {
         slaves: Vec::new(),
         custom_slaves: Vec::new(),
         custom_items: Vec::new(),
+        dali_groups: None,
+        digital_inputs: None,
+        time_zone: None,
         generators: Default::default(),
         send_interval_sec: DEFAULT_SEND_INTERVAL_SEC,
         realistic_mode: false,
@@ -289,58 +288,37 @@ pub fn apply_patch(
 
 /// Apply a setup patch and persist it; returns the new state. Custom slaves / items (D6) get
 /// ids, addresses and register addresses via `payload::naming::assign_slaves` /
-/// `assign_registers` (existing ones are never renumbered); `lw_configModbusSlaves` is
-/// rewritten to match.
+/// `assign_registers` (existing ones are never renumbered). Only `lw_demo` is written (D10).
 pub async fn patch_setup(
     client: &C8yClient,
     library: &Library,
     device_id: &str,
     patch: &DemoSetupPatch,
 ) -> AppResult<LwDemoState> {
-    // Only demo devices: the next `lw_fetch*` would push this config to real hardware.
+    // Only demo devices: a setup edit must never land on real hardware.
     let mo = crud::load_demo_mo(client, device_id).await?;
     let mut state = read(&mo)?.unwrap_or_else(empty_state);
-    let lamps_before = state.dali_lamp_count;
     apply_patch(library, &mut state, patch)?;
-    let resolved = setup::resolve(library, &state)?;
-    let slaves = modbus_slaves_fragment(&resolved.slave_refs(), &resolved.item_refs())?;
-    let mut body = patch_body(&state)?;
-    body["lw_configModbusSlaves"] = slaves;
-    if state.dali_lamp_count != lamps_before {
-        body["lw_configCore"] = core_with_lamps(&mo, state.dali_lamp_count);
-    }
-    client.update_managed_object(device_id, &body).await?;
+    // Resolvable (every slave of a selected item is known), like a session start needs it.
+    setup::resolve(library, &state)?;
+    client
+        .update_managed_object(device_id, &patch_body(&state)?)
+        .await?;
     Ok(state)
 }
 
-/// The device's `lw_configCore` with `maxControlGears = max(55, lamps)` (other fields kept; the
-/// full 13-field default when the device has none).
-pub fn core_with_lamps(mo: &Value, lamps: u32) -> Value {
-    let fresh = config_core_fragment_for(lamps);
-    match mo.get("lw_configCore") {
-        Some(Value::Object(o)) => {
-            let mut o = o.clone();
-            o.insert("maxControlGears".into(), fresh["maxControlGears"].clone());
-            Value::Object(o)
-        }
-        _ => fresh,
-    }
-}
+// ───────────────────────────── device config (D6, D10) ─────────────────────────────
 
-// ───────────────────────────── device config (D6) ─────────────────────────────
-
-/// Read `lw_configGroups` and `lw_configDigitalInputs` from the device (D6).
-pub async fn get_config(client: &C8yClient, device_id: &str) -> AppResult<DeviceConfig> {
+/// DALI groups and digital inputs of the device (`lw_demo`, else the library demo's, see
+/// [`setup::device_config`]).
+pub async fn get_config(
+    client: &C8yClient,
+    library: &Library,
+    device_id: &str,
+) -> AppResult<DeviceConfig> {
     let mo = crud::load_demo_mo(client, device_id).await?;
-    Ok(config_of(&mo))
-}
-
-/// Groups + digital inputs of a managed object.
-pub fn config_of(mo: &Value) -> DeviceConfig {
-    DeviceConfig {
-        groups: parse_groups(mo.get("lw_configGroups")),
-        digital_inputs: parse_digital_inputs(mo.get("lw_configDigitalInputs")),
-    }
+    let state = read(&mo)?.unwrap_or_else(empty_state);
+    Ok(setup::device_config(library, &state))
 }
 
 /// Validate DALI groups: ≤ 16, ids 1–16 unique, lamps 1–64, levels 0–100 with min ≤ max.
@@ -380,19 +358,28 @@ pub fn check_groups(groups: &[DaliGroup]) -> AppResult<()> {
     Ok(())
 }
 
-/// Replace `lw_configGroups` (≤ 16 groups, lamps 1–64) and return what was written (D6).
+/// Store `edit` in the device's `lw_demo` (an empty setup on a raw device) and write it.
+async fn update_state(
+    client: &C8yClient,
+    device_id: &str,
+    edit: impl FnOnce(&mut LwDemoState),
+) -> AppResult<()> {
+    let mo = crud::load_demo_mo(client, device_id).await?;
+    let mut state = read(&mo)?.unwrap_or_else(empty_state);
+    edit(&mut state);
+    write(client, device_id, &state).await
+}
+
+/// Replace the DALI groups (`lw_demo.daliGroups`, ≤ 16 groups, lamps 1–64) and return what was
+/// written (D6, D10).
 pub async fn set_groups(
     client: &C8yClient,
     device_id: &str,
     groups: &[DaliGroup],
 ) -> AppResult<Vec<DaliGroup>> {
     check_groups(groups)?;
-    crud::load_demo_mo(client, device_id).await?;
-    let frag = groups_fragment(groups);
-    client
-        .update_managed_object(device_id, &json!({ "lw_configGroups": frag }))
-        .await?;
-    Ok(parse_groups(Some(&frag)))
+    update_state(client, device_id, |s| s.dali_groups = Some(groups.to_vec())).await?;
+    Ok(groups.to_vec())
 }
 
 /// Validate (and normalise) digital inputs: ≤ 10, index 1–10 unique, unit cut to 19 chars.
@@ -456,20 +443,17 @@ pub fn normalize_digital_inputs(inputs: &[DigitalInputEntry]) -> AppResult<Vec<D
     Ok(out)
 }
 
-/// Replace `lw_configDigitalInputs` (≤ 10 inputs, titles included, see
-/// `payload::config::digital_inputs_fragment`) and return what was written (D6).
+/// Replace the digital inputs (`lw_demo.digitalInputs`, ≤ 10 inputs, titles included; a title
+/// is the fragment of the input's measurement, D10) and return what was written (D6).
 pub async fn set_digital_inputs(
     client: &C8yClient,
     device_id: &str,
     inputs: &[DigitalInputEntry],
 ) -> AppResult<Vec<DigitalInputEntry>> {
     let inputs = normalize_digital_inputs(inputs)?;
-    crud::load_demo_mo(client, device_id).await?;
-    let frag = digital_inputs_fragment(&inputs);
-    client
-        .update_managed_object(device_id, &json!({ "lw_configDigitalInputs": frag }))
-        .await?;
-    Ok(parse_digital_inputs(Some(&frag)))
+    let stored = inputs.clone();
+    update_state(client, device_id, |s| s.digital_inputs = Some(stored)).await?;
+    Ok(inputs)
 }
 
 #[cfg(test)]

@@ -2,13 +2,14 @@
 //!
 //! Writes a `library/`-shaped tree into the target folder:
 //! - `demos/<demoId>.json`: `lw_demo` tags / includes / excludes / lamp count / interval,
-//!   `lw_configGroups` → `daliGroups`, `lw_configDigitalInputs` → `digitalInputs`, the library
+//!   `lw_demo.daliGroups` → `daliGroups`, `lw_demo.digitalInputs` → `digitalInputs`, the library
 //!   demo's scenarios plus a `start` scenario carrying generator overrides of library items;
 //! - `items/<demoId>.json` (only if needed): custom slaves / items (generator overrides applied,
 //!   DI titles from the device config) and DI items created for inputs without one;
 //! - `floorplans/<demoId>/<name>.json` + image: widgets mapped back to item references
-//!   (`measurement {fragment, series}` → `itemId`, Modbus targets → `itemId`, alarm types →
-//!   alarm refs minus the ones `autoAlarms` adds), `deviceId` dropped.
+//!   (`measurement {fragment, series}` → `itemId` by the series, which is the item id (D10);
+//!   Modbus targets → `itemId`, alarm types → alarm refs minus the ones `autoAlarms` adds),
+//!   `deviceId` dropped.
 //!
 //! The result applies back to an equal device configuration (tested in `device::tests`).
 
@@ -30,7 +31,8 @@ use crate::model::{
 use crate::payload::alarm::device_custom_alarm;
 use crate::payload::floorplan::{FloorplanContext, item_alarm_types};
 use crate::payload::naming::{
-    MAX_NAME_LEN, item_naming_with_di, slave_alarm_type, slave_timeout_alarm_type,
+    DALI_VALUE_SERIES, MAX_NAME_LEN, dali_library_series, item_naming_with_di, slave_alarm_type,
+    slave_timeout_alarm_type,
 };
 
 /// `[a-z0-9-]+`.
@@ -195,8 +197,10 @@ struct Reverse<'a> {
 }
 
 impl Reverse<'_> {
-    /// `(item id, series if not the default)` for a measurement `{fragment, series}`.
-    fn measurement(&self, fragment: &str, series: &str) -> Option<(String, Option<String>)> {
+    /// `(item id, library series name if not the default)` for a measurement `{fragment,
+    /// series}`. The series names the item (its id, D10), so a title edited after the floorplan
+    /// was made (a different fragment) still maps back.
+    fn measurement(&self, _fragment: &str, series: &str) -> Option<(String, Option<String>)> {
         for item in &self.resolved.items {
             let slave = item
                 .slave_key()
@@ -212,10 +216,13 @@ impl Reverse<'_> {
             let Some(n) = item_naming_with_di(item, slave, di) else {
                 continue;
             };
-            if n.fragment == fragment && n.series.iter().any(|s| s.name == series) {
-                let default =
-                    n.series.len() == 1 || series == crate::payload::naming::DALI_VALUE_SERIES;
-                return Some((item.id().to_owned(), (!default).then(|| series.to_owned())));
+            if n.series.iter().any(|s| s.name == series) {
+                let library_series = if n.series.len() == 1 {
+                    None
+                } else {
+                    Some(dali_library_series(series)).filter(|s| *s != DALI_VALUE_SERIES)
+                };
+                return Some((item.id().to_owned(), library_series.map(str::to_owned)));
             }
         }
         None
@@ -700,7 +707,7 @@ pub async fn export(
     let mo = crud::load_demo_mo(client, &req.device_id).await?;
     let state = demo_state::read(&mo)?
         .ok_or_else(|| AppError::NotFound(format!("lw_demo on {}", req.device_id)))?;
-    let config = demo_state::config_of(&mo);
+    let config = setup::device_config(library, &state);
     let mut floorplans = Vec::new();
     for fp in floorplan::list(client, &req.device_id).await? {
         let binary = fp.pointer("/lw_floorplan/imageBinaryId").and_then(|v| {

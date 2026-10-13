@@ -17,8 +17,9 @@
 //! one is kept and the new layout is created next to it as `<name> (v<version>)`.
 //!
 //! Order of writes (so that a failure part-way never marks the device as up to date):
-//! `lw_config*` + `lw_demo` **with the old `libraryVersion`**, then floorplan by floorplan
-//! (`lw_demo` persisted after each), and only the final write sets the new `libraryVersion`.
+//! `lw_demo` (incl. groups / inputs; old `lw_config*` fragments removed, D10) **with the old
+//! `libraryVersion`**, then floorplan by floorplan (`lw_demo` persisted after each), and only the
+//! final write sets the new `libraryVersion`.
 
 use std::collections::BTreeMap;
 
@@ -34,8 +35,6 @@ use crate::model::{
     DaliGroup, DemoDevice, DemoPack, DeviceConfig, DigitalInputEntry, FloorplanLayout,
     FloorplanRef, LwDemoState, UpgradePreview,
 };
-use crate::payload::config::modbus_slaves_fragment;
-use crate::payload::config::{digital_input_entry, digital_inputs_fragment, groups_fragment};
 
 /// Diff of digests: (added, removed, changed), each sorted.
 fn diff(
@@ -76,7 +75,7 @@ struct UpgradePlan {
     /// The new `lw_demo` (merged, new assignments); `libraryVersion` is still the old one.
     next: LwDemoState,
     resolved: ResolvedSetup,
-    /// New `lw_configGroups` / `lw_configDigitalInputs` when the library value is taken.
+    /// New groups / digital inputs when the library value is taken (already in `next`).
     groups: Option<Vec<DaliGroup>>,
     inputs: Option<Vec<DigitalInputEntry>>,
     changes: Vec<String>,
@@ -148,16 +147,18 @@ fn plan_upgrade(
 
     let groups = take_groups.then(|| demo.dali_groups.clone());
     let inputs = if take_inputs {
-        let items = resolved.item_refs();
-        Some(
-            demo.digital_inputs
-                .iter()
-                .map(|c| digital_input_entry(c, &items))
-                .collect::<AppResult<Vec<_>>>()?,
-        )
+        Some(setup::demo_inputs(demo, &resolved.item_refs())?)
     } else {
         None
     };
+    // Groups / inputs live in `lw_demo` (D10): store the current ones (the library demo's on a
+    // device from an older app version) unless the library value is taken.
+    next.dali_groups = Some(groups.clone().unwrap_or_else(|| config.groups.clone()));
+    next.digital_inputs = Some(
+        inputs
+            .clone()
+            .unwrap_or_else(|| config.digital_inputs.clone()),
+    );
     Ok(UpgradePlan {
         next,
         resolved,
@@ -270,7 +271,7 @@ pub async fn check(
     let Some(state) = demo_state::read(&mo)? else {
         return Ok(None);
     };
-    let config = demo_state::config_of(&mo);
+    let config = setup::device_config(library, &state);
     let Some(mut preview) = preview_of(library, &state, &config)? else {
         return Ok(None);
     };
@@ -294,7 +295,7 @@ pub async fn apply(
     let state = demo_state::read(&mo)?
         .ok_or_else(|| AppError::NotFound(format!("lw_demo on {device_id}")))?;
     demo_state::check_lock(&state, client.username(), force, chrono::Utc::now())?;
-    let config = demo_state::config_of(&mo);
+    let config = setup::device_config(library, &state);
     let preview = preview_of(library, &state, &config)?
         .ok_or_else(|| AppError::InvalidInput("device is up to date".into()))?;
     let demo = library
@@ -308,23 +309,14 @@ pub async fn apply(
         inputs,
         ..
     } = plan_upgrade(library, demo, &state, &config)?;
-    let lamps_changed = next.dali_lamp_count != state.dali_lamp_count;
     let mut state = next;
     let new_version = library.version.clone();
     let old_version = state.library_version.clone();
 
-    // 1. Config + lw_demo, still marked with the old version.
+    // 1. lw_demo, still marked with the old version; old `lw_config*` fragments go (D10).
     let mut body = demo_state::patch_body(&state)?;
-    body["lw_configModbusSlaves"] =
-        modbus_slaves_fragment(&resolved.slave_refs(), &resolved.item_refs())?;
-    if let Some(g) = &groups {
-        body["lw_configGroups"] = groups_fragment(g);
-    }
-    if let Some(i) = &inputs {
-        body["lw_configDigitalInputs"] = digital_inputs_fragment(i);
-    }
-    if lamps_changed {
-        body["lw_configCore"] = demo_state::core_with_lamps(&mo, state.dali_lamp_count);
+    if let Some(b) = body.as_object_mut() {
+        b.extend(setup::stale_config_fragments(&mo));
     }
     client.update_managed_object(device_id, &body).await?;
 

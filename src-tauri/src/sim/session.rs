@@ -436,7 +436,7 @@ pub async fn prepare(
 
     // Everything that can fail on the setup comes before anything is written.
     let resolved = setup::resolve(library, &demo)?;
-    let config = demo_state::config_of(&mo);
+    let config = setup::device_config(library, &demo);
     let scenarios = demo
         .demo_id
         .as_deref()
@@ -496,6 +496,12 @@ pub async fn prepare(
                 .unwrap_or_default()
                 .to_owned(),
             user: me,
+            time_zone: demo
+                .time_zone
+                .as_deref()
+                .filter(|z| !z.is_empty())
+                .unwrap_or(super::generators::DEFAULT_TIME_ZONE)
+                .to_owned(),
             demo,
             resolved,
             groups: config.groups,
@@ -503,21 +509,13 @@ pub async fn prepare(
             scenarios,
             auto_accept: req.auto_accept,
             counter_seeds,
-            time_zone: mo
-                .pointer("/lw_configCore/timeZone")
-                .and_then(Value::as_str)
-                .filter(|z| !z.is_empty())
-                .unwrap_or(super::generators::DEFAULT_TIME_ZONE)
-                .to_owned(),
             seed,
             clock_skew: client.clock_skew(),
             group_modes,
             restored_alarms,
             write_seeds,
-            rs485_active: mo
-                .pointer("/lw_configRs485/isActive")
-                .and_then(Value::as_bool)
-                .unwrap_or(true),
+            // No `lw_configRs485` any more (D10): the simulated bus is always active.
+            rs485_active: true,
         },
     })
 }

@@ -7,6 +7,8 @@ demo library.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
 ### Changed
 
 - Measurements are named from the app's own config: fragment = the item's German title, series =

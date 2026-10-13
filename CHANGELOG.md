@@ -7,6 +7,8 @@ demo library.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-13
+
 ### Changed
 
 - Release builds use tauri-action 1.0 and GitHub actions on Node 24. The macOS updater archive

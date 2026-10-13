@@ -1,6 +1,6 @@
 [package]
 name = "lichtwart-demo-simulator"
-version = "0.1.0"
+version = "0.1.1"
 description = "Lichtwart Demo Simulator — simulates Lichtwart Core v2 devices in Cumulocity"
 authors = ["Lichtwart GmbH"]
 edition = "2024"

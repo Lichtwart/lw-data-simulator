@@ -7,6 +7,8 @@ demo library.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-13
+
 ### Changed
 
 - The login form asks for the tenant URL and tenant ID; no tenants ship with the app any more.

@@ -23,6 +23,12 @@ environment are not seen. Secrets cannot be copied or renamed between environmen
 | `APPLE_API_ISSUER` | | App Store Connect Issuer ID |
 | `APPLE_API_KEY_P8` | | `AuthKey_<KeyID>.p8`, base64 |
 
+The commands below are for bash/zsh. **Nushell** appends a line break when it pipes a file or a
+string into `gh secret set`. The updater key then fails with "Invalid symbol 10" (10 is the line
+break). Set file-based secrets from bash/zsh with `<` (e.g. `bash -c 'gh secret set … < file'`), or
+in Nushell pass the value with `--body (open ~/.tauri/lichtwart-sim.key | str trim)`. Empty values
+(a wrong path in a pipe) are set without an error: check the timestamp in `gh secret list`.
+
 `GITHUB_TOKEN` is provided by GitHub. The Apple Team ID (`XD59B34DMF`) is part of
 `APPLE_SIGNING_IDENTITY`; API-key notarization does not need it separately. The workflow stops
 early with a clear message when a required secret is empty.

@@ -54,9 +54,8 @@ release: [`docs/RELEASING.md`](docs/RELEASING.md).
 
 Still open:
 
-- [ ] Required reviewers on the `release` environment and a tag rule for `v*`.
 - [ ] Replace the placeholder app icon (`npm run tauri icon <logo.png>`).
-- [ ] Windows code signing (SmartScreen warns on the first install).
+- [ ] Windows code signing (SmartScreen warns on the first install). Postponed.
 - [ ] Check on real tenants and devices (PRD §19): `description` in Device Management, floorplan
       plugin, DALI brightness %, the `"C"` temperature unit, Windows keychain and updater.
 

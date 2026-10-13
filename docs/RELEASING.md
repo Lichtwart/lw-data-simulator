@@ -157,9 +157,13 @@ Check a notarized build after installing:
 
 ### 5. Protect the signing secrets
 
-- Add **required reviewers** to the `release` environment: a pushed `v*` tag then waits for
-  approval before any secret is available.
-- Add a tag ruleset (Settings > Rules) that restricts who can create `v*` tags.
+Set up on 2026-10-13:
+
+- The `release` environment has a **required reviewer** (lw-lueddemann) and accepts only `v*` tags
+  (deployment branch policy). A release run waits at `build` until it is approved on the run page;
+  only then are the secrets available.
+- The tag ruleset **"release tags"** (Settings > Rules) lets only repository admins create, move or
+  delete `v*` tags.
 - The workflow also refuses tags whose commit is not on `main`.
 
 ## Local builds and the release overlay

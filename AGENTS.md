@@ -13,7 +13,7 @@ contract) before changing code.
 | The one error type | `src-tauri/src/error.rs` (`AppError`, `{ code, details? }`) |
 | Cumulocity HTTP / realtime / keychain / activity log / client event sink | `src-tauri/src/c8y/` |
 | Library loading, validation, item selection | `src-tauri/src/library/` |
-| Native naming + payload builders (pure) | `src-tauri/src/payload/` |
+| Measurement naming + payload builders (pure) | `src-tauri/src/payload/` |
 | Session task, outbound worker, generators, operations, faults | `src-tauri/src/sim/` |
 | Demo device CRUD, `lw_demo` (+ `lw_demoLock` / `lw_demoSnapshot`, D7), apply, floorplans, export, upgrade | `src-tauri/src/device/` |
 | Raw fire | `src-tauri/src/raw.rs` |
@@ -59,7 +59,7 @@ contract) before changing code.
 - **Cumulocity client**: `C8yClient` reports through an `EventSink` (activity log entries,
   401 → `auth-expired`); never log headers or passwords. Credentials: password in the keychain
   only, user names in the app config file; only `login_saved` reads the secret.
-- **Firmware facts** (alarm texts, series names, config fields) must be checked against
+- **Firmware facts** (alarm texts, units, value ranges, operation payloads) must be checked against
   `docs/research/firmware-core-v2.md` and get a unit test in `payload`.
 - **Tests**: pure logic (payload naming, generators, operation handling, export↔apply) gets
   Rust unit tests next to the code. A behavioural fix (Rust or UI) comes with a test that fails
@@ -101,7 +101,7 @@ Spec: `library/schema/*.schema.json` (draft 2020-12); serde mirror: `src-tauri/s
 worked example: `src-tauri/tests/fixtures/library/`. Check with `npm run validate:library`
 (schema) and `npm run rust:test` (schema + semantic rules, `library/validate.rs`). Every file has
 `"type"` and `"schemaVersion": 1`; unknown fields are errors (also in demo `digitalInputs[]` and the
-device's `lw_configDigitalInputs`). Firmware length limits count UTF-8 **bytes** (`"Kühlraum Tür
+device's `lw_demo.digitalInputs`). Firmware length limits count UTF-8 **bytes** (`"Kühlraum Tür
 links"` is 20 bytes): validation is the byte gate, the schema's `maxLength` counts characters.
 
 ```
@@ -118,7 +118,7 @@ label{de,en}}],default}` | `counter {default}`), `generator` (`randomWalk {cente
 `effects` (`event {type,text}` with `{value}`/`{label}`, `inventory {property}`, `alarm {type,
 severity,text,threshold}`).
 - `dailyProfile` hours (00:00…23:00, linearly interpolated) are in the **device's time zone**
-  (`lw_configCore.timeZone`, default `Europe/Berlin`, DST-aware), not the laptop's.
+  (`lw_demo.timeZone`, default `Europe/Berlin`, DST-aware), not the laptop's.
 - `counter` generators are monotonic: allowed only with a `counter` control or on an
   `impulseCounter`; the start is the control default (= DI `initCount`), at session start the
   newest stored value wins, and manual / scenario values below the current value are rejected.
@@ -131,13 +131,18 @@ severity,text,threshold}`).
   `c8y_*`, `name`/`type`/`id`/`owner`/`description`; events `lw_daliGroupChange`, `lw_alarm`,
   `lw_modbus`; native alarm types. Use a `lw_demo*` prefix for properties / events / alarm types.
 
-| kind | own fields | Cumulocity |
+Measurements are named from the app's config, not after the firmware (DECISIONS D10): **fragment =
+the item's German title** (`.` / `$` → `_`, trimmed; a DI's device title wins), **series = the item
+id**, e.g. `Attika 1.light-5`. The simulator writes and reads **no `lw_config*` fragment**: groups,
+DI config and the time zone live in `lw_demo`, apply / upgrade remove old `lw_config*` fragments.
+
+| kind | own fields | Cumulocity (type / `fragment.series`) |
 |---|---|---|
-| `dali` | `index` 1–64 | `daliControlGear` / `LW Dali Control Gear 1-NN` (value = `Brightness`) |
-| `daliBrightness` / `daliMotion` | `index` 1–10 | `LW Dali Brightness.Lux<N>` / `LW Motion.State<N>` |
-| `digitalInput` / `impulseCounter` | `index` 1–10 (counter: `unit` ≤ 19 bytes, must equal the demo DI entry's `unit`; `control.default` must equal its `initCount`) | `LW Digital Input.Value<NN>` / `ImpulseCounter<NN>` |
-| `system` | `system: rssi \| temperature` | `c8y_SignalStrength.rssi` / `c8y_TemperatureMeasurement.T` |
-| `modbus` | `slave` (key), `registerType?` (`coil`\|`holding`\|`input`; default `holding`, `coil` for a switch), `unit?` ≤ 7 bytes, `datatype?` (`int16`\|`uint16`\|`int32`\|`uint32`\|`float32`; default `uint16` for switch / select / writable holding, else `float32`), `writable` (coil/holding only; a writable **holding** register is one 16-bit word: no `float32` / `*32`, control with integer min/max in 0–65535 and integer step, or integer select values) | `LW_Modbus_Slave_<id:02>_<addr:03>.<id>` |
+| `dali` | `index` 1–64 | `daliControlGear` / `<title>.<id>` (brightness) + `<title>.<id> Lamp Status` / `<id> Converter Status` / `<id> Converter Runtime`; a grouped lamp without item: `DALI Leuchte NN.lamp-NN` |
+| `daliBrightness` / `daliMotion` | `index` 1–10 | `daliBrightness` / `daliMotion`, `<title>.<id>` |
+| `digitalInput` / `impulseCounter` | `index` 1–10 (counter: `unit` ≤ 19 bytes, must equal the demo DI entry's `unit`; `control.default` must equal its `initCount`) | `digitalInput` / `impulseCounter` (by the device DI type), `<DI title>.<id>` |
+| `system` | `system: rssi \| temperature` | `c8y_SignalStrength` / `c8y_TemperatureMeasurement`, `<title>.<id>` |
+| `modbus` | `slave` (key), `registerType?` (`coil`\|`holding`\|`input`; default `holding`, `coil` for a switch), `unit?` ≤ 7 bytes, `datatype?` (`int16`\|`uint16`\|`int32`\|`uint32`\|`float32`; default `uint16` for switch / select / writable holding, else `float32`), `writable` (coil/holding only; a writable **holding** register is one 16-bit word: no `float32` / `*32`, control with integer min/max in 0–65535 and integer step, or integer select values) | `modbus`, `<title>.<id>` |
 | `customAlarm` | `severity`, `text`; id must not start with `NN_` | alarm `lw_demo_<id>` |
 
 Native kinds take no `unit` (fixed by the firmware). Units are German/metric; US variants are
@@ -156,29 +161,31 @@ in a group), `daliGroups[]` ≤ 16 `{id 1–16, name, converters:[lamps], minLev
 luxThreshold?, slaveOf?, dynamicControl?, automaticSwitch?}`, `digitalInputs[]` `{index?, itemId,
 type: measurement | daliAction (+highLevelAction/lowLevelAction/groups) | impulseCounter
 (+initCount/increment/unit), isActive?}` (item = DI item with the same index; `index` may be
-omitted and is taken from the item; its German title becomes `lw_configDigitalInputs[].title`;
+omitted and is taken from the item; its German title becomes `lw_demo.digitalInputs[].title`;
 actions are exactly `on` | `off` | `auto`, lowercase; every selected DI item needs an active
 entry, like every selected lamp needs a group), `daliLampCount` may be omitted (default: highest
 converter / selected lamp index), `sendIntervalSec` 5–899, `scenarios[]` `{id, name, description? {de,en},
 start? (≤ 1), set: [{kind:"value",itemId,value} | {kind:"generator",itemId,generator} |
 {kind:"fault",target,active}]}` (`active: true` fires the alarm, `false` clears it in Cumulocity; DECISIONS D9) with targets `daliLamp {lamp,alarmType}`, `daliBus {alarmType}`,
-`slaveTimeout {slaveKey}`, `slaveAlarm {slaveKey,alarmName}`, `customAlarm {itemId}` (edits on a device: `lw_demo.customScenarios` / `hiddenScenarios`, DECISIONS D10);
+`slaveTimeout {slaveKey}`, `slaveAlarm {slaveKey,alarmName}`, `customAlarm {itemId}` (edits on a device: `lw_demo.customScenarios` / `hiddenScenarios`, DECISIONS D11);
 `floorplans: ["floorplans/<demoId>/<name>.json"]` (a layout no demo references, or a folder
 without a demo, is reported as a load warning). Max 20 slaves / 40 registers per slave among the
-selected items. `lw_configCore.maxControlGears` is `max(55, daliLampCount)`.
+selected items.
 
 **Floorplan layout** = plugin `lw_floorplan` with item references: `{name, description?, icon?,
 image, imageWidth, imageHeight (px), imageOpacity?, widgets[]}`. Widgets `{id, kind, x, y, locked?,
 icon}` plus:
-- `sensor`: `measurement {itemId, series?}` (series only for DALI lamps, default `Brightness`),
-  `title?` (default item title de / DI config title, fallback `Eingang <N>`), `unit?`,
+- `sensor`: `measurement {itemId, series?}` (series only for DALI lamps: `Brightness` (default) /
+  `Lamp Status` / `Converter Status` / `Converter Runtime`, sent as `<id>` / `<id> Lamp Status` …),
+  `title?` (default item title de / DI device title, fallback `Eingang <N>`), `unit?`,
   `decimals?` (0–6), `display?`, `ranges[]` (must not overlap; `min` inclusive, `max` exclusive),
   `autoAlarms` (default true: the item's own alarms), `alarms[]`, `staleAfterMin?` (≥ 1);
 - `alarm`: `text`, `note?`, `alarms[]` (≥ 1);
 - `control`: `title?`, `confirm?`, `control` = `{type:"dali", group, modes}` or `{type:"modbus",
   itemId (writable), readback? (default true), valueType: boolean (onLabel, offLabel, invert?) |
   number (integer min, max, step; 0–65535, unit?) | multi (options [{value,label,icon}], holding
-  only)}`; a DALI control whose `group` is missing on the device fails the apply.
+  only)}`; a DALI control whose `group` is missing on the device fails the apply. DALI / Modbus
+  controls do not work in the plugin until it reads `lw_demo` instead of `lw_config*` (D10).
 
 Alarm refs: `{kind:"item",itemId}` (DALI lamp alarms / slave timeout + all slave alarms /
 `lw_demo_<id>`), `{kind:"slaveTimeout",slaveKey}`, `{kind:"slaveAlarm",slaveKey,alarmName}`,
@@ -191,15 +198,16 @@ Brightness / motion sensor widgets watch (and the presenter can raise) the senso
 **Exporting a device by hand** (PRD §13; the advisory lock and the saved snapshot are the own
 fragments `lw_demoLock` / `lw_demoSnapshot`, not part of `lw_demo` (DECISIONS D7), and not exported):
 `lw_demo.tags/includes/excludes/daliLampCount/
-sendIntervalSec` → demo; `lw_configGroups` → `daliGroups` (drop `stdLevel`, `dayState`,
-`channel`, `scheduler`; `slaveOf: null` → omit); `lw_configDigitalInputs` → `digitalInputs`
-(`id` → `index`, `title` → the DI item's `title.de`); `lw_demo.customSlaves/customItems` → an
+sendIntervalSec` → demo; `lw_demo.daliGroups` → `daliGroups` (`slaveOf` absent → omit);
+`lw_demo.digitalInputs` → `digitalInputs` (`title` → the DI item's `title.de`); a device without
+them (older app version) uses the library demo's; `lw_demo.customSlaves/customItems` → an
 item file; `lw_demo.generators` → item `generator`s or a `start` scenario; widgets: replace
-`measurement {fragment, series}` by `{itemId}` (Modbus series = item id, DI `Value<NN>` = DI item
-of index NN, DALI `1-NN` = `dali` item of index NN), Modbus `target`/`readback` by `itemId`,
+`measurement {fragment, series}` by `{itemId}` (the series is the item id, D10; a DALI
+`<id> Lamp Status` etc. becomes `series: "Lamp Status"`), Modbus `target`/`readback` by `itemId`,
 `alarmTypes` by alarm refs (drop the ones `autoAlarms` adds); drop `deviceId`; drop a DI
-widget's `title` when it equals the DI config title (otherwise later title edits never reach the
-floorplan).
+widget's `title` when it equals the DI device title (otherwise later title edits never reach the
+floorplan). Widgets that still use the old firmware names (`LW Dali Control Gear 1-NN`, …) cannot
+be mapped: re-apply the demo first.
 
 ## Shipped demos
 

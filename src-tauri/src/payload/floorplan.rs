@@ -1,8 +1,8 @@
 //! Library floorplan layout → `lw_floorplan` managed object (PRD §12,
 //! docs/research/floorplan-plugin.md §1, §3, §7).
 //!
-//! Item references are resolved here: `measurement {fragment, series}` from the native or Modbus
-//! naming, `alarmTypes` from alarm references (written literally, the plugin never suggests
+//! Item references are resolved here: `measurement {fragment, series}` from the item naming
+//! (title / item id, D10), `alarmTypes` from alarm references (written literally, the plugin never suggests
 //! custom types), Modbus control targets from the slave / register assignment.
 
 use serde_json::{Map, Value, json};
@@ -29,9 +29,9 @@ pub struct FloorplanContext<'a> {
     pub items: &'a [&'a LibraryItem],
     /// Slaves with their persisted assignments (ids, addresses, register addresses).
     pub slaves: &'a [(&'a SlaveDefinition, &'a SlaveAssignment)],
-    /// `lw_configGroups` of the device (group names for DALI control titles).
+    /// DALI groups of the device (group names for DALI control titles).
     pub groups: &'a [DaliGroup],
-    /// `lw_configDigitalInputs` of the device (titles for DI widgets).
+    /// Digital inputs of the device (titles for DI widgets and measurement fragments).
     pub digital_inputs: &'a [DigitalInputEntry],
 }
 
@@ -182,7 +182,7 @@ fn measurement_ref(
         Some(key) => Some(ctx.slave(key)?.1),
         None => None,
     };
-    // A DI item follows the device's `lw_configDigitalInputs` entry (series, counter unit, D6).
+    // A DI item follows the device's digital input entry (title, counter unit, D6 / D10).
     let di = item
         .index()
         .and_then(|i| ctx.digital_inputs.iter().find(|e| e.index == i))
@@ -194,32 +194,42 @@ fn measurement_ref(
         });
     let naming = item_naming_with_di(item, slave, di)
         .ok_or_else(|| AppError::InvalidInput(format!("item {} has no measurement", item.id())))?;
-    let wanted = series.unwrap_or(if naming.series.len() > 1 {
-        DALI_VALUE_SERIES
+    // The library names a DALI lamp's series (`Brightness`, `Lamp Status`, …); on the wire they
+    // are the item id and `<id> <name>` (D10). Other items have exactly one series.
+    let wanted = if naming.series.len() > 1 {
+        naming::dali_series_name(item.id(), series.unwrap_or(DALI_VALUE_SERIES))
     } else {
-        naming.series[0].name.as_str()
-    });
+        series.unwrap_or(naming.series[0].name.as_str()).to_owned()
+    };
     let s = naming
         .series
         .iter()
         .find(|s| s.name == wanted)
-        .ok_or_else(|| AppError::InvalidInput(format!("item {}: no series {wanted}", item.id())))?;
+        .ok_or_else(|| {
+            AppError::InvalidInput(format!(
+                "item {}: no series {}",
+                item.id(),
+                series.unwrap_or(&wanted)
+            ))
+        })?;
     Ok((
         json!({ "fragment": naming.fragment, "series": s.name }),
         s.unit.clone(),
     ))
 }
 
-/// Default sensor title: DI → `lw_configDigitalInputs` title, else the German label
-/// `Eingang <N>` (the widget texts are German, D1 only requires the input number); others →
-/// German item title.
+/// Default sensor title: the German item title; for a DI the device's digital input title when
+/// it has one (the same text as the measurement fragment, D10), and `Eingang <N>` when neither
+/// has a title (the widget texts are German).
 fn default_title(item: &LibraryItem, ctx: &FloorplanContext<'_>) -> String {
     match item {
         LibraryItem::DigitalInput { index, .. } | LibraryItem::ImpulseCounter { index, .. } => ctx
             .digital_inputs
             .iter()
-            .find(|e| e.index == *index && !e.title.is_empty())
-            .map_or_else(|| format!("Eingang {index}"), |e| e.title.clone()),
+            .find(|e| e.index == *index && !e.title.trim().is_empty())
+            .map(|e| e.title.clone())
+            .or_else(|| Some(item.title().de.clone()).filter(|t| !t.trim().is_empty()))
+            .unwrap_or_else(|| format!("Eingang {index}")),
         _ => item.title().de.clone(),
     }
 }
@@ -464,7 +474,7 @@ mod tests {
     use super::*;
     use crate::library::{Library, loader};
     use crate::model::SlaveAssignment;
-    use crate::payload::config::{config_fragments, digital_input_entry};
+    use crate::payload::config::digital_input_entry;
     use crate::payload::naming::{assign_registers, assign_slaves};
     use std::path::Path;
 
@@ -559,7 +569,7 @@ mod tests {
         let freezer = w("w-freezer");
         assert_eq!(
             freezer["measurement"],
-            json!({"fragment": "LW_Modbus_Slave_20_240", "series": "freezer_temp"})
+            json!({"fragment": "Tiefkühler Temperatur", "series": "freezer_temp"})
         );
         assert_eq!(freezer["unit"], "°C");
         assert_eq!(
@@ -580,7 +590,7 @@ mod tests {
         let lamp = w("w-lamp-1");
         assert_eq!(
             lamp["measurement"],
-            json!({"fragment": "LW Dali Control Gear 1-01", "series": "Brightness"})
+            json!({"fragment": "Licht 1", "series": "light-1"})
         );
         assert_eq!(lamp["title"], "Licht 1");
         assert_eq!(lamp["unit"], "%");
@@ -590,7 +600,7 @@ mod tests {
         let door = w("w-door");
         assert_eq!(
             door["measurement"],
-            json!({"fragment": "LW Digital Input", "series": "Value02"})
+            json!({"fragment": "Tür offen", "series": "di-door"})
         );
         assert_eq!(door["title"], "Tür offen");
         assert_eq!(door["alarmTypes"], json!([]));
@@ -611,7 +621,7 @@ mod tests {
         );
         assert_eq!(
             fan["control"]["readback"],
-            json!({"fragment": "LW_Modbus_Slave_20_240", "series": "hood_fan"})
+            json!({"fragment": "Abluft", "series": "hood_fan"})
         );
         assert_eq!(fan["control"]["valueType"], "boolean");
         assert_eq!(fan["control"]["invert"], false);
@@ -635,21 +645,32 @@ mod tests {
             dali["control"],
             json!({"type": "dali", "group": 1, "modes": ["off", "on", "auto"]})
         );
+    }
 
-        // The device config written by the same apply matches the widgets.
-        let cfg = config_fragments(demo, &items, &pairs).unwrap();
-        let mb = cfg["lw_configModbusSlaves"].as_array().unwrap();
-        assert_eq!(mb.len(), 2);
-        assert_eq!(mb[0]["name"], "Kuehlung");
+    /// A lamp widget may show another of the lamp's series (library name), sent as
+    /// `<id> <name>` (D10).
+    #[test]
+    fn dali_widget_series_maps_to_the_wire_name() {
+        let lib = fixture();
+        let demo = &lib.demos[0];
+        let items = lib.demo_items(demo);
+        let lamp = *items.iter().find(|i| i.id() == "light-1").unwrap();
+        let ctx = FloorplanContext {
+            items: &items,
+            slaves: &[],
+            groups: &[],
+            digital_inputs: &[],
+        };
+        let (m, unit) = measurement_ref(lamp, Some("Lamp Status"), &ctx).unwrap();
         assert_eq!(
-            mb[0]["writeRegisters"],
-            json!([{"name": "hood_fan", "address": 1, "type": "coil"}])
+            m,
+            json!({"fragment": "Licht 1", "series": "light-1 Lamp Status"})
         );
-        assert_eq!(mb[1]["writeRegisters"].as_array().unwrap().len(), 2);
-        assert_eq!(cfg["lw_configDigitalInputs"][0]["title"], "Zapfsäule 1");
-        assert_eq!(cfg["lw_configDigitalInputs"][2]["type"], "impulseCounter");
-        assert_eq!(cfg["lw_configGroups"].as_array().unwrap().len(), 2);
-        assert_eq!(cfg["lw_configGroups"][1]["slaveOf"], 1);
+        assert_eq!(unit, None);
+        let (m, unit) = measurement_ref(lamp, None, &ctx).unwrap();
+        assert_eq!(m["series"], "light-1");
+        assert_eq!(unit.as_deref(), Some("%"));
+        assert!(measurement_ref(lamp, Some("Volt"), &ctx).is_err());
     }
 
     #[test]
@@ -669,7 +690,7 @@ mod tests {
     }
 
     /// A DALI control whose group is missing on the device fails the apply (D6: groups are
-    /// edited on the device), a DI widget without a title falls back to `Eingang <N>`.
+    /// edited on the device), a DI widget without a device entry takes the item title.
     #[test]
     fn missing_group_fails_and_di_label_falls_back() {
         let lib = fixture();
@@ -702,10 +723,11 @@ mod tests {
             .find(|w| w["id"] == "w-door")
             .unwrap()
             .clone();
-        assert_eq!(door["title"], "Eingang 2");
+        assert_eq!(door["title"], "Tür offen");
     }
 
-    /// The DI series and counter unit follow the device entry, not the library item.
+    /// The DI type, title (widget title and fragment) and counter unit follow the device
+    /// entry, not the library item.
     #[test]
     fn di_widget_follows_the_device_entry() {
         use crate::model::DigitalInputType;
@@ -719,6 +741,7 @@ mod tests {
             .map(|c| digital_input_entry(c, &items).unwrap())
             .collect();
         inputs[2].settings.unit = Some("kWh".into());
+        inputs[2].title = "Gas Küche".into();
         let ctx = FloorplanContext {
             items: &items,
             slaves: &[],
@@ -726,17 +749,17 @@ mod tests {
             digital_inputs: &inputs,
         };
         let (m, unit) = measurement_ref(gas, None, &ctx).unwrap();
-        assert_eq!(m["series"], "ImpulseCounter03");
+        assert_eq!(m, json!({"fragment": "Gas Küche", "series": "gas-meter"}));
         assert_eq!(unit.as_deref(), Some("kWh"));
+        assert_eq!(default_title(gas, &ctx), "Gas Küche");
         let mut as_value = inputs.clone();
         as_value[2].settings.input_type = DigitalInputType::Measurement;
         let ctx = FloorplanContext {
             digital_inputs: &as_value,
             ..ctx
         };
-        assert_eq!(
-            measurement_ref(gas, None, &ctx).unwrap().0["series"],
-            "Value03"
-        );
+        let (m, unit) = measurement_ref(gas, None, &ctx).unwrap();
+        assert_eq!(m["series"], "gas-meter");
+        assert_eq!(unit, None);
     }
 }

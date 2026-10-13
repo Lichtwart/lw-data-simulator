@@ -80,19 +80,16 @@ export const commands = {
 	 *  custom slaves / items — D6). A running session on this device picks the change up.
 	 */
 	updateDemoSetup: (deviceId: string, patch: DemoSetupPatch_Deserialize) => typedError<LwDemoState_Serialize, AppError>(__TAURI_INVOKE("update_demo_setup", { deviceId, patch })),
-	/**
-	 *  The device's editable config fragments: DALI groups (`lw_configGroups`) and digital inputs
-	 *  (`lw_configDigitalInputs`, incl. titles). D6.
-	 */
+	/**  The device's DALI groups and digital inputs (incl. titles), kept in `lw_demo` (D6, D10). */
 	getDeviceConfig: (deviceId: string) => typedError<DeviceConfig_Serialize, AppError>(__TAURI_INVOKE("get_device_config", { deviceId })),
 	/**
-	 *  Replace `lw_configGroups` on the device (≤ 16 groups). Returns what was written. D6. A
-	 *  running session on this device takes the change at once.
+	 *  Replace the DALI groups of the device (`lw_demo.daliGroups`, ≤ 16 groups). Returns what was
+	 *  written. D6, D10. A running session on this device takes the change at once.
 	 */
 	setDaliGroups: (deviceId: string, groups: DaliGroup_Deserialize[]) => typedError<DaliGroup_Serialize[], AppError>(__TAURI_INVOKE("set_dali_groups", { deviceId, groups })),
 	/**
-	 *  Replace `lw_configDigitalInputs` on the device (≤ 10 inputs, titles included). D6. A running
-	 *  session on this device takes the change at once.
+	 *  Replace the digital inputs of the device (`lw_demo.digitalInputs`, ≤ 10 inputs, titles
+	 *  included). D6, D10. A running session on this device takes the change at once.
 	 */
 	setDigitalInputs: (deviceId: string, inputs: DigitalInputEntry_Deserialize[]) => typedError<DigitalInputEntry_Serialize[], AppError>(__TAURI_INVOKE("set_digital_inputs", { deviceId, inputs })),
 	/**  Selectable faults for the device's setup (firmware texts + severities). */
@@ -449,8 +446,9 @@ export type CreateDeviceResult_Serialize = {
 };
 
 /**
- *  DALI group (→ `lw_configGroups`, firmware-core-v2.md §5.3). Used in demo packs and
- *  as the device-side group entry edited by `set_dali_groups`.
+ *  DALI group (fields as in the firmware's group config, firmware-core-v2.md §5.3). Used in
+ *  demo packs and as the device-side group entry (`lw_demo.daliGroups`, D10) edited by
+ *  `set_dali_groups`.
  */
 export type DaliGroup = DaliGroup_Serialize | DaliGroup_Deserialize;
 
@@ -462,8 +460,9 @@ export type DaliGroupState = {
 };
 
 /**
- *  DALI group (→ `lw_configGroups`, firmware-core-v2.md §5.3). Used in demo packs and
- *  as the device-side group entry edited by `set_dali_groups`.
+ *  DALI group (fields as in the firmware's group config, firmware-core-v2.md §5.3). Used in
+ *  demo packs and as the device-side group entry (`lw_demo.daliGroups`, D10) edited by
+ *  `set_dali_groups`.
  */
 export type DaliGroup_Deserialize = {
 	/**  1–16. */
@@ -484,8 +483,9 @@ export type DaliGroup_Deserialize = {
 };
 
 /**
- *  DALI group (→ `lw_configGroups`, firmware-core-v2.md §5.3). Used in demo packs and
- *  as the device-side group entry edited by `set_dali_groups`.
+ *  DALI group (fields as in the firmware's group config, firmware-core-v2.md §5.3). Used in
+ *  demo packs and as the device-side group entry (`lw_demo.daliGroups`, D10) edited by
+ *  `set_dali_groups`.
  */
 export type DaliGroup_Serialize = {
 	/**  1–16. */
@@ -685,14 +685,16 @@ export type DemoSummary = {
 };
 
 /**
- *  The editable device-side config fragments (`lw_configGroups`, `lw_configDigitalInputs`).
- *  Returned by `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
+ *  The device's DALI groups and digital inputs (`lw_demo.daliGroups` / `lw_demo.digitalInputs`,
+ *  D10; the library demo's values when the device has none yet). Returned by
+ *  `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
  */
 export type DeviceConfig = DeviceConfig_Serialize | DeviceConfig_Deserialize;
 
 /**
- *  The editable device-side config fragments (`lw_configGroups`, `lw_configDigitalInputs`).
- *  Returned by `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
+ *  The device's DALI groups and digital inputs (`lw_demo.daliGroups` / `lw_demo.digitalInputs`,
+ *  D10; the library demo's values when the device has none yet). Returned by
+ *  `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
  */
 export type DeviceConfig_Deserialize = {
 	groups: DaliGroup_Deserialize[],
@@ -700,8 +702,9 @@ export type DeviceConfig_Deserialize = {
 };
 
 /**
- *  The editable device-side config fragments (`lw_configGroups`, `lw_configDigitalInputs`).
- *  Returned by `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
+ *  The device's DALI groups and digital inputs (`lw_demo.daliGroups` / `lw_demo.digitalInputs`,
+ *  D10; the library demo's values when the device has none yet). Returned by
+ *  `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
  */
 export type DeviceConfig_Serialize = {
 	groups: DaliGroup_Serialize[],
@@ -710,8 +713,8 @@ export type DeviceConfig_Serialize = {
 
 /**
  *  Digital input in a demo pack. The title is **not** stored here: the entry references
- *  the `digitalInput` / `impulseCounter` item, whose German title is written to
- *  `lw_configDigitalInputs[].title` (D1, single source of truth).
+ *  the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
+ *  title (D1, single source of truth).
  * 
  *  Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
  *  would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -720,8 +723,8 @@ export type DigitalInputConfig = DigitalInputConfig_Serialize | DigitalInputConf
 
 /**
  *  Digital input in a demo pack. The title is **not** stored here: the entry references
- *  the `digitalInput` / `impulseCounter` item, whose German title is written to
- *  `lw_configDigitalInputs[].title` (D1, single source of truth).
+ *  the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
+ *  title (D1, single source of truth).
  * 
  *  Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
  *  would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -738,8 +741,8 @@ export type DigitalInputConfig_Deserialize = {
 
 /**
  *  Digital input in a demo pack. The title is **not** stored here: the entry references
- *  the `digitalInput` / `impulseCounter` item, whose German title is written to
- *  `lw_configDigitalInputs[].title` (D1, single source of truth).
+ *  the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
+ *  title (D1, single source of truth).
  * 
  *  Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
  *  would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -755,41 +758,41 @@ export type DigitalInputConfig_Serialize = {
 } & DigitalInputSettings_Serialize;
 
 /**
- *  Digital input as stored on the device (`lw_configDigitalInputs[]`, incl. the extra
- *  `title` field of D1). Read / edited via `get_device_config` / `set_digital_inputs`.
+ *  Digital input as stored on the device (`lw_demo.digitalInputs[]`, D10, incl. the `title` of
+ *  D1). Read / edited via `get_device_config` / `set_digital_inputs`.
  * 
  *  Deserialization is hand-written (see [`DigitalInputConfig`]): unknown fields are errors.
  */
 export type DigitalInputEntry = DigitalInputEntry_Serialize | DigitalInputEntry_Deserialize;
 
 /**
- *  Digital input as stored on the device (`lw_configDigitalInputs[]`, incl. the extra
- *  `title` field of D1). Read / edited via `get_device_config` / `set_digital_inputs`.
+ *  Digital input as stored on the device (`lw_demo.digitalInputs[]`, D10, incl. the `title` of
+ *  D1). Read / edited via `get_device_config` / `set_digital_inputs`.
  * 
  *  Deserialization is hand-written (see [`DigitalInputConfig`]): unknown fields are errors.
  */
 export type DigitalInputEntry_Deserialize = {
 	/**  1–10 (the firmware `id`). */
 	index: number,
-	/**  Display title (D1); the floorplan widget label falls back to the input number if empty. */
+	/**  Display title (D1) and fragment of the input's measurement (D10); empty = the item title. */
 	title: string,
 } & DigitalInputSettings_Deserialize;
 
 /**
- *  Digital input as stored on the device (`lw_configDigitalInputs[]`, incl. the extra
- *  `title` field of D1). Read / edited via `get_device_config` / `set_digital_inputs`.
+ *  Digital input as stored on the device (`lw_demo.digitalInputs[]`, D10, incl. the `title` of
+ *  D1). Read / edited via `get_device_config` / `set_digital_inputs`.
  * 
  *  Deserialization is hand-written (see [`DigitalInputConfig`]): unknown fields are errors.
  */
 export type DigitalInputEntry_Serialize = {
 	/**  1–10 (the firmware `id`). */
 	index: number,
-	/**  Display title (D1); the floorplan widget label falls back to the input number if empty. */
+	/**  Display title (D1) and fragment of the input's measurement (D10); empty = the item title. */
 	title: string,
 } & DigitalInputSettings_Serialize;
 
 /**
- *  Settings of one digital input that map 1:1 to `lw_configDigitalInputs[]`
+ *  Settings of one digital input, as in the firmware's input config
  *  (firmware-core-v2.md §5.4). Which fields apply depends on `type`:
  *  `daliAction` → `highLevelAction`, `lowLevelAction`, `groups`;
  *  `impulseCounter` → `initCount`, `increment`, `unit`; `measurement` → none.
@@ -797,7 +800,7 @@ export type DigitalInputEntry_Serialize = {
 export type DigitalInputSettings = DigitalInputSettings_Serialize | DigitalInputSettings_Deserialize;
 
 /**
- *  Settings of one digital input that map 1:1 to `lw_configDigitalInputs[]`
+ *  Settings of one digital input, as in the firmware's input config
  *  (firmware-core-v2.md §5.4). Which fields apply depends on `type`:
  *  `daliAction` → `highLevelAction`, `lowLevelAction`, `groups`;
  *  `impulseCounter` → `initCount`, `increment`, `unit`; `measurement` → none.
@@ -824,7 +827,7 @@ export type DigitalInputSettings_Deserialize = {
 };
 
 /**
- *  Settings of one digital input that map 1:1 to `lw_configDigitalInputs[]`
+ *  Settings of one digital input, as in the firmware's input config
  *  (firmware-core-v2.md §5.4). Which fields apply depends on `type`:
  *  `daliAction` → `highLevelAction`, `lowLevelAction`, `groups`;
  *  `impulseCounter` → `initCount`, `increment`, `unit`; `measurement` → none.
@@ -850,13 +853,13 @@ export type DigitalInputSettings_Serialize = {
 	groups?: number[],
 };
 
-/**  Digital input mode (`lw_configDigitalInputs[].type`; `none` is rejected by the firmware). */
+/**  Digital input mode (as in the firmware's input config; `none` is not offered). */
 export type DigitalInputType = 
-/**  Switches DALI groups (`highLevelAction` / `lowLevelAction` / `groups`); sends `Value<NN>`. */
+/**  Switches DALI groups (`highLevelAction` / `lowLevelAction` / `groups`); sends its value. */
 "daliAction" | 
-/**  Counts pulses; sends `ImpulseCounter<NN>` (`initCount`, `increment`, `unit`). */
+/**  Counts pulses (`initCount`, `increment`, `unit`); type `impulseCounter`. */
 "impulseCounter" | 
-/**  Plain input; sends `Value<NN>`. */
+/**  Plain input; sends its value. */
 "measurement";
 
 /**  Arguments of `export_demo_pack`. */
@@ -1074,39 +1077,39 @@ export type LibraryItem = LibraryItem_Serialize | LibraryItem_Deserialize;
  *  matching all variants.
  */
 export type LibraryItem_Deserialize = 
-/**  DALI lamp `LW Dali Control Gear 1-NN`; the item value is its `Brightness`. */
+/**  DALI lamp; the item value is its brightness (series = item id, D10). */
 ({ kind: "dali"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  DALI lamp 1–64. */
 index: number; title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  DALI brightness sensor `LW Dali Brightness.Lux<N>` (unit `Lux`). */
+/**  DALI brightness sensor (unit `Lux`). */
 ({ kind: "daliBrightness"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  DALI motion sensor `LW Motion.State<N>` (no unit). */
+/**  DALI motion sensor (no unit). */
 ({ kind: "daliMotion"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  Digital input value `LW Digital Input.Value<NN>` (D1). */
+/**  Digital input value (0 / 1). */
 ({ kind: "digitalInput"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title is written to `lw_configDigitalInputs[].title` (D1). */
+/**  For digital inputs the German title becomes the device's input title (D1). */
 title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  Digital input impulse counter `LW Digital Input.ImpulseCounter<NN>` (D1); `unit` is the counter unit (≤ 19 bytes). */
+/**  Digital input impulse counter; `unit` is the counter unit (≤ 19 bytes). */
 ({ kind: "impulseCounter"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title is written to `lw_configDigitalInputs[].title` (D1). */
+/**  For digital inputs the German title becomes the device's input title (D1). */
 title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
 /**  System measurement: signal strength or board temperature. */
 ({ kind: "system"; id: string; 
@@ -1144,39 +1147,39 @@ text: string }) & { control?: never; datatype?: never; effects?: never; generato
  *  matching all variants.
  */
 export type LibraryItem_Serialize = 
-/**  DALI lamp `LW Dali Control Gear 1-NN`; the item value is its `Brightness`. */
+/**  DALI lamp; the item value is its brightness (series = item id, D10). */
 ({ kind: "dali"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  DALI lamp 1–64. */
 index: number; title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  DALI brightness sensor `LW Dali Brightness.Lux<N>` (unit `Lux`). */
+/**  DALI brightness sensor (unit `Lux`). */
 ({ kind: "daliBrightness"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  DALI motion sensor `LW Motion.State<N>` (no unit). */
+/**  DALI motion sensor (no unit). */
 ({ kind: "daliMotion"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  Digital input value `LW Digital Input.Value<NN>` (D1). */
+/**  Digital input value (0 / 1). */
 ({ kind: "digitalInput"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title is written to `lw_configDigitalInputs[].title` (D1). */
+/**  For digital inputs the German title becomes the device's input title (D1). */
 title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
-/**  Digital input impulse counter `LW Digital Input.ImpulseCounter<NN>` (D1); `unit` is the counter unit (≤ 19 bytes). */
+/**  Digital input impulse counter; `unit` is the counter unit (≤ 19 bytes). */
 ({ kind: "impulseCounter"; 
 /**  Globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars. */
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title is written to `lw_configDigitalInputs[].title` (D1). */
+/**  For digital inputs the German title becomes the device's input title (D1). */
 title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
 /**  System measurement: signal strength or board temperature. */
 ({ kind: "system"; id: string; 
@@ -1267,6 +1270,21 @@ export type LwDemoState_Deserialize = {
 	customScenarios?: Scenario_Deserialize[],
 	/**  Ids of library scenarios deleted on this device. */
 	hiddenScenarios?: string[],
+	/**
+	 *  DALI groups of the device (D6, D10: kept here, no `lw_configGroups`). `None` on devices
+	 *  set up by an older app version: the library demo's groups apply until the next write.
+	 */
+	daliGroups?: DaliGroup_Deserialize[] | null,
+	/**
+	 *  Digital inputs of the device incl. titles (D6, D10: kept here, no
+	 *  `lw_configDigitalInputs`). `None` like `daliGroups`.
+	 */
+	digitalInputs?: DigitalInputEntry_Deserialize[] | null,
+	/**
+	 *  IANA time zone of the device (`dailyProfile` runs in device time); `None` =
+	 *  `Europe/Berlin`.
+	 */
+	timeZone?: string | null,
 	generators?: { [key in string]: GeneratorConfig },
 	sendIntervalSec: number,
 	realisticMode?: boolean,
@@ -1323,6 +1341,21 @@ export type LwDemoState_Serialize = {
 	customScenarios?: Scenario_Serialize[],
 	/**  Ids of library scenarios deleted on this device. */
 	hiddenScenarios?: string[],
+	/**
+	 *  DALI groups of the device (D6, D10: kept here, no `lw_configGroups`). `None` on devices
+	 *  set up by an older app version: the library demo's groups apply until the next write.
+	 */
+	daliGroups?: DaliGroup_Serialize[] | null,
+	/**
+	 *  Digital inputs of the device incl. titles (D6, D10: kept here, no
+	 *  `lw_configDigitalInputs`). `None` like `daliGroups`.
+	 */
+	digitalInputs?: DigitalInputEntry_Serialize[] | null,
+	/**
+	 *  IANA time zone of the device (`dailyProfile` runs in device time); `None` =
+	 *  `Europe/Berlin`.
+	 */
+	timeZone?: string | null,
 	generators: { [key in string]: GeneratorConfig },
 	sendIntervalSec: number,
 	realisticMode: boolean,
@@ -1350,14 +1383,20 @@ export type LwDemoState_Serialize = {
 
 /**  Resolved Cumulocity naming of an item's measurement. */
 export type MeasurementNaming = {
-	/**  e.g. `daliControlGear`, `digitalInput`, `modbus`, `c8y_SignalStrength`. */
+	/**
+	 *  e.g. `daliControlGear`, `digitalInput`, `impulseCounter`, `modbus`,
+	 *  `c8y_SignalStrength`.
+	 */
 	type: string,
-	/**  e.g. `LW Dali Control Gear 1-03`, `LW_Modbus_Slave_20_240`, `LW Digital Input`. */
+	/**
+	 *  The item's German title, made safe for a fragment key (D10), e.g. `Attika 1`,
+	 *  `Zapfsäule 1`.
+	 */
 	fragment: string,
 	/**
-	 *  All series under the fragment. One entry for most items; a DALI lamp has four
-	 *  (`Converter Status`, `Lamp Status`, `Converter Runtime`, `Brightness`). The item's value
-	 *  is the single series, or `Brightness` for a DALI lamp.
+	 *  All series under the fragment. One entry (the item id) for most items; a DALI lamp has
+	 *  four (`<id> Converter Status`, `<id> Lamp Status`, `<id> Converter Runtime`, `<id>`). The
+	 *  item's value is the series named like the item id.
 	 */
 	series: SeriesNaming[],
 };
@@ -1366,7 +1405,7 @@ export type MeasurementNaming = {
 export type ModbusDatatype = "int16" | "uint16" | "int32" | "uint32" | "float32";
 
 /**
- *  Modbus register type (`lw_configModbusSlaves[].registers[].type`).
+ *  Modbus register type (firmware register types).
  *  `discrete` exists in the firmware but is not simulated.
  */
 export type ModbusRegisterType = "coil" | "holding" | "input";
@@ -1562,7 +1601,10 @@ export type SelectOption = {
 
 /**  One series of a measurement: name plus the unit the firmware sends (`None` = omit `unit`). */
 export type SeriesNaming = {
-	/**  e.g. `Brightness`, `Value03`, `freezer_temp`. */
+	/**
+	 *  The item id (`light-5`, `freezer_temp`); a DALI lamp's other series are
+	 *  `<id> Lamp Status` etc. (D10).
+	 */
 	name: string,
 	unit: string | null,
 };
@@ -1664,7 +1706,7 @@ export type SlaveDefinition = {
 	key: string,
 	/**  ≤ 19 UTF-8 bytes (firmware buffer). */
 	name: string,
-	/**  Request interval in seconds (written to `lw_configModbusSlaves`). */
+	/**  Request interval in seconds. */
 	requestInterval: number,
 	/**  Custom alarms of this slave (D2). */
 	alarms?: SlaveAlarmDefinition[],
@@ -1681,9 +1723,9 @@ export type StartSessionRequest = {
 
 /**  Which system measurement a `system` item simulates. */
 export type SystemKind = 
-/**  `c8y_SignalStrength.rssi`, unit `dBm`. */
+/**  Signal strength, unit `dBm`. */
 "rssi" | 
-/**  `c8y_TemperatureMeasurement.T`, unit `C`. */
+/**  Device temperature, unit `C`. */
 "temperature";
 
 /**

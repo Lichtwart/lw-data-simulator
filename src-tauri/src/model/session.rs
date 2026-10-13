@@ -144,7 +144,8 @@ pub struct ActiveFault {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesNaming {
-    /// e.g. `Brightness`, `Value03`, `freezer_temp`.
+    /// The item id (`light-5`, `freezer_temp`); a DALI lamp's other series are
+    /// `<id> Lamp Status` etc. (D10).
     pub name: String,
     pub unit: Option<String>,
 }
@@ -153,14 +154,16 @@ pub struct SeriesNaming {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct MeasurementNaming {
-    /// e.g. `daliControlGear`, `digitalInput`, `modbus`, `c8y_SignalStrength`.
+    /// e.g. `daliControlGear`, `digitalInput`, `impulseCounter`, `modbus`,
+    /// `c8y_SignalStrength`.
     #[serde(rename = "type")]
     pub measurement_type: String,
-    /// e.g. `LW Dali Control Gear 1-03`, `LW_Modbus_Slave_20_240`, `LW Digital Input`.
+    /// The item's German title, made safe for a fragment key (D10), e.g. `Attika 1`,
+    /// `Zapfsäule 1`.
     pub fragment: String,
-    /// All series under the fragment. One entry for most items; a DALI lamp has four
-    /// (`Converter Status`, `Lamp Status`, `Converter Runtime`, `Brightness`). The item's value
-    /// is the single series, or `Brightness` for a DALI lamp.
+    /// All series under the fragment. One entry (the item id) for most items; a DALI lamp has
+    /// four (`<id> Converter Status`, `<id> Lamp Status`, `<id> Converter Runtime`, `<id>`). The
+    /// item's value is the series named like the item id.
     pub series: Vec<SeriesNaming>,
 }
 

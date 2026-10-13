@@ -158,19 +158,18 @@ pub async fn update_demo_setup(
     Ok(demo)
 }
 
-/// The device's editable config fragments: DALI groups (`lw_configGroups`) and digital inputs
-/// (`lw_configDigitalInputs`, incl. titles). D6.
+/// The device's DALI groups and digital inputs (incl. titles), kept in `lw_demo` (D6, D10).
 #[tauri::command]
 #[specta::specta]
 pub async fn get_device_config(
     state: State<'_, AppState>,
     device_id: String,
 ) -> AppResult<DeviceConfig> {
-    device::demo_state::get_config(&state.client().await?, &device_id).await
+    device::demo_state::get_config(&state.client().await?, &*state.library()?, &device_id).await
 }
 
-/// Replace `lw_configGroups` on the device (≤ 16 groups). Returns what was written. D6. A
-/// running session on this device takes the change at once.
+/// Replace the DALI groups of the device (`lw_demo.daliGroups`, ≤ 16 groups). Returns what was
+/// written. D6, D10. A running session on this device takes the change at once.
 #[tauri::command]
 #[specta::specta]
 pub async fn set_dali_groups(
@@ -195,8 +194,8 @@ pub async fn set_dali_groups(
     Ok(written)
 }
 
-/// Replace `lw_configDigitalInputs` on the device (≤ 10 inputs, titles included). D6. A running
-/// session on this device takes the change at once.
+/// Replace the digital inputs of the device (`lw_demo.digitalInputs`, ≤ 10 inputs, titles
+/// included). D6, D10. A running session on this device takes the change at once.
 #[tauri::command]
 #[specta::specta]
 pub async fn set_digital_inputs(

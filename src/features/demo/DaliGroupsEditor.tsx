@@ -59,7 +59,7 @@ function rowsToGroups(rows: readonly Row[]): DaliGroup_Deserialize[] | null {
   return out;
 }
 
-/** Edit `lw_configGroups` (≤ 16 groups; D6). */
+/** Edit the device's DALI groups (`lw_demo.daliGroups`, ≤ 16 groups; D6, D10). */
 export function DaliGroupsEditor({
   groups,
   onSaved,

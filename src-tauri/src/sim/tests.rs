@@ -224,34 +224,19 @@ mod paused {
         r.settle().await;
         let items = r.drain();
         let ms = measurements(&items);
-        assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-01", "Brightness"),
-            Some(80.0)
-        );
-        assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-01", "Lamp Status"),
-            Some(1.0)
-        );
+        assert_eq!(has_series(&ms, "Licht 1", "light-1"), Some(80.0));
+        assert_eq!(has_series(&ms, "Licht 1", "light-1 Lamp Status"), Some(1.0));
         // Lamp 3 has no item (excluded) but is in a group: still sent, at its group's max.
-        assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-03", "Brightness"),
-            Some(90.0)
-        );
+        assert_eq!(has_series(&ms, "DALI Leuchte 03", "lamp-03"), Some(90.0));
         // The start scenario set the freezer to -18.
         assert_eq!(
-            has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp"),
+            has_series(&ms, "Tiefkühler Temperatur", "freezer_temp"),
             Some(-18.0)
         );
-        assert_eq!(
-            has_series(&ms, "LW_Modbus_Slave_19_239", "ac_setpoint"),
-            Some(21.0)
-        );
-        assert_eq!(has_series(&ms, "LW Digital Input", "Value02"), Some(0.0));
-        assert_eq!(
-            has_series(&ms, "LW Digital Input", "ImpulseCounter03"),
-            Some(1000.0)
-        );
-        assert!(has_series(&ms, "c8y_SignalStrength", "rssi").is_some());
+        assert_eq!(has_series(&ms, "Klima Soll", "ac_setpoint"), Some(21.0));
+        assert_eq!(has_series(&ms, "Tür offen", "di-door"), Some(0.0));
+        assert_eq!(has_series(&ms, "Gaszähler", "gas-meter"), Some(1000.0));
+        assert!(has_series(&ms, "Signalstärke", "rssi").is_some());
         // DALI lamps: ≤ 6 per collection; every object has time.
         assert!(
             ms.iter()
@@ -345,14 +330,8 @@ mod paused {
         r.settle().await;
         let items = r.drain();
         let ms = measurements(&items);
-        assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-01", "Brightness"),
-            Some(0.0)
-        );
-        assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-02", "Brightness"),
-            Some(0.0)
-        );
+        assert_eq!(has_series(&ms, "Licht 1", "light-1"), Some(0.0));
+        assert_eq!(has_series(&ms, "Licht 2", "light-2"), Some(0.0));
         let ev = events_of(&items);
         assert_eq!(ev.len(), 1);
         assert_eq!(ev[0]["type"], "lw_daliGroupChange");
@@ -443,10 +422,7 @@ mod paused {
         let items = r.flush().await;
         let ms = measurements(&items);
         assert_eq!(ms.len(), 1);
-        assert_eq!(
-            ms[0]["LW_Modbus_Slave_19_239"]["ac_setpoint"]["value"],
-            json!(23)
-        );
+        assert_eq!(ms[0]["Klima Soll"]["ac_setpoint"]["value"], json!(23));
         // EXECUTING went out at once; SUCCESSFUL waited for its answer and follows the readback.
         assert_eq!(
             statuses(&items),
@@ -658,8 +634,8 @@ mod paused {
         r.cmd(SessionCommand::SendAllNow).await.unwrap();
         r.settle().await;
         let ms = measurements(&r.drain());
-        assert!(has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp").is_none());
-        assert!(has_series(&ms, "LW_Modbus_Slave_19_239", "ac_mode").is_some());
+        assert!(has_series(&ms, "Tiefkühler Temperatur", "freezer_temp").is_none());
+        assert!(has_series(&ms, "Klima Modus", "ac_mode").is_some());
         assert!(
             r.handle
                 .snapshot()
@@ -685,7 +661,7 @@ mod paused {
         assert!(
             has_series(
                 &measurements(&items),
-                "LW_Modbus_Slave_20_240",
+                "Tiefkühler Temperatur",
                 "freezer_temp"
             )
             .is_some()
@@ -718,11 +694,8 @@ mod paused {
         let items = r.drain();
         r.ack(&items);
         let ms = measurements(&items);
-        assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-01", "Lamp Status"),
-            Some(0.0)
-        );
-        assert!(has_series(&ms, "LW Dali Control Gear 1-02", "Brightness").is_none());
+        assert_eq!(has_series(&ms, "Licht 1", "light-1 Lamp Status"), Some(0.0));
+        assert!(has_series(&ms, "Licht 2", "light-2").is_none());
         r.cmd(SessionCommand::SetFault {
             target: open,
             active: false,
@@ -739,11 +712,7 @@ mod paused {
         // it clears even in realistic mode (that mode only spares derived alarms).
         assert_eq!(clears(&items), 1);
         assert_eq!(
-            has_series(
-                &measurements(&items),
-                "LW Dali Control Gear 1-01",
-                "Lamp Status"
-            ),
+            has_series(&measurements(&items), "Licht 1", "light-1 Lamp Status"),
             Some(1.0)
         );
     }
@@ -837,11 +806,15 @@ mod paused {
         r.cmd(SessionCommand::SendAllNow).await.unwrap();
         let ms = measurements(&r.flush().await);
         assert!(!ms.is_empty());
-        for n in 1..=4 {
-            let f = format!("LW Dali Control Gear 1-{n:02}");
-            assert!(has_series(&ms, &f, "Brightness").is_none(), "{f}");
+        for (f, s) in [
+            ("Licht 1", "light-1"),
+            ("Licht 2", "light-2"),
+            ("DALI Leuchte 03", "lamp-03"),
+            ("DALI Leuchte 04", "lamp-04"),
+        ] {
+            assert!(has_series(&ms, f, s).is_none(), "{f}");
         }
-        assert!(has_series(&ms, "LW Dali Brightness", "Lux1").is_none());
+        assert!(has_series(&ms, "Helligkeit Shop", "lux-1").is_none());
 
         // A lamp fault raised during the bus failure: the alarm is open already.
         let lost2 = FaultTarget::DaliLamp {
@@ -872,17 +845,14 @@ mod paused {
         assert_eq!(clears(&items), texts.len());
         let ms = measurements(&items);
         // Lamp 1 is back with its own open-circuit fault, lamp 4 with its group level.
+        assert_eq!(has_series(&ms, "Licht 1", "light-1 Lamp Status"), Some(0.0));
         assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-01", "Lamp Status"),
-            Some(0.0)
-        );
-        assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-04", "Lamp Status"),
+            has_series(&ms, "DALI Leuchte 04", "lamp-04 Lamp Status"),
             Some(1.0)
         );
-        assert!(has_series(&ms, "LW Dali Control Gear 1-04", "Brightness").is_some());
-        assert!(has_series(&ms, "LW Dali Control Gear 1-02", "Brightness").is_none());
-        assert!(has_series(&ms, "LW Dali Brightness", "Lux1").is_some());
+        assert!(has_series(&ms, "DALI Leuchte 04", "lamp-04").is_some());
+        assert!(has_series(&ms, "Licht 2", "light-2").is_none());
+        assert!(has_series(&ms, "Helligkeit Shop", "lux-1").is_some());
         assert_eq!(r.handle.snapshot().active_faults.len(), 2);
 
         // Clearing lamp 2's own fault now recovers it.
@@ -900,14 +870,7 @@ mod paused {
                 "Alarm cleared: lw_controlGearFailure_1_02".to_owned()
             ]
         );
-        assert!(
-            has_series(
-                &measurements(&items),
-                "LW Dali Control Gear 1-02",
-                "Brightness"
-            )
-            .is_some()
-        );
+        assert!(has_series(&measurements(&items), "Licht 2", "light-2").is_some());
         // The snapshot is no longer paused after the recovery.
         let snap = r.handle.snapshot();
         assert!(
@@ -1044,7 +1007,7 @@ mod paused {
             r.cmd(SessionCommand::SendAllNow).await.unwrap();
             measurements(&r.flush().await)
         };
-        assert!(has_series(&ms, "LW Dali Control Gear 1-02", "Brightness").is_none());
+        assert!(has_series(&ms, "Licht 2", "light-2").is_none());
 
         // The group returns while the bus is down: lamps 3 and 4 are lost now.
         r.cmd(SessionCommand::ConfigChanged {
@@ -1255,14 +1218,7 @@ mod paused {
         assert!(texts.contains(&"Alarm cleared: lw_converter_1_03_lost".to_owned()));
         assert!(texts.contains(&"Alarm cleared: lw_controlGearFailure_1_03".to_owned()));
         assert_eq!(clears(&items), 1, "only the bus alarm itself");
-        assert!(
-            has_series(
-                &measurements(&items),
-                "LW Dali Control Gear 1-03",
-                "Brightness"
-            )
-            .is_some()
-        );
+        assert!(has_series(&measurements(&items), "DALI Leuchte 03", "lamp-03").is_some());
     }
 
     /// Open alarms at session start: lamp lost alarms next to an open bus power alarm belong to
@@ -1362,7 +1318,7 @@ mod paused {
         let ms = measurements(&r.drain());
         assert_eq!(ms.len(), 1, "only the changed item is sent");
         assert_eq!(
-            has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp"),
+            has_series(&ms, "Tiefkühler Temperatur", "freezer_temp"),
             Some(-12.0)
         );
         tokio::time::sleep(Duration::from_secs(6)).await;
@@ -1437,10 +1393,7 @@ mod paused {
         let mut r = rig_with(p);
         r.settle().await;
         let ms = measurements(&r.drain());
-        assert_eq!(
-            has_series(&ms, "LW Digital Input", "ImpulseCounter03"),
-            Some(1240.0)
-        );
+        assert_eq!(has_series(&ms, "Gaszähler", "gas-meter"), Some(1240.0));
         tokio::time::sleep(Duration::from_secs(60)).await;
         let v = r
             .handle
@@ -1668,31 +1621,25 @@ mod fake {
         wait_for("measurements", || fake.state().measurements.len() > 10).await;
         let ms = fake.state().measurements.clone();
         assert!(ms.iter().all(|m| m["source"]["id"] == id.as_str()));
-        let dali = ms
-            .iter()
-            .find(|m| m.get("LW Dali Control Gear 1-01").is_some())
-            .unwrap();
+        let dali = ms.iter().find(|m| m.get("Licht 1").is_some()).unwrap();
         assert_eq!(dali["type"], "daliControlGear");
-        let s = &dali["LW Dali Control Gear 1-01"];
-        assert_eq!(s["Brightness"]["unit"], "%");
-        assert!(s["Lamp Status"].get("unit").is_none());
-        assert_eq!(s["Converter Runtime"]["unit"], "hr");
+        let s = &dali["Licht 1"];
+        assert_eq!(s["light-1"]["unit"], "%");
+        assert!(s["light-1 Lamp Status"].get("unit").is_none());
+        assert_eq!(s["light-1 Converter Runtime"]["unit"], "hr");
         let modbus = ms
             .iter()
-            .find(|m| m.get("LW_Modbus_Slave_20_240").is_some())
+            .find(|m| m.get("Tiefkühler Temperatur").is_some())
             .unwrap();
         assert_eq!(modbus["type"], "modbus");
         assert_eq!(
-            modbus["LW_Modbus_Slave_20_240"]["freezer_temp"]["unit"],
+            modbus["Tiefkühler Temperatur"]["freezer_temp"]["unit"],
             "°C"
         );
+        assert!(ms.iter().any(|m| m["Zapfsäule 1"]["di-pump-1"].is_object()));
         assert!(
             ms.iter()
-                .any(|m| m["LW Digital Input"]["Value01"].is_object())
-        );
-        assert!(
-            ms.iter()
-                .any(|m| m["c8y_TemperatureMeasurement"]["T"]["unit"] == "C")
+                .any(|m| m["Gerätetemperatur"]["board_temp"]["unit"] == "C")
         );
         // A collection request was used.
         assert!(fake.requests().iter().any(|r| {
@@ -1924,7 +1871,7 @@ mod review_paused {
         );
         let ms = measurements(&items);
         assert_eq!(
-            has_series(&ms, "LW Dali Control Gear 1-01", "Brightness"),
+            has_series(&ms, "Licht 1", "light-1"),
             Some(100.0),
             "group 1 is on at its max level"
         );
@@ -2076,11 +2023,11 @@ mod review_paused {
         let ms = measurements(&items);
         let sends = ms
             .iter()
-            .filter(|m| m.get("LW_Modbus_Slave_20_240").is_some())
+            .filter(|m| m.get("Tiefkühler Temperatur").is_some())
             .count();
         assert!((2..=5).contains(&sends), "{sends} sends for 20 changes");
         assert_eq!(
-            has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp"),
+            has_series(&ms, "Tiefkühler Temperatur", "freezer_temp"),
             Some(-6.0),
             "the latest value goes out"
         );
@@ -2213,11 +2160,10 @@ mod review_paused {
         r.settle().await;
         let ms = measurements(&r.drain());
         assert!(
-            ms.iter()
-                .all(|m| m.get("LW Dali Control Gear 1-60").is_none()),
+            ms.iter().all(|m| m.get("DALI Leuchte 60").is_none()),
             "{ms:?}"
         );
-        assert!(has_series(&ms, "LW Dali Control Gear 1-01", "Brightness").is_some());
+        assert!(has_series(&ms, "Licht 1", "light-1").is_some());
     }
 
     /// Finding 28: an alarm `POST` that failed does not stay "active" forever.
@@ -2625,7 +2571,7 @@ mod review_paused {
         let f = core.finish();
         assert!(!paused(&changed_snapshot(&f).unwrap(), "lux-1"));
         assert!(
-            has_series(&measurements(&f.outbound), "LW Dali Brightness", "Lux1").is_some(),
+            has_series(&measurements(&f.outbound), "Helligkeit Shop", "lux-1").is_some(),
             "the sensor is sent again"
         );
     }
@@ -2677,23 +2623,34 @@ mod review_paused {
         core.setup_changed(demo, now);
         assert!(!core.snapshot().restart_needed, "reverted selection");
 
-        // A digital input switched to an impulse counter: other series, restart needed.
+        // A new DI title is the new fragment (D10): taken over at once, no restart.
         let mut inputs = core.inputs.clone();
+        inputs.iter_mut().find(|e| e.index == 1).unwrap().title = "Säule A".into();
+        core.config_changed(None, Some(inputs.clone()));
+        let snap = core.snapshot();
+        assert!(!snap.restart_needed);
+        let naming = |snap: &crate::model::SessionSnapshot| {
+            snap.items
+                .iter()
+                .find(|i| i.item_id == "di-pump-1")
+                .unwrap()
+                .naming
+                .clone()
+                .unwrap()
+        };
+        assert_eq!(naming(&snap).fragment, "Säule A");
+
+        // A digital input switched to an impulse counter: other type, restart needed.
         let e = inputs.iter_mut().find(|e| e.index == 1).unwrap();
         e.settings.input_type = crate::model::DigitalInputType::ImpulseCounter;
         e.settings.unit = Some("x".into());
         core.config_changed(None, Some(inputs));
         let snap = core.snapshot();
         assert!(snap.restart_needed);
-        let di = snap
-            .items
-            .iter()
-            .find(|i| i.item_id == "di-pump-1")
-            .unwrap();
         assert_eq!(
-            di.naming.as_ref().unwrap().series[0].name,
-            "Value01",
-            "the running item keeps its series"
+            naming(&snap).measurement_type,
+            "digitalInput",
+            "the running item keeps its type"
         );
     }
 }
@@ -2797,14 +2754,14 @@ mod review_fake {
             fake.state()
                 .measurements
                 .iter()
-                .any(|m| m["LW Dali Control Gear 1-01"]["Lamp Status"]["value"] == json!(0))
+                .any(|m| m["Licht 1"]["light-1 Lamp Status"]["value"] == json!(0))
         })
         .await;
         wait_for("readback of the restored value", || {
             fake.state()
                 .measurements
                 .iter()
-                .any(|m| m["LW_Modbus_Slave_19_239"]["ac_setpoint"]["value"] == json!(25))
+                .any(|m| m["Klima Soll"]["ac_setpoint"]["value"] == json!(25))
         })
         .await;
         // The restored fault can be cleared (before: "not active", nothing could).
@@ -3116,7 +3073,7 @@ mod cloud_clear {
         r.cloud(&bus_id, "ACKNOWLEDGED").await;
         assert_eq!(status_of(&r, &bus()), Some(OpenAlarmStatus::Acknowledged));
         let ms = r.send_all().await;
-        assert!(has_series(&ms, "LW Dali Control Gear 1-01", "Brightness").is_none());
+        assert!(has_series(&ms, "Licht 1", "light-1").is_none());
         assert!(
             paused(&r, "light-1"),
             "acknowledging does not end the effect"
@@ -3132,14 +3089,7 @@ mod cloud_clear {
         assert!(!ids.contains(&bus_id), "the bus alarm is CLEARED already");
         assert!(ids.contains(&lost1));
         assert!(alarm_posts(&items).is_empty(), "nothing raised again");
-        assert!(
-            has_series(
-                &measurements(&items),
-                "LW Dali Control Gear 1-01",
-                "Brightness"
-            )
-            .is_some()
-        );
+        assert!(has_series(&measurements(&items), "Licht 1", "light-1").is_some());
         assert!(r.handle.snapshot().active_faults.is_empty());
         assert!(!paused(&r, "light-1"));
 
@@ -3218,14 +3168,7 @@ mod cloud_clear {
             cleared_texts(&items).contains(&"Alarm cleared: lw_converter_1_02_lost".to_owned())
         );
         assert!(!clear_ids(&items).contains(&lost2_id));
-        assert!(
-            has_series(
-                &measurements(&items),
-                "LW Dali Control Gear 1-02",
-                "Brightness"
-            )
-            .is_some()
-        );
+        assert!(has_series(&measurements(&items), "Licht 2", "light-2").is_some());
     }
 
     /// A slave timeout stops the slave's values until the presenter clears the alarm.
@@ -3239,7 +3182,7 @@ mod cloud_clear {
         let id = posted_id(&items, "lw_modbus_20_timeoutError");
         tokio::time::sleep(Duration::from_secs(120)).await;
         let ms = r.send_all().await;
-        assert!(has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp").is_none());
+        assert!(has_series(&ms, "Tiefkühler Temperatur", "freezer_temp").is_none());
         r.cloud(&id, "ACKNOWLEDGED").await;
         assert_eq!(
             status_of(&r, &timeout()),
@@ -3257,7 +3200,7 @@ mod cloud_clear {
         assert!(
             has_series(
                 &measurements(&items),
-                "LW_Modbus_Slave_20_240",
+                "Tiefkühler Temperatur",
                 "freezer_temp"
             )
             .is_some()
@@ -3448,8 +3391,8 @@ mod cloud_clear {
         assert!(texts.contains(&"Alarm cleared: lw_converter_1_01_lost".to_owned()));
         assert!(alarm_posts(&items).is_empty());
         let ms = measurements(&items);
-        assert!(has_series(&ms, "LW Dali Control Gear 1-01", "Brightness").is_some());
-        assert!(has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp").is_some());
+        assert!(has_series(&ms, "Licht 1", "light-1").is_some());
+        assert!(has_series(&ms, "Tiefkühler Temperatur", "freezer_temp").is_some());
         assert!(r.handle.snapshot().active_faults.is_empty());
         assert!(!paused(&r, "light-1") && !paused(&r, "freezer_temp"));
 
@@ -3615,7 +3558,7 @@ mod cloud_clear {
         assert!(
             has_series(
                 &measurements(&items),
-                "LW_Modbus_Slave_20_240",
+                "Tiefkühler Temperatur",
                 "freezer_temp"
             )
             .is_some()
@@ -3797,7 +3740,7 @@ mod cloud_clear {
 
         let ms = measurements(&items);
         assert_eq!(
-            has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp"),
+            has_series(&ms, "Tiefkühler Temperatur", "freezer_temp"),
             Some(-18.0),
             "changed values are sent at once"
         );

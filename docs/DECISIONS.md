@@ -5,7 +5,7 @@ Decisions that change or extend `PRD.md`. Newest first. Affected PRD sections ar
 
 ## 2026-10-13
 
-### D10. Scenarios are editable per device; "Reset to defaults"
+### D11. Scenarios are editable per device; "Reset to defaults"
 
 User feedback: scenarios should be editable, new ones creatable, with a description, and one button should set
 everything back so scenarios are easy to undo. Decision:
@@ -34,9 +34,63 @@ everything back so scenarios are easy to undo. Decision:
   **Counters keep their value** (they never go backwards). DALI group modes and lamps without an item are not
   touched.
 
+### D10. Measurements are named from the app's config; no `lw_config*` fragments
+
+User feedback from testing: in the floorplan plugin's measurement picker (it lists `fragment.series` from the
+device's supported series) nobody can tell which lamp or input is which: is `LW Dali Control Gear 1-05.Brightness`
+"Attika 1"? Is `LW Digital Input.Value03` the pump or the door? The user decided, after being told the trade-offs,
+to give up the firmware naming for measurements and every `lw_config*` fragment.
+
+- **Measurement names.** For every item kind (`dali`, `daliBrightness`, `daliMotion`, `digitalInput`,
+  `impulseCounter`, `system`, `modbus`, custom items too) the **fragment is the item's German title** and the
+  **series is the item id**: `Attika 1.light-5`, `Zapfsäule 1.di-3`, `Tiefkühler.freezer_temp`. Titles come from
+  the effective item (library + `lw_demo.customItems`); a digital input uses its device title
+  (`lw_demo.digitalInputs[].title`, the item title by default). Ids are unique, so series never collide, even when
+  two items share a title. Rules in `payload::naming` (`fragment_name`, `item_naming_with_di`):
+  - `.` (separates fragment and series in paths and queries) and `$` (operator prefix) become `_`; leading /
+    trailing whitespace is trimmed; an empty title falls back to the id. Umlauts and inner spaces are kept.
+  - A DALI lamp keeps its four series under its title: the brightness series is the id, the others are
+    `<id> Lamp Status`, `<id> Converter Status`, `<id> Converter Runtime` (ids contain no space, so these cannot
+    collide). A grouped lamp without an item is `DALI Leuchte NN.lamp-NN`.
+  - Measurement types: `daliControlGear`, `daliBrightness`, `daliMotion`, `digitalInput`, `impulseCounter` (new:
+    a counter is no longer told apart by its series name), `c8y_SignalStrength`, `c8y_TemperatureMeasurement`,
+    `modbus`. Units, value quantization and batching stay as the firmware does it.
+  - The library format does not change: a floorplan widget still names a lamp's series `Brightness` /
+    `Lamp Status` / …; the apply maps it to the wire name, export maps it back. Export finds the item of a widget
+    by its series (= item id), so a title edited after the floorplan was made still maps back.
+  - A digital input's new title is a new fragment; a running session takes it over at once (only a type change,
+    value ↔ counter, needs a restart). Counters are restored from the newest stored value of the current
+    `<title>.<id>`: renaming an input restarts its counter at the stored value of the new name (none: the start
+    value).
+- **No `lw_config*` fragments.** The simulator neither writes nor reads `lw_configCore`, `lw_configRs485`,
+  `lw_configGroups`, `lw_configDigitalInputs`, `lw_configModbusSlaves` (or any other `lw_config*`). What the app
+  used to read back lives in `lw_demo` or comes from the library:
+  - DALI groups → `lw_demo.daliGroups`, digital inputs incl. titles → `lw_demo.digitalInputs` (D6's
+    `get_device_config` / `set_dali_groups` / `set_digital_inputs` keep their contract and read / write these).
+    A device set up by an older app version has neither: the library demo's groups / inputs apply until the next
+    apply or edit (its old `lw_config*` edits are not taken over).
+  - Slaves and register addresses were always in `lw_demo.slaves`; `lw_modbusWrite` is matched against them.
+  - Time zone → `lw_demo.timeZone` (absent = `Europe/Berlin`); `maxControlGears` is gone; the RS485 bus is
+    always active.
+  - Applying a demo and an upgrade **remove** every `lw_config*` fragment found on the device (set to `null`), so
+    old devices get cleaned. A new device gets none.
+  - Operations keep working inside the simulator: `lw_switchGroupMode` uses the groups above, `lw_modbusWrite`
+    the slave assignments, `lw_fetch*` are still answered SUCCESSFUL.
+  - The `lw_config*` inventory property names stay reserved for item effects.
+- **Known impact on the floorplan plugin** (accepted by the user; the plugin is adapted separately): its DALI
+  group control and its Modbus write control (saved targets from `lw_configModbusSlaves[].writeRegisters`, and the
+  group list from `lw_configGroups`) do not work on demo devices. The app still generates those widgets. Sensor
+  and alarm widgets work with the new names. Floorplans applied before this change still point to the old
+  firmware names: re-apply the demo (or upgrade) to regenerate them; export cannot map such old widgets and drops
+  them with a warning.
+- Superseded parts: D1 (native DI series), D5 (`lw_configCore` with 13 fields, `maxControlGears`, writable items in
+  `writeRegisters[]`), the `lw_config*` storage of D6.
+
 ## 2026-10-12
 
 ### D1. Digital inputs use native firmware series names
+
+(Superseded by D10: measurements are named `<title>.<item id>`, titles live in `lw_demo.digitalInputs`.)
 
 - Series are `Value<NN>` and `ImpulseCounter<NN>` (NN = 01-10), fragment `LW Digital Input`, type `digitalInput`.
   This is what the firmware emits on every branch (`research/firmware-core-v2.md` section 1.4).
@@ -67,6 +121,9 @@ prototype's davaco items are the `restaurant` demo. Tag rule and counts: `resear
 
 ### D5. Decisions taken from the research review
 
+(The `lw_configCore` / `maxControlGears` / `writeRegisters[]` points are superseded by D10: no `lw_config*`
+fragments are written.)
+
 - **`lw_configCore`** is always written with the full 13-field object (the firmware fails `lw_fetchCore` on any
   missing field except `timeZone`/`ntpServer`), not just `measurementIntervalMinutes`.
 - **Firmware version** stays `"V 03.00.02"` (the real firmware sends the `V ` too; it must stay parseable as
@@ -82,6 +139,9 @@ prototype's davaco items are the `restaurant` demo. Tag rule and counts: `resear
 - **`lw_modbusWrite` readback** echoes exactly the operation's `value` (the plugin compares raw values with `===`).
 
 ### D6. Device-local slaves, items, DI titles and group edits live on the device
+
+(Changed by D10: groups and digital inputs are stored in `lw_demo.daliGroups` / `lw_demo.digitalInputs`, not in
+`lw_configGroups` / `lw_configDigitalInputs`; nothing is written to `lw_configModbusSlaves`.)
 
 The demo editor (PRD §7.4 "created in the app's demo editor", §11.3 "generate series" helper) and the export
 round trip (§13) need setup that is not in the bundled library. Decision (foundation review, finding 17):

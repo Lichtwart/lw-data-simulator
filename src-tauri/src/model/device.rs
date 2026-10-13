@@ -124,6 +124,18 @@ pub struct LwDemoState {
     /// Ids of library scenarios deleted on this device.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hidden_scenarios: Vec<String>,
+    /// DALI groups of the device (D6, D10: kept here, no `lw_configGroups`). `None` on devices
+    /// set up by an older app version: the library demo's groups apply until the next write.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dali_groups: Option<Vec<DaliGroup>>,
+    /// Digital inputs of the device incl. titles (D6, D10: kept here, no
+    /// `lw_configDigitalInputs`). `None` like `daliGroups`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digital_inputs: Option<Vec<DigitalInputEntry>>,
+    /// IANA time zone of the device (`dailyProfile` runs in device time); `None` =
+    /// `Europe/Berlin`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_zone: Option<String>,
     #[serde(default)]
     pub generators: BTreeMap<String, GeneratorConfig>,
     pub send_interval_sec: u32,
@@ -291,8 +303,9 @@ pub struct DemoSetupPatch {
     pub realistic_mode: Option<bool>,
 }
 
-/// The editable device-side config fragments (`lw_configGroups`, `lw_configDigitalInputs`).
-/// Returned by `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
+/// The device's DALI groups and digital inputs (`lw_demo.daliGroups` / `lw_demo.digitalInputs`,
+/// D10; the library demo's values when the device has none yet). Returned by
+/// `get_device_config`; written by `set_dali_groups` / `set_digital_inputs`.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceConfig {

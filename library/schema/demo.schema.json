@@ -58,7 +58,7 @@
   },
   "$defs": {
     "daliGroup": {
-      "description": "Entry of lw_configGroups (firmware-core-v2.md §5.3).",
+      "description": "DALI group as in the firmware group config (firmware-core-v2.md §5.3); stored in lw_demo.daliGroups on the device.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "name", "converters", "minLevel", "maxLevel"],
@@ -66,7 +66,7 @@
         "id": { "type": "integer", "minimum": 1, "maximum": 16 },
         "name": { "type": "string", "minLength": 1 },
         "converters": {
-          "description": "Lamp numbers (NN of LW Dali Control Gear 1-NN). Only grouped lamps send measurements.",
+          "description": "Lamp numbers 1-64 (the dali item index). Only grouped lamps send measurements.",
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "integer", "minimum": 1, "maximum": 64 }
@@ -80,7 +80,7 @@
       }
     },
     "digitalInput": {
-      "description": "Entry of lw_configDigitalInputs; the referenced item's German title becomes the title.",
+      "description": "Digital input (stored in lw_demo.digitalInputs on the device); the referenced item's German title becomes the title.",
       "type": "object",
       "additionalProperties": false,
       "required": ["itemId", "type"],

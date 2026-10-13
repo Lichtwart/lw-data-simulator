@@ -387,7 +387,7 @@
     },
     "groups": {
       "title": "DALI-Gruppen",
-      "description": "Bis zu 16 Gruppen (lw_configGroups). Eine Leuchte wird nur gemessen, wenn sie in einer Gruppe ist.",
+      "description": "Bis zu 16 Gruppen. Eine Leuchte wird nur gemessen, wenn sie in einer Gruppe ist.",
       "add": "Gruppe hinzufügen",
       "empty": "Keine Gruppen.",
       "id": "Gruppen-ID",
@@ -399,7 +399,7 @@
     },
     "inputs": {
       "title": "Digitale Eingänge",
-      "description": "Bis zu 10 Eingänge (lw_configDigitalInputs). Der Titel erscheint als Beschriftung, nicht im Serien-Namen.",
+      "description": "Bis zu 10 Eingänge. Der Titel ist der Name der Messung in Cumulocity (Fragment), die Serie ist die Item-ID.",
       "add": "Eingang hinzufügen",
       "empty": "Keine Eingänge.",
       "index": "Nummer",

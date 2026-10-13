@@ -38,7 +38,7 @@ chrono-tz = "0.10"
 [dev-dependencies]
 # Fake Cumulocity server for tests (`c8y::fake`).
 axum = "0.8"
-base64 = "0.22"
+base64 = "0.23"
 tokio = { version = "1", features = ["net", "rt-multi-thread", "macros", "test-util"] }
 # Validates library/** against library/schema/ in `cargo test` (`library::schema_tests`).
 jsonschema = { version = "0.58", default-features = false }

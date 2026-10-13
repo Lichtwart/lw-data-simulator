@@ -56,7 +56,7 @@ export function ScenarioBar({
         </Button>
       </div>
       {scenarios.length > 0 && (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(14rem,100%),1fr))] gap-2">
           {scenarios.map((s) => (
             <li key={s.id} className="flex">
               <Button

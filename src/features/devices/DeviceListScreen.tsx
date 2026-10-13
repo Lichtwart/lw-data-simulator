@@ -135,7 +135,7 @@ export function DeviceListScreen() {
   const now = useNow(60_000);
 
   return (
-    <div className="flex flex-col gap-6 p-8">
+    <div className="flex flex-col gap-6 p-4 sm:p-8">
       <PageHeader
         title={t("devices.title")}
         actions={
@@ -177,9 +177,9 @@ export function DeviceListScreen() {
               return (
                 <li
                   key={d.id}
-                  className="flex items-center gap-4 rounded-lg border bg-card p-4 shadow-xs"
+                  className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border bg-card p-4 shadow-xs"
                 >
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-strong">{d.name}</span>
                       {d.demoId && <Badge variant="secondary">{d.demoId}</Badge>}

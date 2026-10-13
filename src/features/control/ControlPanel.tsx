@@ -178,7 +178,7 @@ function Running({ deviceId }: { deviceId: string }) {
       {shown.length === 0 ? (
         <p className="text-muted-foreground">{t("control.noItems")}</p>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(15rem,100%),1fr))] gap-3">
           {shown.map((entry) => {
             const statuses = encodeStatuses(entry.faults, session.activeFaults);
             if (entry.type === "alarms") {

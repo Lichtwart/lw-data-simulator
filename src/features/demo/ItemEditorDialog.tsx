@@ -321,7 +321,7 @@ export function ItemEditorDialog({
                 </Select>
               </Field>
               {d.controlKind !== "none" && (
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {d.controlKind === "slider" && (
                     <>
                       <Field label={t("setup.items.min")} htmlFor="it-min">

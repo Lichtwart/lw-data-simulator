@@ -37,7 +37,7 @@ export function AppShell() {
   const sidebar = useSidebar();
 
   if (loading) {
-    return <div className="p-8 text-muted-foreground">{t("common.loading")}</div>;
+    return <div className="p-4 sm:p-8 text-muted-foreground">{t("common.loading")}</div>;
   }
   if (!auth) return <Navigate to="/login" replace />;
 

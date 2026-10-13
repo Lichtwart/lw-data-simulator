@@ -59,7 +59,7 @@ function Workspace({ deviceId, tab }: { deviceId: string; tab: WorkspaceTab }) {
 
   if (!device) {
     return (
-      <div className="flex flex-col gap-4 p-8">
+      <div className="flex flex-col gap-4 p-4 sm:p-8">
         <BackLink />
         {state.error !== null ? (
           <ErrorNotice error={state.error} />
@@ -86,7 +86,7 @@ function Workspace({ deviceId, tab }: { deviceId: string; tab: WorkspaceTab }) {
         setDevice: state.setData,
       }}
     >
-      <div className="flex flex-col gap-6 p-8">
+      <div className="flex flex-col gap-6 p-4 sm:p-8">
         <div className="flex flex-col gap-2">
           <BackLink />
           <header className="flex items-start justify-between gap-4">
@@ -133,7 +133,7 @@ function Workspace({ deviceId, tab }: { deviceId: string; tab: WorkspaceTab }) {
           </header>
         </div>
         <Tabs value={tab} onValueChange={(v) => navigate(`/devices/${device.id}/${v}`)}>
-          <TabsList>
+          <TabsList className="max-w-full justify-start overflow-x-auto">
             {WORKSPACE_TABS.map((key) => (
               <TabsTrigger key={key} value={key}>
                 {t(`workspace.tabs.${key}`)}

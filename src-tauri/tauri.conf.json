@@ -15,7 +15,7 @@
         "title": "Lichtwart Demo Simulator",
         "width": 1280,
         "height": 820,
-        "minWidth": 960,
+        "minWidth": 480,
         "minHeight": 640
       }
     ],

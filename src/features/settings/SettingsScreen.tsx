@@ -35,7 +35,7 @@ export function SettingsScreen() {
   }, []);
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6 p-8">
+    <div className="flex max-w-2xl flex-col gap-6 p-4 sm:p-8">
       <PageHeader title={t("settings.title")} />
       <Card>
         <CardContent className="flex flex-col gap-6">

@@ -73,7 +73,7 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center p-8">
+    <div className="flex h-full items-center justify-center p-4 sm:p-8">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <img

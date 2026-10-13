@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use super::library::{
-    DaliGroup, DigitalInputEntry, GeneratorConfig, LibraryItem, ModbusRegisterType, SlaveDefinition,
+    DaliGroup, DigitalInputEntry, GeneratorConfig, LibraryItem, ModbusRegisterType, Scenario,
+    SlaveDefinition,
 };
 
 /// `c8y_Position`.
@@ -116,6 +117,13 @@ pub struct LwDemoState {
     /// Merged with the library's items; ids must not collide with library ids.
     #[serde(default)]
     pub custom_items: Vec<LibraryItem>,
+    /// Scenarios edited or created on this device. One with the id of a library scenario
+    /// replaces it (in place); the others follow the library's (`setup::merge_scenarios`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom_scenarios: Vec<Scenario>,
+    /// Ids of library scenarios deleted on this device.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hidden_scenarios: Vec<String>,
     #[serde(default)]
     pub generators: BTreeMap<String, GeneratorConfig>,
     pub send_interval_sec: u32,
@@ -269,6 +277,13 @@ pub struct DemoSetupPatch {
     pub custom_slaves: Option<Vec<SlaveDefinition>>,
     /// Replaces the custom items (D6). New Modbus items get register addresses on write.
     pub custom_items: Option<Vec<LibraryItem>>,
+    /// Replaces the device's scenarios (edited / new ones, `lw_demo.customScenarios`). Validated
+    /// against the device's items and faults; a running session takes them at once.
+    #[serde(default)]
+    pub custom_scenarios: Option<Vec<Scenario>>,
+    /// Replaces the ids of library scenarios deleted on this device.
+    #[serde(default)]
+    pub hidden_scenarios: Option<Vec<String>>,
     /// Replaces the whole override map (an item missing from it falls back to its library
     /// generator).
     pub generators: Option<BTreeMap<String, GeneratorConfig>>,

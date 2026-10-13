@@ -38,7 +38,8 @@ use super::select::{parse_tag, select_items};
 use crate::model::{
     AlarmRef, Control, DemoPack, DigitalInputType, FaultTarget, FloorplanLayout, FloorplanWidget,
     GeneratorConfig, ItemEffect, ItemKind, LibraryItem, ModbusDatatype, ModbusRegisterType,
-    ModbusValueType, ScenarioStep, SensorDisplay, SlaveDefinition, WidgetControl, WidgetRange,
+    ModbusValueType, Scenario, ScenarioStep, SensorDisplay, SlaveDefinition, WidgetControl,
+    WidgetRange,
 };
 use crate::payload::alarm::{dali_bus_alarms, dali_lamp_alarms, is_native_alarm_type};
 use crate::payload::naming::{
@@ -774,6 +775,58 @@ pub fn validate_custom(
     r.0
 }
 
+/// Validate a device's own scenarios (`lw_demo.customScenarios`) against its setup (`items` =
+/// the selected library and custom items, `lamps` = DALI lamps): the step rules of a library
+/// demo's scenarios (selected items, values in the control range, generators that fit, valid
+/// fault targets, no value hidden behind a slave timeout), ids `[A-Za-z0-9_-]` and unique, a name
+/// in de and en, and at most one start scenario among all the device shows (`effective`). The
+/// library's "start scenario resets everything" rule is not enforced on a device (the Control
+/// tab has "Reset to defaults"); the export reports it ([`scenario_reset_findings`]).
+pub fn validate_device_scenarios(
+    lib: &Library,
+    custom_slaves: &[SlaveDefinition],
+    items: &[LibraryItem],
+    lamps: u32,
+    custom: &[Scenario],
+    effective: &[Scenario],
+) -> Vec<Finding> {
+    const FILE: &str = "lw_demo";
+    const PREFIX: &str = "/customScenarios";
+    let mut r = Report::default();
+    let selected: Vec<&LibraryItem> = items.iter().collect();
+    let used_slaves: BTreeSet<&str> = items.iter().filter_map(LibraryItem::slave_key).collect();
+    let slave_has_alarm = |key: &str, name: &str| {
+        lib.slave(key)
+            .or_else(|| custom_slaves.iter().find(|s| s.key == key))
+            .is_some_and(|s| s.alarms.iter().any(|a| a.name == name))
+    };
+    let ctx = ScenarioContext {
+        selected: &selected,
+        lamps,
+        used_slaves: &used_slaves,
+        slave_has_alarm: &slave_has_alarm,
+    };
+    for (i, sc) in custom.iter().enumerate() {
+        if sc.name.de.trim().is_empty() || sc.name.en.trim().is_empty() {
+            r.add(FILE, format!("{PREFIX}/{i}/name"), "name needs de and en");
+        }
+    }
+    check_scenarios(&mut r, FILE, PREFIX, custom, &ctx);
+    if effective.iter().filter(|s| s.start).count() > 1 {
+        r.add(FILE, PREFIX, "only one scenario can be the start scenario");
+    }
+    r.0
+}
+
+/// The library's "the start scenario resets what the other scenarios change" rule for a demo
+/// whose selected items are `items` (used by the export to warn about device scenarios).
+pub fn scenario_reset_findings(file: &str, demo: &DemoPack, items: &[LibraryItem]) -> Vec<Finding> {
+    let mut r = Report::default();
+    let selected_item = |id: &str| items.iter().find(|i| i.id() == id);
+    check_scenario_resets(&mut r, file, "/scenarios", &demo.scenarios, &selected_item);
+    r.0
+}
+
 // ---------------------------------------------------------------------------------------------
 // Demos
 // ---------------------------------------------------------------------------------------------
@@ -1182,10 +1235,71 @@ fn check_demo(r: &mut Report, lib: &Library, file: &str, demo: &DemoPack) {
 
     // Scenarios.
     let used_slaves: BTreeSet<&str> = per_slave.keys().copied().collect();
+    let slave_has_alarm = |key: &str, name: &str| {
+        lib.slave(key)
+            .is_some_and(|s| s.alarms.iter().any(|a| a.name == name))
+    };
+    let ctx = ScenarioContext {
+        selected: &selected,
+        lamps,
+        used_slaves: &used_slaves,
+        slave_has_alarm: &slave_has_alarm,
+    };
+    check_scenarios(r, file, "/scenarios", &demo.scenarios, &ctx);
+    check_scenario_resets(r, file, "/scenarios", &demo.scenarios, &selected_item);
+
+    // Floorplans.
+    for (i, rel) in demo.floorplans.iter().enumerate() {
+        let p = format!("/floorplans/{i}");
+        let prefix = format!("floorplans/{}/", demo.id);
+        if !rel.starts_with(&prefix) || rel[prefix.len()..].contains('/') {
+            r.add(file, &p, format!("floorplan must live in {prefix}"));
+        }
+        match lib.floorplan(rel) {
+            Some(layout) => check_floorplan(r, lib, rel, layout, demo, &selected),
+            None => r.add(
+                file,
+                &p,
+                format!("floorplan {rel} is missing or could not be loaded"),
+            ),
+        }
+    }
+}
+
+/// What scenario steps are checked against (a library demo or a device setup).
+struct ScenarioContext<'a> {
+    /// Selected items (library selection, plus custom items on a device).
+    selected: &'a [&'a LibraryItem],
+    /// DALI lamps of the setup.
+    lamps: u32,
+    /// Slaves with selected items.
+    used_slaves: &'a BTreeSet<&'a str>,
+    /// Whether slave `key` has a custom alarm `name`.
+    slave_has_alarm: &'a dyn Fn(&str, &str) -> bool,
+}
+
+impl<'a> ScenarioContext<'a> {
+    fn item(&self, id: &str) -> Option<&'a LibraryItem> {
+        self.selected.iter().copied().find(|i| i.id() == id)
+    }
+}
+
+/// Scenario ids (`[A-Za-z0-9_-]`, unique), at most one start scenario, every step against the
+/// setup (selected items, values in the control range, generators that fit, valid fault
+/// targets), and no scenario that hides its own value behind a slave timeout. `prefix` is the
+/// JSON path of the list (`/scenarios`, `/customScenarios`).
+fn check_scenarios(
+    r: &mut Report,
+    file: &str,
+    prefix: &str,
+    scenarios: &[Scenario],
+    ctx: &ScenarioContext<'_>,
+) {
+    let selected_item = |id: &str| ctx.item(id);
     let mut scenario_ids = BTreeSet::new();
     let mut starts = 0;
-    for (i, sc) in demo.scenarios.iter().enumerate() {
-        let p = format!("/scenarios/{i}");
+    for (i, sc) in scenarios.iter().enumerate() {
+        let p = format!("{prefix}/{i}");
         if sc.id.is_empty()
             || !sc
                 .id
@@ -1260,35 +1374,14 @@ fn check_demo(r: &mut Report, lib: &Library, file: &str, demo: &DemoPack) {
                     }
                 }
                 ScenarioStep::Fault { target, .. } => {
-                    if let Some(problem) =
-                        fault_problem(lib, target, lamps, &used_slaves, &selected_item)
-                    {
+                    if let Some(problem) = fault_problem(target, ctx) {
                         r.add(file, format!("{sp}/target"), problem);
                     }
                 }
             }
         }
     }
-
-    check_scenario_resets(r, file, demo, &selected_item);
-    check_scenario_hidden_values(r, file, demo, &selected_item);
-
-    // Floorplans.
-    for (i, rel) in demo.floorplans.iter().enumerate() {
-        let p = format!("/floorplans/{i}");
-        let prefix = format!("floorplans/{}/", demo.id);
-        if !rel.starts_with(&prefix) || rel[prefix.len()..].contains('/') {
-            r.add(file, &p, format!("floorplan must live in {prefix}"));
-        }
-        match lib.floorplan(rel) {
-            Some(layout) => check_floorplan(r, lib, rel, layout, demo, &selected),
-            None => r.add(
-                file,
-                &p,
-                format!("floorplan {rel} is missing or could not be loaded"),
-            ),
-        }
-    }
+    check_scenario_hidden_values(r, file, prefix, scenarios, &selected_item);
 }
 
 /// The start scenario is the full reset ("Normalbetrieb" restores the demo): every item and
@@ -1300,14 +1393,15 @@ fn check_demo(r: &mut Report, lib: &Library, file: &str, demo: &DemoPack) {
 fn check_scenario_resets<'a>(
     r: &mut Report,
     file: &str,
-    demo: &DemoPack,
+    prefix: &str,
+    scenarios: &[Scenario],
     selected_item: &dyn Fn(&str) -> Option<&'a LibraryItem>,
 ) {
-    let start = demo.scenarios.iter().find(|s| s.start);
+    let start = scenarios.iter().find(|s| s.start);
     let mut no_start_reported = false;
-    for (i, sc) in demo.scenarios.iter().enumerate().filter(|(_, s)| !s.start) {
+    for (i, sc) in scenarios.iter().enumerate().filter(|(_, s)| !s.start) {
         for (j, step) in sc.set.iter().enumerate() {
-            let sp = format!("/scenarios/{i}/set/{j}");
+            let sp = format!("{prefix}/{i}/set/{j}");
             let problem = match step {
                 ScenarioStep::Value { item_id, .. } | ScenarioStep::Generator { item_id, .. } => {
                     // Unknown / unselected items are reported by the step checks.
@@ -1354,7 +1448,7 @@ fn check_scenario_resets<'a>(
                         no_start_reported = true;
                         r.add(
                             file,
-                            "/scenarios",
+                            prefix,
                             "the demo has scenarios but no start scenario that resets them",
                         );
                     }
@@ -1371,10 +1465,11 @@ fn check_scenario_resets<'a>(
 fn check_scenario_hidden_values<'a>(
     r: &mut Report,
     file: &str,
-    demo: &DemoPack,
+    prefix: &str,
+    scenarios: &[Scenario],
     selected_item: &dyn Fn(&str) -> Option<&'a LibraryItem>,
 ) {
-    for (i, sc) in demo.scenarios.iter().enumerate() {
+    for (i, sc) in scenarios.iter().enumerate() {
         let timed_out: BTreeSet<&str> = sc
             .set
             .iter()
@@ -1396,7 +1491,7 @@ fn check_scenario_hidden_values<'a>(
             {
                 r.add(
                     file,
-                    format!("/scenarios/{i}/set/{j}"),
+                    format!("{prefix}/{i}/set/{j}"),
                     format!(
                         "value of \"{item_id}\" is never sent: the same scenario puts its slave \"{slave}\" into timeout"
                     ),
@@ -1406,13 +1501,10 @@ fn check_scenario_hidden_values<'a>(
     }
 }
 
-fn fault_problem<'a>(
-    lib: &Library,
-    target: &FaultTarget,
-    lamps: u32,
-    used_slaves: &BTreeSet<&str>,
-    selected_item: &dyn Fn(&str) -> Option<&'a LibraryItem>,
-) -> Option<String> {
+fn fault_problem(target: &FaultTarget, ctx: &ScenarioContext<'_>) -> Option<String> {
+    let lamps = ctx.lamps;
+    let used_slaves = ctx.used_slaves;
+    let selected_item = |id: &str| ctx.item(id);
     match target {
         FaultTarget::DaliLamp { lamp, alarm_type } => {
             if *lamp == 0 || *lamp > lamps {
@@ -1442,10 +1534,7 @@ fn fault_problem<'a>(
                 Some(format!(
                     "slave \"{slave_key}\" has no selected items in this demo"
                 ))
-            } else if !lib
-                .slave(slave_key)
-                .is_some_and(|s| s.alarms.iter().any(|a| a.name == *alarm_name))
-            {
+            } else if !(ctx.slave_has_alarm)(slave_key, alarm_name) {
                 Some(format!(
                     "slave \"{slave_key}\" has no alarm \"{alarm_name}\""
                 ))
@@ -1469,11 +1558,10 @@ fn fault_problem<'a>(
                 "motion" => ItemKind::DaliMotion,
                 other => return Some(format!("unknown sensor kind \"{other}\"")),
             };
-            let selected = lib
-                .items
+            let selected = ctx
+                .selected
                 .iter()
-                .filter(|i| i.kind() == wanted && i.index() == Some(index))
-                .any(|i| selected_item(i.id()).is_some());
+                .any(|i| i.kind() == wanted && i.index() == Some(index));
             if !selected {
                 Some(format!(
                     "no selected {sensor_kind} sensor {index} in this demo"
@@ -2566,5 +2654,78 @@ mod tests {
         assert!(found[0].contains("/customSlaves/1/key"));
         assert!(found[1].contains("/customItems/0/id: item id \"freezer_temp\" is already used"));
         assert!(found[2].contains("/customItems/2/slave"));
+    }
+
+    /// Device scenarios follow the library's step rules against the device's items.
+    #[test]
+    fn device_scenarios_are_checked_against_the_setup() {
+        let lib = fixture();
+        let demo = &lib.demos[0];
+        let items: Vec<LibraryItem> = select_items(&lib.items, demo)
+            .into_iter()
+            .cloned()
+            .collect();
+        let sc = |j: serde_json::Value| serde_json::from_value::<Scenario>(j).unwrap();
+        let check = |custom: Vec<Scenario>| {
+            let effective = crate::device::setup::merge_scenarios(&demo.scenarios, &custom, &[]);
+            messages(&validate_device_scenarios(
+                &lib,
+                &[],
+                &items,
+                demo.dali_lamp_count,
+                &custom,
+                &effective,
+            ))
+        };
+        let good = sc(serde_json::json!({
+            "id": "hot", "name": { "de": "Hitze", "en": "Heat" },
+            "description": { "de": "Kühlung fällt aus", "en": "Cooling fails" },
+            "set": [
+                { "kind": "value", "itemId": "freezer_temp", "value": -5 },
+                { "kind": "fault", "target": { "kind": "customAlarm", "itemId": "doorOpen" }, "active": true },
+                { "kind": "fault", "target": { "kind": "daliLamp", "lamp": 2, "alarmType": "lw_lampFailure_1_02_openCircuit" }, "active": true }
+            ]
+        }));
+        assert!(
+            check(vec![good.clone()]).is_empty(),
+            "{:?}",
+            check(vec![good.clone()])
+        );
+
+        let bad = sc(serde_json::json!({
+            "id": "bad id", "name": { "de": "", "en": "Bad" },
+            "set": [
+                { "kind": "value", "itemId": "freezer_temp", "value": 5 },
+                { "kind": "value", "itemId": "nope", "value": 1 },
+                { "kind": "fault", "target": { "kind": "slaveAlarm", "slaveKey": "kuehlung", "alarmName": "nope" }, "active": true },
+                { "kind": "fault", "target": { "kind": "daliLamp", "lamp": 9, "alarmType": "lw_lampFailure_1_09_openCircuit" }, "active": true }
+            ]
+        }));
+        let found = check(vec![bad]);
+        for needle in [
+            "lw_demo: /customScenarios/0/name: name needs de and en",
+            "/customScenarios/0/id: scenario id \"bad id\"",
+            "/customScenarios/0/set/0/value: value 5 outside -30…0",
+            "/customScenarios/0/set/1/itemId: item \"nope\" is not selected",
+            "/customScenarios/0/set/2/target: slave \"kuehlung\" has no alarm \"nope\"",
+            "/customScenarios/0/set/3/target: lamp 9 outside 1–4",
+        ] {
+            assert!(
+                found.iter().any(|m| m.contains(needle)),
+                "{needle:?} in {found:#?}"
+            );
+        }
+
+        // A second start scenario next to the library's.
+        let mut second = good.clone();
+        second.start = true;
+        assert!(
+            check(vec![second.clone()])
+                .iter()
+                .any(|m| m.contains("only one scenario can be the start scenario"))
+        );
+        // … is fine when it replaces the library's start scenario.
+        second.id = "normal".into();
+        assert!(check(vec![second]).is_empty());
     }
 }

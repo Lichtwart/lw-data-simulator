@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { Field } from "@/components/Field";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,23 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { api, type GeneratorConfig } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 
 import { useDevice } from "../devices/DeviceContext";
+import { GeneratorFields } from "./GeneratorFields";
 import {
   draftFromGenerator,
   draftToGenerator,
-  GENERATOR_KINDS,
   type GeneratorDraft,
   savedGenerators,
 } from "./generatorDraft";
@@ -111,105 +101,7 @@ export function GeneratorDialog({
           <DialogDescription>{t("generator.hint")}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
-          <Field label={t("generator.kind")} htmlFor="gen-kind">
-            <Select
-              value={d.kind}
-              onValueChange={(v) => set({ kind: v as GeneratorDraft["kind"] })}
-            >
-              <SelectTrigger id="gen-kind">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {GENERATOR_KINDS.map((k) => (
-                  <SelectItem key={k} value={k}>
-                    {k === "none" ? t("generator.none") : t(`control.generators.${k}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          {d.kind === "randomWalk" && (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label={t("generator.center")} htmlFor="gen-center">
-                <Input
-                  id="gen-center"
-                  className="font-mono"
-                  value={d.center}
-                  onChange={(e) => set({ center: e.target.value })}
-                />
-              </Field>
-              <Field label={t("generator.spread")} htmlFor="gen-spread">
-                <Input
-                  id="gen-spread"
-                  className="font-mono"
-                  value={d.spread}
-                  onChange={(e) => set({ spread: e.target.value })}
-                />
-              </Field>
-              <Field label={t("generator.step")} htmlFor="gen-step">
-                <Input
-                  id="gen-step"
-                  className="font-mono"
-                  value={d.step}
-                  onChange={(e) => set({ step: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-          {d.kind === "sine" && (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label={t("generator.period")} htmlFor="gen-period">
-                <Input
-                  id="gen-period"
-                  className="font-mono"
-                  value={d.period}
-                  onChange={(e) => set({ period: e.target.value })}
-                />
-              </Field>
-              <Field label={t("generator.amplitude")} htmlFor="gen-amp">
-                <Input
-                  id="gen-amp"
-                  className="font-mono"
-                  value={d.amplitude}
-                  onChange={(e) => set({ amplitude: e.target.value })}
-                />
-              </Field>
-              <Field label={t("generator.centerOptional")} htmlFor="gen-center">
-                <Input
-                  id="gen-center"
-                  className="font-mono"
-                  value={d.center}
-                  onChange={(e) => set({ center: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-          {d.kind === "dailyProfile" && (
-            <Field
-              label={t("generator.points")}
-              htmlFor="gen-points"
-              hint={t("generator.pointsHint")}
-            >
-              <Textarea
-                id="gen-points"
-                rows={3}
-                className="font-mono"
-                value={d.points}
-                onChange={(e) => set({ points: e.target.value })}
-              />
-            </Field>
-          )}
-          {d.kind === "counter" && (
-            <Field label={t("generator.rate")} htmlFor="gen-rate" className="max-w-xs">
-              <Input
-                id="gen-rate"
-                className="font-mono"
-                value={d.ratePerHour}
-                onChange={(e) => set({ ratePerHour: e.target.value })}
-              />
-            </Field>
-          )}
+          <GeneratorFields draft={d} onChange={set} idPrefix="gen" />
           {invalid && <p className="text-xs text-destructive">{t("generator.invalid")}</p>}
           {d.kind === "none" && (
             <p className="text-xs text-muted-foreground">{t("generator.noneHint")}</p>

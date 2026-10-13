@@ -277,7 +277,9 @@ The real firmware never clears cloud alarms; it only sends `lw_alarm` "Alarm cle
 - **Scenarios**: named presets in the pack. Each is a list of `{itemId, value | generator | fault}`;
   one can be marked `start`. Applying one is a single click. A fault step fires the alarm (`active: true`) or clears
   it in Cumulocity (`active: false`); applying the start scenario by hand first clears all open alarms of the device
-  (changed 2026-10-12, see DECISIONS.md D9).
+  (changed 2026-10-12, see DECISIONS.md D9). Scenarios carry an optional description, can be edited, duplicated,
+  deleted and created per device in the Setup tab, and "Reset to defaults" in the Control tab sets every value back
+  and clears all alarms (changed 2026-10-13, see DECISIONS.md D10).
 
 ## 9. Operations (commands from Cumulocity / floorplan)
 

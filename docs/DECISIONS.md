@@ -3,6 +3,37 @@
 Decisions that change or extend `PRD.md`. Newest first. Affected PRD sections are marked inline with
 "(changed 2026-10-12, see DECISIONS.md)". Evidence lives in `docs/research/`.
 
+## 2026-10-13
+
+### D10. Scenarios are editable per device; "Reset to defaults"
+
+User feedback: scenarios should be editable, new ones creatable, with a description, and one button should set
+everything back so scenarios are easy to undo. Decision:
+
+- A library scenario gets an optional `description {de, en}` (schema + serde); the shipped demos carry one. The
+  Control tab shows it on the scenario button.
+- Device edits live in `lw_demo`: **`customScenarios[]`** (full `Scenario`s; one with the id of a library scenario
+  replaces it in place, the others follow the library's) and **`hiddenScenarios[]`** (ids of deleted library
+  scenarios). `update_demo_setup` carries both (optional fields). The Setup tab's scenario editor plans value,
+  generator and fault steps (raise / clear) and saves the whole list as that patch.
+- Validation on save (`validate::validate_device_scenarios`): the library's step rules against the device's
+  selected items (library + custom), lamp count, slaves and fault catalog (item selected and not a custom alarm,
+  value in the control range / option / counter ≥ start, generator fits the item and its band, fault target
+  valid, no value hidden behind its own slave timeout), ids `[A-Za-z0-9_-]` and unique, a name in de and en, and
+  **one start scenario** among all scenarios of the device. The library's "the start scenario resets everything
+  the others change" rule is **not** enforced on a device; the export reports it as a warning (the exported pack
+  must pass the library validation once released).
+- Scenarios are checked only when they are edited; a later selection change does not block other setup edits (a
+  step on an item that is gone fails when the scenario is applied).
+- A running session takes edited scenarios at once (`SetupChanged`); no restart needed.
+- Applying a **different** demo drops the scenario edits (like generator overrides); re-applying the same demo
+  and upgrades keep them. Export writes the merged list.
+- **"Reset to defaults"** (`reset_to_defaults`, Control tab, with a confirmation): "Clear all" (D9), then every
+  item back to its default value (control default; lamp 100, else 0) and its effective generator
+  (`lw_demo.generators` override, else the library's), manual overrides dropped, changed values sent at once.
+  **Counters keep their value** (they never go backwards). DALI group modes and lamps without an item are not
+  touched.
+
 ## 2026-10-12
 
 ### D1. Digital inputs use native firmware series names

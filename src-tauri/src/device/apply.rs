@@ -37,8 +37,8 @@ pub struct ApplyPlan {
 }
 
 /// The new `lw_demo` for applying `demo` over `existing` (device-local edits survive: custom
-/// slaves / items, realistic mode, floorplan ids, slave assignments; generators and snapshot only
-/// when the same demo is re-applied).
+/// slaves / items, realistic mode, floorplan ids, slave assignments; generators, snapshot and
+/// scenario edits only when the same demo is re-applied).
 pub fn new_state(
     library: &Library,
     demo: &DemoPack,
@@ -57,6 +57,9 @@ pub fn new_state(
     if !same_demo {
         st.generators.clear();
         st.snapshot = None;
+        // Scenario edits belong to the demo they were made for.
+        st.custom_scenarios.clear();
+        st.hidden_scenarios.clear();
     }
     st
 }

@@ -108,6 +108,10 @@
         "de": "Normalbetrieb",
         "en": "Normal operation"
       },
+      "description": {
+        "de": "Setzt alle Werte zurück und beendet jede Störung.",
+        "en": "Resets every value and ends every fault."
+      },
       "start": true,
       "set": [
         {
@@ -451,6 +455,10 @@
         "de": "Nacht",
         "en": "Night"
       },
+      "description": {
+        "de": "Nachtabsenkung: Licht gedimmt, Klima abgesenkt, keine Belegung.",
+        "en": "Night setback: lights dimmed, AC lowered, no occupancy."
+      },
       "set": [
         {
           "kind": "value",
@@ -540,6 +548,10 @@
         "de": "Störung Küche",
         "en": "Kitchen fault"
       },
+      "description": {
+        "de": "Grill, Fritteuse und Sicherung melden Störungen, das Küchenklima fällt aus.",
+        "en": "Grill, fry station and fuse report faults, the kitchen AC fails."
+      },
       "set": [
         {
           "kind": "fault",
@@ -587,6 +599,10 @@
         "de": "Störung Kühlung",
         "en": "Cooling fault"
       },
+      "description": {
+        "de": "Tiefkühler und Kühlzelle werden zu warm, Energiealarm und Sicherung lösen aus.",
+        "en": "Freezer and cold room warm up, an energy alarm and a fuse trip."
+      },
       "set": [
         {
           "kind": "value",
@@ -623,6 +639,10 @@
         "de": "Kommunikationsausfall Klima Küche",
         "en": "Kitchen AC communication loss"
       },
+      "description": {
+        "de": "Der Modbus-Slave Klima Küche antwortet nicht mehr, seine Werte bleiben aus.",
+        "en": "The kitchen AC Modbus slave stops answering, its values stop."
+      },
       "set": [
         {
           "kind": "fault",
@@ -639,6 +659,10 @@
       "name": {
         "de": "Mittagsspitze",
         "en": "Lunch peak"
+      },
+      "description": {
+        "de": "Volle Belegung zur Mittagszeit mit hoher Last in Küche und Gastraum.",
+        "en": "Full occupancy at lunchtime with high load in the kitchen and the dining room."
       },
       "set": [
         {
@@ -689,6 +713,10 @@
         "de": "Leuchtenausfall",
         "en": "Lamp failure"
       },
+      "description": {
+        "de": "Eine Leuchte fällt aus, ein Betriebsgerät antwortet nicht mehr.",
+        "en": "One lamp fails, one control gear stops answering."
+      },
       "set": [
         {
           "kind": "fault",
@@ -715,6 +743,10 @@
       "name": {
         "de": "Wasserschaden",
         "en": "Water damage"
+      },
+      "description": {
+        "de": "Die Wassermelder in WC und Lager melden Wasser.",
+        "en": "The water leak sensors in the restroom and the dry storage report water."
       },
       "set": [
         {

@@ -74,7 +74,7 @@ src-tauri/            Rust backend (crate `lichtwart-demo-simulator`, lib `lw_si
 | `sim/generators.rs` | `next_value(cfg, state, Tick, base, &mut dyn RandomSource)`, `SeededRng`, `local_hour` | **Implemented + tested** (deterministic). |
 | `sim/core.rs` | `SessionCore`: all live state + mutations without I/O (values, generators, effects, groups, DI actions, alarms, snapshot, `finish()` → tagged outbound + events + revisioned snapshot) | **Implemented + tested.** |
 | `sim/emit.rs` | `SessionEmitter` (`TauriEmitter`, `RecordingEmitter` for tests), `error_code` | **Implemented.** |
-| `sim/{scheduler,operations,faults,scenario}.rs` | send timing (periodic `sendIntervalSec`, generator tick 5 s, lock refresh 3 min), op triage (de-dup, final ignored, stale → offline) + prompt flow (60 s), faults (D9: fire once, effect until the alarm is CLEARED in Cumulocity — realtime `Alarm`, `OpenAlarms` re-sync, "Clear all", scenario `active: false`; ACKNOWLEDGED only changes `ActiveFault.status`; bus cascade D8, slave pause, lamp status, realistic mode for derived alarms), scenarios (start scenario by hand = Clear all + steps) | **Implemented + tested** (paused-time tests in `sim/tests.rs`). |
+| `sim/{scheduler,operations,faults,scenario}.rs` | send timing (periodic `sendIntervalSec`, generator tick 5 s, lock refresh 3 min), op triage (de-dup, final ignored, stale → offline) + prompt flow (60 s), faults (D9: fire once, effect until the alarm is CLEARED in Cumulocity — realtime `Alarm`, `OpenAlarms` re-sync, "Clear all", scenario `active: false`; ACKNOWLEDGED only changes `ActiveFault.status`; bus cascade D8, slave pause, lamp status, realistic mode for derived alarms), scenarios (start scenario by hand = Clear all + steps; device edits taken over by `SetupChanged`; "Reset to defaults", D10) | **Implemented + tested** (paused-time tests in `sim/tests.rs`). |
 | `device/` | `crud`, `demo_state` (`lw_demo` + its own fragments `lw_demoLock` / `lw_demoSnapshot` (D7), lock TTL 10 min, refresh 3 min, device config get/set), `setup` (resolve library + custom items, slave/register assignment, lenient `lw_config*` parsing, digests, versions), `apply`, `floorplan`, `export`, `upgrade` | **Implemented + tested** (`device/tests.rs` against the fake, incl. export ↔ apply round trip). |
 | `raw.rs` | raw fire `build()` (pure) + `fire()` + `RawHistory` (50) | **Implemented + tested.** Always sets `source.id` and `time` (raw JSON: only if missing). |
 
@@ -126,7 +126,7 @@ Files: `app`, `auth`, `library`, `devices`, `session`, `raw`, `activity` in
 | `delete_demo_device` | `deviceId` | `null` | device::crud | impl (stops session first) |
 | `preview_apply_demo` | `deviceId, request: ApplyDemoRequest` | `ApplyDemoPreview` | device::apply | impl |
 | `apply_demo` | `deviceId, request: ApplyDemoRequest` | `ApplyDemoResult` | device::apply | impl (stops session first) |
-| `update_demo_setup` | `deviceId, patch: DemoSetupPatch` | `LwDemoState` | device::demo_state | impl (`generators` replaces the whole map; a running session on the device picks up interval / realistic mode / generators; patch also carries `customSlaves` / `customItems`, D6) |
+| `update_demo_setup` | `deviceId, patch: DemoSetupPatch` | `LwDemoState` | device::demo_state | impl (`generators` replaces the whole map; a running session on the device picks up interval / realistic mode / generators / scenarios; patch also carries `customSlaves` / `customItems`, D6, and `customScenarios` / `hiddenScenarios` (optional), D10: custom scenarios are validated against the device's items and faults) |
 | `get_device_config` | `deviceId` | `DeviceConfig` (`groups`, `digitalInputs`) | device::demo_state | impl (D6) |
 | `set_dali_groups` | `deviceId, groups: DaliGroup[]` | `DaliGroup[]` | device::demo_state | impl (writes `lw_configGroups`, D6) |
 | `set_digital_inputs` | `deviceId, inputs: DigitalInputEntry[]` | `DigitalInputEntry[]` | device::demo_state | impl (writes `lw_configDigitalInputs` incl. titles, D6) |
@@ -144,7 +144,8 @@ Files: `app`, `auth`, `library`, `devices`, `session`, `raw`, `activity` in
 | `set_item_value` | `request: SetItemValueRequest` (`itemId`, `value`) | `null` | sim | impl (a struct, because a bare `f64` argument cannot be typed as `number`) |
 | `resume_generator` | `itemId` | `null` | sim | impl |
 | `set_item_generator` | `itemId, generator: GeneratorConfig \| null` | `null` | sim | impl |
-| `apply_scenario` | `scenarioId` | `null` | sim::scenario | impl |
+| `apply_scenario` | `scenarioId` | `null` | sim::scenario | impl (the device's scenarios: library demo's as edited in `lw_demo`, D10) |
+| `reset_to_defaults` | — | `null` | sim::scenario | impl ("Clear all" + every item back to its default value and effective generator, manual overrides dropped; counters keep their value, D10) |
 | `set_group_mode` | `groupId, mode: GroupMode` | `null` | sim | impl |
 | `fire_fault` | `target: FaultTarget` | `null` | sim::faults | impl (posts the alarm, again if open; the effect lasts until the alarm is cleared in Cumulocity, D9) |
 | `clear_all_alarms` | `deviceId` | `null` | sim::faults / c8y | impl (every ACTIVE / ACKNOWLEDGED alarm of the device → CLEARED, bulk update with fallback; through the session when one runs on the device (all effects end), else a plain REST call; D9) |
@@ -356,7 +357,13 @@ Details live in `model/library.rs`, `model/device.rs`, `model/session.rs`; decis
 - **Runtime naming** (`MeasurementNaming`): `type`, `fragment`, `series[] {name, unit?}`
   (a DALI lamp has four series); `ItemRuntimeState.naming` is `None` for `customAlarm`.
 - **Scenario steps** (`ScenarioStep`): `{kind:"value",itemId,value}`,
-  `{kind:"generator",itemId,generator}`, `{kind:"fault",target,active}`.
+  `{kind:"generator",itemId,generator}`, `{kind:"fault",target,active}`. A `Scenario` has an
+  optional `description {de, en}`.
+- **Device scenarios** (D10): `lw_demo.customScenarios[]` (a scenario with a library id replaces
+  it in place, others follow) and `lw_demo.hiddenScenarios[]` (deleted library ids);
+  `setup::merge_scenarios` / `effective_scenarios` (TS mirror `mergeScenarios` in
+  `src/lib/library.ts`). Validated by `validate::validate_device_scenarios`; export writes the
+  merged list and warns when the start scenario does not reset the others.
 - **Floorplan layouts** (`FloorplanLayout`, library-only, not IPC): plugin widgets with item
   references (`measurement {itemId, series?}`, `alarms[]` refs `item | slaveTimeout | slaveAlarm |
   type`, Modbus control `itemId`); resolved by `payload::floorplan`. `DaliGroup` levels are

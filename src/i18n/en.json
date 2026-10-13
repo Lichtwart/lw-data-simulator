@@ -161,7 +161,11 @@
     "scenarioStart": "(start)",
     "editGenerator": "Edit generator of {{name}}",
     "intervalMin": "The send interval is at least {{min}} s.",
-    "restartNeeded": "The setup changed during the session (selection, custom items or input type). Restart the session to apply it."
+    "restartNeeded": "The setup changed during the session (selection, custom items or input type). Restart the session to apply it.",
+    "resetDefaults": "Defaults",
+    "resetDefaultsTitle": "Reset everything to defaults?",
+    "resetDefaultsText": "Sets every value back to its default, restores the generators and clears every open alarm of the device in Cumulocity. Counters keep their count.",
+    "resetDone": "Defaults set. Alarms are being cleared."
   },
   "raw": {
     "title": "Raw fire",
@@ -489,7 +493,65 @@
     "discard": "Discard",
     "leaveTitle": "Discard unsaved changes?",
     "leaveText": "The Setup tab has changes that are not saved yet. They will be lost.",
-    "leave": "Discard and leave"
+    "leave": "Discard and leave",
+    "scenarios": {
+      "title": "Scenarios",
+      "description": "Values, generators and alarms applied together. Changes apply to this device and go into the export.",
+      "add": "New scenario",
+      "none": "No scenarios.",
+      "start": "Start",
+      "origin": {
+        "edited": "Edited",
+        "custom": "Own"
+      },
+      "stepCount_one": "{{count}} step",
+      "stepCount_other": "{{count}} steps",
+      "duplicate": "Duplicate",
+      "copySuffix": "(copy)",
+      "restore": "Restore library version",
+      "deleted": "Deleted:",
+      "newTitle": "New scenario",
+      "editTitle": "Edit scenario",
+      "editorHint": "Plan values, generators and alarms. The steps run in order when the scenario is applied.",
+      "nameDe": "Name (German)",
+      "nameEn": "Name (English)",
+      "descriptionDe": "Description (German)",
+      "descriptionEn": "Description (English)",
+      "startLabel": "Apply at session start",
+      "startHint": "Only one scenario is the start scenario. Applied by hand it first clears all alarms.",
+      "id": "ID",
+      "steps": "Steps",
+      "noSteps": "No steps yet.",
+      "addValue": "Value",
+      "addGenerator": "Generator",
+      "addFault": "Alarm",
+      "kinds": {
+        "value": "Value",
+        "generator": "Generator",
+        "fault": "Alarm"
+      },
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "item": "Item",
+      "itemPlaceholder": "Choose an item",
+      "value": "Value",
+      "range": "{{min}} to {{max}} {{unit}}",
+      "counterMin": "from {{min}} (counter)",
+      "alarm": "Alarm",
+      "alarmPlaceholder": "Choose an alarm",
+      "action": "Action",
+      "raise": "Raise",
+      "clear": "Clear",
+      "problems": {
+        "name": "Enter the name in German and English.",
+        "description": "Enter the description in both languages or leave it empty.",
+        "noSteps": "Add at least one step.",
+        "item": "Choose an item.",
+        "value": "The value does not fit the item.",
+        "generator": "The generator does not fit the item.",
+        "fault": "Choose an alarm."
+      }
+    }
   },
   "generator": {
     "title": "Generator: {{name}}",

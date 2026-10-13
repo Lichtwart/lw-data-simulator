@@ -129,6 +129,10 @@
         "de": "Normalbetrieb",
         "en": "Normal operation"
       },
+      "description": {
+        "de": "Setzt alle Werte zurück und beendet jede Störung.",
+        "en": "Resets every value and ends every fault."
+      },
       "start": true,
       "set": [
         {
@@ -486,6 +490,10 @@
         "de": "Nacht",
         "en": "Night"
       },
+      "description": {
+        "de": "Nachtabsenkung: Licht gedimmt, Klima abgesenkt, keine Belegung.",
+        "en": "Night setback: lights dimmed, AC lowered, no occupancy."
+      },
       "set": [
         {
           "kind": "value",
@@ -600,6 +608,10 @@
         "de": "Störung Kühlung",
         "en": "Cooling fault"
       },
+      "description": {
+        "de": "Tiefkühler und Kühlzelle werden zu warm, Energiealarm und Sicherung lösen aus.",
+        "en": "Freezer and cold room warm up, an energy alarm and a fuse trip."
+      },
       "set": [
         {
           "kind": "value",
@@ -636,6 +648,10 @@
         "de": "Kommunikationsausfall Kühlung",
         "en": "Cooling communication loss"
       },
+      "description": {
+        "de": "Der Modbus-Slave der Kühlung antwortet nicht mehr, seine Werte bleiben aus.",
+        "en": "The cooling Modbus slave stops answering, its values stop."
+      },
       "set": [
         {
           "kind": "fault",
@@ -652,6 +668,10 @@
       "name": {
         "de": "Spitzenlast",
         "en": "Peak load"
+      },
+      "description": {
+        "de": "Alle Ladeplätze belegt, Spitzenstrom mit Leistungsalarm der Ladeinfrastruktur.",
+        "en": "All charging slots busy, peak current with a charging power alarm."
       },
       "set": [
         {
@@ -711,6 +731,10 @@
         "de": "Leuchtenausfall",
         "en": "Lamp failure"
       },
+      "description": {
+        "de": "Eine Leuchte fällt aus, ein Betriebsgerät antwortet nicht mehr.",
+        "en": "One lamp fails, one control gear stops answering."
+      },
       "set": [
         {
           "kind": "fault",
@@ -737,6 +761,10 @@
       "name": {
         "de": "Wasserschaden",
         "en": "Water damage"
+      },
+      "description": {
+        "de": "Die Wassermelder in WC und Lager melden Wasser.",
+        "en": "The water leak sensors in the restroom and the dry storage report water."
       },
       "set": [
         {

@@ -7,6 +7,13 @@ demo library.
 
 ## [Unreleased]
 
+### Changed
+
+- The login form asks for the tenant URL and tenant ID; no tenants ship with the app any more.
+  "Remember me" stores them with the user name; saved logins from 0.1.0 are not taken over.
+- New updater signing key. 0.1.0 cannot update itself to this version: install it by hand.
+- macOS builds are signed with the Lichtwart GmbH Developer ID and notarized by Apple.
+
 ## [0.1.0] - 2026-10-12
 
 ### Added

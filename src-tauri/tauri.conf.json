@@ -60,7 +60,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwNEVCQjM0MUNGODBCRDAKUldUUUMvZ2NOTHRPUUp2bzFtWjRtWWlBaSsxcGJNZFNtMXRpZis3b21DeTY4NkkrSDg4TFV5Sm8K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYwRUEwRkRCNUEzNDczM0IKUldRN2N6UmEydy9xOENCYVhaVGl3ak5CbndHMkFmanoyaFFoeU8wTnVGQk54bUl6SDUxMDE5S1MK",
       "endpoints": [
         "https://github.com/Lichtwart/lw-data-simulator/releases/latest/download/latest.json"
       ],

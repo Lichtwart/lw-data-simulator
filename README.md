@@ -30,21 +30,33 @@ A local `tauri build` makes an unsigned bundle without updater artifacts. Signed
 installers and the updater files (`latest.json`) come only from the release workflow, which adds
 `--config src-tauri/tauri.release.conf.json` (see [`docs/RELEASING.md`](docs/RELEASING.md)).
 
-## Before the first release
+## Releases
 
-The updater is not usable yet: `src-tauri/tauri.conf.json` still holds a placeholder public key and
-the repository path `OWNER/REPO`, and the project has no git remote. Until this is done every
-update check fails (it is logged once on start and shown as "check failed" in Settings) and
-`node scripts/release-check.mjs` refuses every tag. Only the repository owner can do these steps;
-[`docs/RELEASING.md`](docs/RELEASING.md) has the details.
+A pushed `v*` tag builds, signs and publishes a GitHub release; installed apps update from it.
+The release build needs these secrets in the GitHub environment **`release`** (Settings >
+Environments > `release`, not repository secrets):
 
-- [ ] Create the GitHub repository, add the remote, first commit on `main`.
-- [ ] Replace `OWNER/REPO` in `plugins.updater.endpoints` (`src-tauri/tauri.conf.json`).
-- [ ] Generate the updater key (`npm run tauri signer generate`) and put the public key into
-      `plugins.updater.pubkey`. Keep the private key and its password safe.
-- [ ] Add the signing and Apple secrets to a `release` environment with required reviewers, and a
-      tag rule for `v*`.
+| Secret | Required | Content |
+|---|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | yes | updater private key (`~/.tauri/lichtwart-sim.key`) |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | yes | its password |
+| `APPLE_CERTIFICATE` | all six or none | "Developer ID Application" certificate, `.p12`, base64 |
+| `APPLE_CERTIFICATE_PASSWORD` | | export password of the `.p12` |
+| `APPLE_SIGNING_IDENTITY` | | `Developer ID Application: Lichtwart GmbH (XD59B34DMF)` |
+| `APPLE_API_KEY` | | App Store Connect API Key ID (notarization) |
+| `APPLE_API_ISSUER` | | App Store Connect Issuer ID |
+| `APPLE_API_KEY_P8` | | `AuthKey_<KeyID>.p8`, base64 |
+
+**All keys, certificates and passwords are stored in the password vault "Lichtwart/Product 1".**
+The updater key must never change: installed apps accept only updates signed with the key whose
+public half is in `src-tauri/tauri.conf.json`. How each secret was created and set, and how to cut a
+release: [`docs/RELEASING.md`](docs/RELEASING.md).
+
+Still open:
+
+- [ ] Required reviewers on the `release` environment and a tag rule for `v*`.
 - [ ] Replace the placeholder app icon (`npm run tauri icon <logo.png>`).
+- [ ] Windows code signing (SmartScreen warns on the first install).
 - [ ] Check on real tenants and devices (PRD §19): `description` in Device Management, floorplan
       plugin, DALI brightness %, the `"C"` temperature unit, Windows keychain and updater.
 

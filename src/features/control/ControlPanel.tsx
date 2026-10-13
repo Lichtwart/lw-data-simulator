@@ -15,19 +15,27 @@ import { usePending } from "@/lib/usePending";
 import { useDevice } from "../devices/DeviceContext";
 import { useDeviceSession, useDeviceSessionHead, useSession } from "../session/SessionProvider";
 import { useStartSession } from "../session/useStartSession";
-import { FaultSectionsPanel } from "./FaultSections";
+import { AlarmCard, ClearAllAlarms } from "./FaultSections";
 import { FilterBar } from "./FilterBar";
-import { encodeStatuses, groupFaults, itemFaultKeyOf, itemFaultOwner } from "./faults";
+import { activeFaultPredicate, buildEntries, encodeStatuses } from "./faults";
 import { GeneratorDialog, type GeneratorTarget } from "./GeneratorDialog";
 import { GroupModes } from "./GroupModes";
 import { ItemCard } from "./ItemCard";
-import { buildChipGroups, filterItems, type ItemFilter, type Lang } from "./itemFilter";
+import {
+  buildChipGroups,
+  EMPTY_FILTER,
+  filterEntries,
+  type ItemFilter,
+  inlineFaults,
+  type Lang,
+} from "./itemFilter";
 import { compareItems } from "./itemOrder";
 import { SessionBar } from "./SessionBar";
 
-const EMPTY_FAULTS: readonly FaultDefinition[] = [];
-
-/** Control tab (PRD §8): session bar, scenarios, groups, faults, filterable item cards. */
+/**
+ * Control tab (PRD §8): session bar, scenarios, groups, one filterable list of item cards and
+ * alarm cards (lamp alarms on the lamp, slave alarms with the slave's registers).
+ */
 export function ControlPanel({ deviceId }: { deviceId: string }) {
   // Head only: the value-tick subscription lives in `Running`, so the tab switch doesn't re-render per tick.
   const session = useDeviceSessionHead(deviceId);
@@ -72,7 +80,7 @@ function Running({ deviceId }: { deviceId: string }) {
     () => api.faultCatalog(deviceId),
     [deviceId, session?.startedAt],
   );
-  const [filter, setFilter] = useState<ItemFilter>({ query: "", tags: new Set() });
+  const [filter, setFilter] = useState<ItemFilter>(EMPTY_FILTER);
   const scenarioCalls = usePending();
   const [genItemId, setGenItemId] = useState<string | null>(null);
 
@@ -89,43 +97,51 @@ function Running({ deviceId }: { deviceId: string }) {
   const metaById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const slaveNames = useMemo(() => new Map(slaves.map((s) => [s.key, s.name])), [slaves]);
 
-  const rows = useMemo(() => {
-    if (!session) return [];
-    return session.items
-      .flatMap((state) => {
-        const meta = metaById.get(state.itemId);
-        return meta && meta.kind !== "customAlarm" ? [{ meta, state }] : [];
-      })
-      .sort((a, b) => compareItems(a.meta, b.meta));
-  }, [session, metaById]);
+  // The list's shape depends on which items run, not on their values: rebuilt only when the item
+  // set changes, so the cards' fault arrays keep their identity (memo) across value ticks.
+  const itemIds = session?.items.map((s) => s.itemId).join("\n") ?? "";
+  const rows = useMemo(
+    () =>
+      itemIds
+        .split("\n")
+        .flatMap((id) => {
+          const meta = metaById.get(id);
+          return meta ? [{ meta }] : [];
+        })
+        .sort((a, b) => compareItems(a.meta, b.meta)),
+    [itemIds, metaById],
+  );
 
-  const lampFaultMap = useMemo(() => {
-    const m = new Map<string, FaultDefinition[]>();
-    for (const f of catalog.data ?? []) {
-      const owner = itemFaultOwner(f.target);
-      if (owner) m.set(owner, [...(m.get(owner) ?? []), f]);
-    }
-    return m;
-  }, [catalog.data]);
-  const sections = useMemo(() => groupFaults(catalog.data ?? []), [catalog.data]);
+  const entries = useMemo(
+    () =>
+      buildEntries(rows, catalog.data ?? [], slaves, {
+        lang,
+        daliBus: t("control.daliBus"),
+        slave: (name) => t("control.slave", { name }),
+        slaveTimeout: t("control.slaveTimeout"),
+      }),
+    [rows, catalog.data, slaves, lang, t],
+  );
+  const chipGroups = useMemo(() => buildChipGroups(entries), [entries]);
   const pack = library.data?.demos.find((d) => d.id === device.demo?.demoId);
 
   if (!session) return null;
 
-  const genRow = genItemId ? rows.find((r) => r.meta.id === genItemId) : undefined;
-  const genTarget: GeneratorTarget | null = genRow
-    ? {
-        id: genRow.meta.id,
-        title: genRow.meta.title[lang],
-        generator: genRow.state.generator,
-        center: genRow.meta.control?.default ?? 0,
-      }
-    : null;
+  const stateById = new Map(session.items.map((s) => [s.itemId, s]));
+  const genMeta = genItemId ? metaById.get(genItemId) : undefined;
+  const genState = genItemId ? stateById.get(genItemId) : undefined;
+  const genTarget: GeneratorTarget | null =
+    genMeta && genState
+      ? {
+          id: genMeta.id,
+          title: genMeta.title[lang],
+          generator: genState.generator,
+          center: genMeta.kind === "customAlarm" ? 0 : (genMeta.control?.default ?? 0),
+        }
+      : null;
 
-  const metas = rows.map((r) => r.meta);
-  const visible = new Set(filterItems(metas, filter, slaves).map((m) => m.id));
-  const chipGroups = buildChipGroups(metas);
-  const shownRows = rows.filter((r) => visible.has(r.meta.id));
+  const isActive = activeFaultPredicate(session.activeFaults);
+  const shown = filterEntries(entries, filter, isActive);
   const unknown = session.items.length - rows.length;
 
   return (
@@ -171,38 +187,50 @@ function Running({ deviceId }: { deviceId: string }) {
 
       <GroupModes groups={session.groups} />
       {catalog.error !== null && <ErrorNotice error={catalog.error} />}
-      <FaultSectionsPanel
-        deviceId={deviceId}
-        sections={sections}
-        slaves={slaves}
-        activeFaults={session.activeFaults}
-      />
 
       {library.error !== null && <ErrorNotice error={library.error} />}
       <FilterBar
         filter={filter}
         onChange={setFilter}
         groups={chipGroups}
-        shown={shownRows.length}
-        total={rows.length}
+        shown={shown.length}
+        total={entries.length}
+        activeAlarms={session.activeFaults.length}
+        alarmActions={<ClearAllAlarms deviceId={deviceId} />}
       />
 
-      {shownRows.length === 0 ? (
+      {shown.length === 0 ? (
         <p className="text-muted-foreground">{t("control.noItems")}</p>
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
-          {shownRows.map(({ meta, state }) => {
-            const owner = itemFaultKeyOf(meta);
-            const faults = (owner !== null ? lampFaultMap.get(owner) : undefined) ?? EMPTY_FAULTS;
-            const statuses = encodeStatuses(faults, session.activeFaults);
+          {shown.map((entry) => {
+            const statuses = encodeStatuses(entry.faults, session.activeFaults);
+            if (entry.type === "alarms") {
+              return (
+                <li key={entry.key} className="flex">
+                  <AlarmCard
+                    title={entry.title}
+                    subtitle={entry.subtitle}
+                    faults={entry.faults}
+                    statuses={statuses}
+                  />
+                </li>
+              );
+            }
+            const { meta } = entry.row;
+            const state = stateById.get(meta.id);
+            if (!state) return null;
             return (
-              <li key={meta.id} className="flex">
+              <li key={entry.key} className="flex">
                 <ItemCard
                   meta={meta}
                   state={state}
                   lang={lang}
-                  lampFaults={faults}
+                  lampFaults={entry.faults}
                   lampFaultStatuses={statuses}
+                  inlineFaultTypes={inlineFaults(entry, filter.query, isActive)
+                    .map((f) => f.alarmType)
+                    .join(",")}
                   slaveName={meta.kind === "modbus" ? slaveNames.get(meta.slave) : null}
                   onEditGenerator={setGenItemId}
                 />

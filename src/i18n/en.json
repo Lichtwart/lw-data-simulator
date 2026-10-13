@@ -8,7 +8,10 @@
     "settings": "Settings",
     "logout": "Log out",
     "updateAvailable": "New version",
-    "session": "Active session"
+    "session": "Active session",
+    "menu": "Menu",
+    "hideMenu": "Hide menu",
+    "showMenu": "Show menu"
   },
   "common": {
     "loading": "Loading …",
@@ -118,14 +121,11 @@
       "off": "Off",
       "auto": "Auto"
     },
-    "faultsAndAlarms": "Faults and alarms",
-    "activeFaults_one": "{{count}} active",
-    "activeFaults_other": "{{count}} active",
+    "alarms": "Alarms",
+    "activeAlarms": "Active alarms",
     "daliBus": "DALI bus",
     "slave": "Slave {{name}}",
     "slaveTimeout": "Timeout (slave does not answer)",
-    "customAlarms": "Custom alarms",
-    "faultList": "Fire faults",
     "faultsHint": "An alarm stays in effect until it is cleared in Cumulocity. Acknowledging only changes its status.",
     "fire": "Fire",
     "fireFault": "Fire alarm",
@@ -140,7 +140,7 @@
     "allClearing": "Clearing all alarms.",
     "faultMenu": "Faults of {{name}}",
     "filter": "Filter",
-    "search": "Search: title, id, tag, slave",
+    "search": "Search: title, id, tag, slave, alarm",
     "shown": "{{shown}} of {{total}}",
     "clearFilter": "Reset",
     "tagsClient": "Demo",

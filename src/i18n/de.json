@@ -8,7 +8,10 @@
     "settings": "Einstellungen",
     "logout": "Abmelden",
     "updateAvailable": "Neue Version",
-    "session": "Aktive Session"
+    "session": "Aktive Session",
+    "menu": "Menü",
+    "hideMenu": "Menü ausblenden",
+    "showMenu": "Menü einblenden"
   },
   "common": {
     "loading": "Wird geladen …",
@@ -118,14 +121,11 @@
       "off": "Aus",
       "auto": "Auto"
     },
-    "faultsAndAlarms": "Störungen und Alarme",
-    "activeFaults_one": "{{count}} aktiv",
-    "activeFaults_other": "{{count}} aktiv",
+    "alarms": "Alarme",
+    "activeAlarms": "Aktive Alarme",
     "daliBus": "DALI-Bus",
     "slave": "Slave {{name}}",
     "slaveTimeout": "Timeout (Slave antwortet nicht)",
-    "customAlarms": "Eigene Alarme",
-    "faultList": "Störungen auslösen",
     "faultsHint": "Ein Alarm wirkt, bis er in Cumulocity aufgehoben wird. Quittieren ändert nur den Status.",
     "fire": "Auslösen",
     "fireFault": "Alarm auslösen",
@@ -140,7 +140,7 @@
     "allClearing": "Alarme werden aufgehoben.",
     "faultMenu": "Störungen von {{name}}",
     "filter": "Filter",
-    "search": "Suchen: Titel, ID, Tag, Slave",
+    "search": "Suchen: Titel, ID, Tag, Slave, Alarm",
     "shown": "{{shown}} von {{total}}",
     "clearFilter": "Zurücksetzen",
     "tagsClient": "Demo",

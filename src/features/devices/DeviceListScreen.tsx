@@ -170,7 +170,7 @@ export function DeviceListScreen() {
           <h2 className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
             {section.group?.name ?? t("devices.ungrouped")}
           </h2>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-4">
             {section.devices.map((d) => {
               const running = session?.deviceId === d.id;
               const locked = !running && isLockFresh(d.lock, now);

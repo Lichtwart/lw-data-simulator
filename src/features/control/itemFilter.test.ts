@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { LibraryItem_Serialize, SlaveDefinition } from "@/lib/api";
+import type { FaultDefinition, LibraryItem_Serialize } from "@/lib/api";
 
 import {
   buildChipGroups,
-  filterItems,
+  EMPTY_FILTER,
+  type FilterableEntry,
+  faultHaystack,
+  filterEntries,
+  inlineFaults,
+  itemHaystack,
   matchesQuery,
   matchesTags,
   tagNamespace,
@@ -26,10 +31,10 @@ const item = (
   writable: false,
 });
 
-const slaves: SlaveDefinition[] = [
-  { key: "kuehlung", name: "Kuehlung", requestInterval: 10 },
-  { key: "klima", name: "Klima Zone 1", requestInterval: 10 },
-];
+const slaveNames = new Map([
+  ["kuehlung", "Kuehlung"],
+  ["klima", "Klima Zone 1"],
+]);
 
 const items = [
   item("freezer_temp", "Tiefkühler Temperatur", "Freezer temperature", [
@@ -45,6 +50,25 @@ const items = [
     "zone:outside",
   ]),
 ];
+
+const toEntry = (i: LibraryItem_Serialize): FilterableEntry & { id: string } => ({
+  id: i.id,
+  type: "item",
+  tags: i.tags,
+  haystack: itemHaystack(i, i.kind === "modbus" ? slaveNames.get(i.slave) : null),
+  faults: [],
+  faultHaystacks: [],
+});
+const entries = items.map(toEntry);
+const id = (e: { id: string }) => e.id;
+const never = (_f: FaultDefinition) => false;
+
+const fault = (alarmType: string, text: string): FaultDefinition => ({
+  target: { kind: "customAlarm", itemId: alarmType },
+  alarmType,
+  text,
+  severity: "MAJOR",
+});
 
 describe("tags", () => {
   it("splits the namespace", () => {
@@ -87,9 +111,8 @@ describe("search", () => {
   });
 
   it("searches title (de + en), id, tags and slave name", () => {
-    const none = new Set<string>();
     const ids = (query: string) =>
-      filterItems(items, { query, tags: none }, slaves).map((i) => i.id);
+      filterEntries(entries, { ...EMPTY_FILTER, query }, never).map(id);
     expect(ids("tiefkühler")).toEqual(["freezer_temp"]);
     expect(ids("freezer")).toEqual(["freezer_temp"]);
     expect(ids("ev_power")).toEqual(["ev_power"]);
@@ -100,9 +123,72 @@ describe("search", () => {
   });
 
   it("combines search and tag chips", () => {
-    const result = filterItems(items, { query: "temp", tags: new Set(["zone:shop"]) }, slaves).map(
-      (i) => i.id,
-    );
+    const result = filterEntries(
+      entries,
+      { ...EMPTY_FILTER, query: "temp", tags: new Set(["zone:shop"]) },
+      never,
+    ).map(id);
     expect(result).toEqual(["freezer_temp"]);
+  });
+});
+
+describe("alarms in the list", () => {
+  const short = fault("lw_lampFailure_1_03_shortCircuit", "Lamp Failure 1-03 Short Circuit");
+  const gear = fault("lw_controlGearFailure_1_03", "Control Gear Failure 1-03");
+  const lamp: FilterableEntry & { id: string } = {
+    id: "light-3",
+    type: "item",
+    tags: ["retail", "category:lighting"],
+    haystack: "verkaufsraum leuchte 3\nlight-3\ncategory:lighting",
+    faults: [short, gear],
+    faultHaystacks: [faultHaystack(short), faultHaystack(gear)],
+  };
+  const door = fault("lw_demo_01_door", "Kühlzelle: Tür offen");
+  const slave: FilterableEntry & { id: string } = {
+    id: "slave:kuehlung",
+    type: "alarms",
+    tags: ["retail", "category:cooling"],
+    haystack: "slave kuehlung\nkuehlung",
+    faults: [door],
+    faultHaystacks: [faultHaystack(door)],
+  };
+  const all = [...entries, lamp, slave];
+
+  it("finds alarm texts and types by the text search", () => {
+    const ids = (query: string) => filterEntries(all, { ...EMPTY_FILTER, query }, never).map(id);
+    expect(ids("short circuit")).toEqual(["light-3"]);
+    expect(ids("lw_demo_01")).toEqual(["slave:kuehlung"]);
+    expect(ids("tür offen")).toEqual(["slave:kuehlung"]);
+    expect(ids("leuchte gear")).toEqual(["light-3"]);
+  });
+
+  it("filters alarm cards by their tags like items", () => {
+    const cooling = new Set(["category:cooling"]);
+    expect(filterEntries(all, { ...EMPTY_FILTER, tags: cooling }, never).map(id)).toEqual([
+      "freezer_temp",
+      "slave:kuehlung",
+    ]);
+  });
+
+  it("shows only cards with an alarm in effect", () => {
+    const active = (f: FaultDefinition) => f === door;
+    expect(filterEntries(all, { ...EMPTY_FILTER, activeOnly: true }, active).map(id)).toEqual([
+      "slave:kuehlung",
+    ]);
+    expect(filterEntries(all, { ...EMPTY_FILTER, activeOnly: true }, never)).toEqual([]);
+  });
+
+  it("lists an item's alarms on the card when in effect or found by the search", () => {
+    const types = (query: string, isActive = never) =>
+      inlineFaults(lamp, query, isActive).map((f) => f.alarmType);
+    expect(types("")).toEqual([]);
+    // The card itself matches: the alarms stay in the menu.
+    expect(types("leuchte 3")).toEqual([]);
+    expect(types("short")).toEqual([short.alarmType]);
+    expect(types("leuchte short")).toEqual([short.alarmType]);
+    expect(types("failure")).toEqual([short.alarmType, gear.alarmType]);
+    expect(types("", (f) => f === gear)).toEqual([gear.alarmType]);
+    // Alarm cards list every alarm.
+    expect(inlineFaults(slave, "", never)).toEqual([door]);
   });
 });

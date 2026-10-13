@@ -20,8 +20,9 @@ import {
 } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatValue } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
-import { AlarmStatusBadge } from "./FaultSections";
+import { AlarmStatusBadge, FaultList } from "./FaultSections";
 import { decodeStatuses } from "./faults";
 import { ItemControl } from "./ItemControl";
 import type { Lang } from "./itemFilter";
@@ -34,6 +35,11 @@ interface Props {
   lampFaults: readonly FaultDefinition[];
   /** Statuses of its faults in effect (`encodeStatuses`; a string keeps the memo cheap). */
   lampFaultStatuses: string;
+  /**
+   * Alarm types of the faults listed on the card itself (`inlineFaults`: in effect or found by
+   * the search), joined with `,`. The others stay in the menu.
+   */
+  inlineFaultTypes: string;
   /** Name of the item's Modbus slave. */
   slaveName?: string | null;
   /** Open the generator editor for this item. */
@@ -61,6 +67,7 @@ export const ItemCard = memo(function ItemCard({
   lang,
   lampFaults,
   lampFaultStatuses,
+  inlineFaultTypes,
   slaveName,
   onEditGenerator,
 }: Props) {
@@ -70,12 +77,17 @@ export const ItemCard = memo(function ItemCard({
     meta.kind === "customAlarm" ? null : (meta.unit ?? state.naming?.series[0]?.unit ?? null);
   const control = meta.kind === "customAlarm" ? null : (meta.control ?? null);
   const statuses = decodeStatuses(lampFaultStatuses);
+  const inlineTypes = new Set(inlineFaultTypes.split(",").filter(Boolean));
+  const inline = lampFaults.filter((f) => inlineTypes.has(f.alarmType));
   const generator = state.generator;
 
   return (
     <article
       aria-label={title}
-      className="flex w-full flex-col gap-3 rounded-lg border bg-card p-4 shadow-xs"
+      className={cn(
+        "flex w-full flex-col gap-3 rounded-lg border bg-card p-4 shadow-xs",
+        statuses.size > 0 && "border-destructive",
+      )}
     >
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col">
@@ -154,6 +166,10 @@ export const ItemCard = memo(function ItemCard({
         <span className="font-mono text-sm text-strong">
           {formatValue(state.value, unit, lang)}
         </span>
+      )}
+
+      {inline.length > 0 && (
+        <FaultList faults={inline} statuses={lampFaultStatuses} className="border-t" />
       )}
 
       {(generator || state.paused || state.manualOverride) && (

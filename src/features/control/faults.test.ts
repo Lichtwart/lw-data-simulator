@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ActiveFault, FaultDefinition } from "@/lib/api";
+import type { ActiveFault, FaultDefinition, LibraryItem_Serialize } from "@/lib/api";
 
 import {
+  activeFaultPredicate,
   alarmStatusBadge,
+  buildEntries,
   decodeStatuses,
   encodeStatuses,
   faultKey,
   faultStatus,
-  groupFaults,
   itemFaultOwner,
   lampFaults,
   runClearAll,
@@ -83,13 +84,22 @@ describe("faults", () => {
     expect(decodeStatuses("").size).toBe(0);
   });
 
-  it("selects lamp faults and groups the rest", () => {
+  it("selects lamp faults", () => {
     expect(lampFaults(catalog, 3)).toHaveLength(1);
     expect(lampFaults(catalog, 9)).toHaveLength(0);
-    const g = groupFaults(catalog);
-    expect(g.daliBus).toHaveLength(1);
-    expect(g.customAlarms).toHaveLength(1);
-    expect(g.slaves.get("kuehlung")).toHaveLength(2);
+  });
+
+  it("tells which catalog entries are in effect", () => {
+    const isActive = activeFaultPredicate([
+      {
+        target: { kind: "slaveTimeout", slaveKey: "kuehlung" },
+        alarmType: "d",
+        alarmId: null,
+        raisedAt: "",
+        status: "ACTIVE",
+      },
+    ]);
+    expect(catalog.filter(isActive).map((f) => f.alarmType)).toEqual(["d"]);
   });
 
   it("assigns per-item faults to their item", () => {
@@ -98,6 +108,122 @@ describe("faults", () => {
       "motion:2",
     );
     expect(itemFaultOwner({ kind: "daliBus", alarmType: "x" })).toBeNull();
+  });
+});
+
+describe("buildEntries", () => {
+  const tags = (t: string) => ["retail", t];
+  const items: LibraryItem_Serialize[] = [
+    {
+      kind: "system",
+      id: "rssi",
+      system: "rssi",
+      title: { de: "Signal", en: "Signal" },
+      tags: tags("category:system"),
+    },
+    {
+      kind: "dali",
+      id: "light-3",
+      index: 3,
+      title: { de: "Leuchte 3", en: "Lamp 3" },
+      tags: tags("category:lighting"),
+    },
+    {
+      kind: "dali",
+      id: "light-4",
+      index: 4,
+      title: { de: "Leuchte 4", en: "Lamp 4" },
+      tags: tags("zone:outside"),
+    },
+    {
+      kind: "daliBrightness",
+      id: "lux-2",
+      index: 2,
+      title: { de: "Helligkeit", en: "Brightness" },
+      tags: tags("category:lighting"),
+    },
+    {
+      kind: "modbus",
+      id: "frz_temp",
+      slave: "kuehlung",
+      writable: false,
+      title: { de: "Tiefkühler", en: "Freezer" },
+      tags: tags("category:cooling"),
+    },
+    {
+      kind: "modbus",
+      id: "frz_power",
+      slave: "kuehlung",
+      writable: false,
+      title: { de: "Leistung", en: "Power" },
+      tags: tags("category:energy"),
+    },
+    {
+      kind: "customAlarm",
+      id: "smoke",
+      severity: "CRITICAL",
+      text: "Rauch",
+      title: { de: "Rauchmelder", en: "Smoke detector" },
+      tags: tags("category:safety"),
+    },
+  ];
+  const rows = items.map((meta) => ({ meta }));
+  const labels = {
+    lang: "de" as const,
+    daliBus: "DALI-Bus",
+    slave: (name: string) => `Slave ${name}`,
+    slaveTimeout: "Timeout (Slave antwortet nicht)",
+  };
+  const entries = buildEntries(
+    rows,
+    catalog,
+    [{ key: "kuehlung", name: "Kuehlung", requestInterval: 10 }],
+    labels,
+  );
+
+  it("puts every alarm into the list next to what it belongs to", () => {
+    expect(entries.map((e) => e.key)).toEqual([
+      "item:rssi",
+      "daliBus",
+      "item:light-3",
+      "item:light-4",
+      "item:lux-2",
+      "slave:kuehlung",
+      "item:frz_temp",
+      "item:frz_power",
+      "item:smoke",
+    ]);
+    const types = (key: string) =>
+      entries.find((e) => e.key === key)?.faults.map((f) => f.alarmType);
+    expect(types("item:light-3")).toEqual(["a"]);
+    expect(types("item:lux-2")).toEqual(["g"]);
+    expect(types("daliBus")).toEqual(["c"]);
+    expect(types("slave:kuehlung")).toEqual(["d", "e"]);
+    expect(types("item:smoke")).toEqual(["f"]);
+    expect(types("item:rssi")).toEqual([]);
+  });
+
+  it("gives alarm cards the tags of their items and a searchable text", () => {
+    const slave = entries.find((e) => e.key === "slave:kuehlung");
+    expect(slave?.type).toBe("alarms");
+    expect([...(slave?.tags ?? [])].sort()).toEqual([
+      "category:cooling",
+      "category:energy",
+      "retail",
+    ]);
+    expect(slave?.haystack).toContain("kuehlung");
+    // The timeout is searchable by its UI label.
+    expect(slave?.faultHaystacks[0]).toContain("antwortet nicht");
+    const bus = entries.find((e) => e.key === "daliBus");
+    expect([...(bus?.tags ?? [])].sort()).toEqual(["category:lighting", "retail", "zone:outside"]);
+    const smoke = entries.find((e) => e.key === "item:smoke");
+    expect(smoke).toMatchObject({ type: "alarms", title: "Rauchmelder", subtitle: "smoke" });
+    expect(smoke?.tags).toContain("category:safety");
+  });
+
+  it("keeps alarms whose items are not on the list", () => {
+    const keys = buildEntries([], catalog, [], labels).map((e) => e.key);
+    expect(keys).toEqual(["daliBus", "slave:kuehlung"]);
   });
 });
 

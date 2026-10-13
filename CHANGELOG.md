@@ -7,6 +7,26 @@ demo library.
 
 ## [Unreleased]
 
+### Changed
+
+- Measurements are named from the app's own config: fragment = the item's German title, series =
+  the item id (e.g. `Attika 1.light-5`), so the floorplan picker shows readable names. The
+  simulator no longer writes `lw_config*` fragments; applying a demo removes them. DALI groups,
+  digital inputs and the time zone live in `lw_demo`. The floorplan plugin's DALI group and Modbus
+  write controls stay inactive until the plugin is adapted (DECISIONS D10).
+- Control tab: alarms sit in the same list as the items they belong to, the text search also
+  finds alarm texts, and an "Active alarms" filter shows only cards with a raised alarm.
+- Device overview rows have more space between them.
+
+### Added
+
+- Scenarios have a description and can be edited, created, copied and deleted per device in the
+  Setup tab, with value, generator and alarm steps (DECISIONS D11).
+- "Reset to defaults" in the Control tab: clears all alarms and sets every value and generator
+  back to its default (counters keep their value).
+- The left menu can be hidden (button, Cmd/Ctrl+\, left edge); the window works down to 480 px
+  wide.
+
 ## [0.1.2] - 2026-10-13
 
 ### Changed

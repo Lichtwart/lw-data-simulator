@@ -23,7 +23,8 @@
   "login": {
     "title": "Anmelden",
     "subtitle": "Mit einem Lichtwart-Tenant verbinden.",
-    "tenant": "Tenant",
+    "url": "URL",
+    "tenantId": "Tenant-ID",
     "username": "Benutzername",
     "password": "Passwort",
     "remember": "Angemeldet bleiben (Schlüsselbund)",

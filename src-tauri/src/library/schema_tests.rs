@@ -13,7 +13,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use crate::model::{DemoPack, FloorplanLayout, ItemLibraryFile, TenantsFile};
+use crate::model::{DemoPack, FloorplanLayout, ItemLibraryFile};
 
 const BASE: &str = "https://schemas.lichtwart.io/demo-simulator/";
 
@@ -31,7 +31,6 @@ fn fixture_library() -> PathBuf {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Kind {
-    Tenants,
     Items,
     Demo,
     Floorplan,
@@ -40,7 +39,6 @@ enum Kind {
 impl Kind {
     fn schema(self) -> &'static str {
         match self {
-            Kind::Tenants => "tenants.schema.json",
             Kind::Items => "items.schema.json",
             Kind::Demo => "demo.schema.json",
             Kind::Floorplan => "floorplan.schema.json",
@@ -51,7 +49,6 @@ impl Kind {
 /// Which schema a library file (path relative to the library root) must satisfy.
 fn kind_of(rel: &[String]) -> Option<Kind> {
     match rel {
-        [f] if f == "tenants.json" => Some(Kind::Tenants),
         [d, _] if d == "items" => Some(Kind::Items),
         [d, _] if d == "demos" => Some(Kind::Demo),
         [d, _, _] if d == "floorplans" => Some(Kind::Floorplan),
@@ -185,7 +182,6 @@ fn schema_and_serde_accept_the_same_fixtures() {
         let kind = kind_of(&rel).unwrap();
         assert!(schemas.errors(kind, &doc).is_empty(), "{name}");
         match kind {
-            Kind::Tenants => round_trip::<TenantsFile>(&schemas, kind, &name, &doc),
             Kind::Items => round_trip::<ItemLibraryFile>(&schemas, kind, &name, &doc),
             Kind::Demo => round_trip::<DemoPack>(&schemas, kind, &name, &doc),
             Kind::Floorplan => round_trip::<FloorplanLayout>(&schemas, kind, &name, &doc),
@@ -196,7 +192,6 @@ fn schema_and_serde_accept_the_same_fixtures() {
 fn rejected_by_serde(kind: Kind, doc: &Value) -> bool {
     let v = doc.clone();
     match kind {
-        Kind::Tenants => serde_json::from_value::<TenantsFile>(v).is_err(),
         Kind::Items => serde_json::from_value::<ItemLibraryFile>(v).is_err(),
         Kind::Demo => serde_json::from_value::<DemoPack>(v).is_err(),
         Kind::Floorplan => serde_json::from_value::<FloorplanLayout>(v).is_err(),

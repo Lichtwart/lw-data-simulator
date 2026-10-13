@@ -3,38 +3,27 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::library::LocalizedText;
-
-/// A tenant baked into the app via `library/tenants.json`.
+/// The Cumulocity tenant a login goes to. Entered by the user (tenant id + URL); nothing
+/// tenant-specific is bundled with the app.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Tenant {
-    /// Stable key used in commands and keychain entries, e.g. `test`, `production`.
+    /// Stable key used in commands and keychain entries: `<tenantId>@<host>`.
     pub key: String,
-    /// Display label.
-    pub label: LocalizedText,
-    /// Cumulocity tenant id, e.g. `t819292026`.
+    /// Cumulocity tenant id, e.g. `t12345`.
     pub tenant_id: String,
-    /// Base URL without trailing slash, e.g. `https://test.ram.m2m.telekom.com`.
+    /// Base URL without path or trailing slash, e.g. `https://example.cumulocity.com`.
     pub base_url: String,
-}
-
-/// `library/tenants.json` file format.
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct TenantsFile {
-    /// Always `lw-tenants`.
-    #[serde(rename = "type")]
-    pub file_type: String,
-    pub schema_version: u32,
-    pub tenants: Vec<Tenant>,
 }
 
 /// Arguments of the `login` command. `Debug` is written by hand: it must never print the password.
 #[derive(Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginRequest {
-    pub tenant_key: String,
+    /// Cumulocity tenant id as entered.
+    pub tenant_id: String,
+    /// Tenant URL as entered (`https://` is added when missing; a path is ignored).
+    pub base_url: String,
     /// Plain user name; the backend prefixes `tenantId/` when needed.
     pub username: String,
     pub password: String,
@@ -45,7 +34,8 @@ pub struct LoginRequest {
 impl std::fmt::Debug for LoginRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LoginRequest")
-            .field("tenant_key", &self.tenant_key)
+            .field("tenant_id", &self.tenant_id)
+            .field("base_url", &self.base_url)
             .field("username", &self.username)
             .field("password", &"****")
             .field("remember", &self.remember)
@@ -65,10 +55,10 @@ pub struct AuthState {
 }
 
 /// A credential stored in the keychain (the password never leaves Rust).
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SavedLogin {
-    pub tenant_key: String,
+    pub tenant: Tenant,
     pub username: String,
 }
 
@@ -79,7 +69,8 @@ mod tests {
     #[test]
     fn login_request_debug_hides_the_password() {
         let req = LoginRequest {
-            tenant_key: "test".into(),
+            tenant_id: "t1".into(),
+            base_url: "https://example.cumulocity.com".into(),
             username: "sl".into(),
             password: "s3cret-pw".into(),
             remember: false,

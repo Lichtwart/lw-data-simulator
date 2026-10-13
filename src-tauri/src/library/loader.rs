@@ -1,17 +1,14 @@
 //! Load the library from disk.
 //!
-//! Tenants and the item / demo files are loaded separately: a broken item or demo file is
-//! skipped with a warning (shown via `library_info`), and never keeps anyone from logging in.
+//! A broken item or demo file is skipped with a warning (shown via `library_info`).
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::{Library, Origin};
 use crate::error::{AppError, AppResult};
-use crate::model::{DemoPack, FloorplanLayout, ItemLibraryFile, LibraryItem, Tenant, TenantsFile};
+use crate::model::{DemoPack, FloorplanLayout, ItemLibraryFile, LibraryItem};
 
-/// `type` of `library/tenants.json`.
-pub const TENANTS_TYPE: &str = "lw-tenants";
 /// `type` of `library/items/*.json`.
 pub const ITEMS_TYPE: &str = "lw-demo-items";
 /// `type` of `library/demos/*.json`.
@@ -20,14 +17,6 @@ pub const DEMO_TYPE: &str = "lw-demo";
 pub const FLOORPLAN_TYPE: &str = "lw-demo-floorplan";
 /// The only supported `schemaVersion` of every library file.
 pub const SCHEMA_VERSION: u32 = 1;
-
-/// Load `root/tenants.json`. Fails if missing, unparsable, or of the wrong type / version.
-pub fn load_tenants(root: &Path) -> AppResult<Vec<Tenant>> {
-    let path = root.join("tenants.json");
-    let file: TenantsFile = read_json(&path)?;
-    check_header(&path, &file.file_type, TENANTS_TYPE, file.schema_version)?;
-    Ok(file.tenants)
-}
 
 /// Load items and demos of `root` (the `library/` folder). Unreadable, unparsable or wrongly
 /// typed files are skipped and reported in `Library::warnings`; semantic findings are added by
@@ -271,9 +260,6 @@ mod tests {
     /// The repo's own `library/` must always load.
     #[test]
     fn loads_repo_library() {
-        let tenants = load_tenants(&repo_library()).expect("tenants load");
-        assert!(tenants.iter().any(|t| t.key == "test"));
-        assert!(tenants.iter().any(|t| t.key == "production"));
         let lib = load(&repo_library(), "0.0.0").expect("library loads");
         assert!(lib.warnings.is_empty(), "{:?}", lib.warnings);
     }
@@ -319,26 +305,6 @@ mod tests {
         assert_eq!(lib.warnings.len(), 5, "{:?}", lib.warnings);
         assert!(lib.warnings.iter().any(|w| w.contains("broken.json")));
         assert!(lib.warnings.iter().any(|w| w.contains("schemaVersion 2")));
-        let _ = fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn tenants_load_without_items() {
-        let root = scratch("tenants");
-        fs::write(root.join("items/broken.json"), "garbage").unwrap();
-        fs::write(
-            root.join("tenants.json"),
-            r#"{"type":"lw-tenants","schemaVersion":1,"tenants":[
-                {"key":"t","label":{"de":"T","en":"T"},"tenantId":"t1","baseUrl":"https://x"}]}"#,
-        )
-        .unwrap();
-        assert_eq!(load_tenants(&root).unwrap().len(), 1);
-        fs::write(
-            root.join("tenants.json"),
-            r#"{"type":"x","schemaVersion":1,"tenants":[]}"#,
-        )
-        .unwrap();
-        assert!(load_tenants(&root).is_err());
         let _ = fs::remove_dir_all(&root);
     }
 

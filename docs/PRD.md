@@ -46,13 +46,14 @@ Lichtwart staff only. Mostly one presenter per demo device; concurrent use is ra
 
 ## 5. Login & tenants
 
-- Tenants are **baked into the app** (`library/tenants.json`), no passwords in it:
-  - test — `t819292026` — `https://test.ram.m2m.telekom.com`
-  - production — `t134875661` — `https://lichtwart.ram.m2m.telekom.com`
+- **No tenant ships with the app** (the repo is public): the user enters the tenant **URL** and
+  **tenant ID**. `https://` is added when missing; a path (copied browser URL) is dropped; only
+  `https` is accepted.
 - Login: username + password, **Basic auth** (`Authorization: Basic …`, `UseXBasic: true`). The username
   is always sent as `tenantId/user` (works on every domain). Validate with `GET /user/currentUser`.
-- "Remember me" (optional) stores the credentials in the OS keychain per tenant; otherwise held in
-  memory only.
+- "Remember me" (optional) stores the password in the OS keychain per tenant (key
+  `<tenantId>@<host>`) and tenant ID, URL and user name in the app config; otherwise held in memory
+  only. The remembered logins are the tenant choice on the login screen.
 - Switching tenant = logout + login.
 
 ## 6. Demo devices
@@ -316,7 +317,6 @@ Usable with or without a demo pack, on the selected demo device:
 
 ```
 library/
-  tenants.json
   items/            # reusable item libraries — "type": "lw-demo-items"
     dali-lights.json      # light-1 … light-64 (native DALI), tagged per demo
     digital-inputs.json

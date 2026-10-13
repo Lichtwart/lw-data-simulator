@@ -2,8 +2,6 @@
 //! commands as `tauri::State<'_, AppState>`.
 //!
 //! Concurrency model:
-//! - `tenants`: loaded from `library/tenants.json` on its own (a broken item or demo file must
-//!   never lock the user out of login); immutable → `Arc`.
 //! - `library`: immutable after startup → `Arc`, no lock.
 //! - `auth`: `RwLock<Option<Authenticated>>` — written on login/logout, read (and the
 //!   client cloned) by every Cumulocity command. Never hold the guard across `.await`
@@ -28,7 +26,7 @@ use crate::c8y::{ActivityLog, C8yClient};
 use crate::error::{AppError, AppResult};
 use crate::events::SessionChanged;
 use crate::library::Library;
-use crate::model::{AuthState, SessionSnapshot, Tenant};
+use crate::model::{AuthState, SessionSnapshot};
 use crate::raw::RawHistory;
 use crate::sim::{SessionHandle, SessionSender};
 
@@ -58,8 +56,6 @@ pub struct Authenticated {
 }
 
 pub struct AppState {
-    /// `Err` if `library/tenants.json` could not be read (login is unavailable then).
-    pub tenants: Result<Arc<Vec<Tenant>>, AppError>,
     /// `Err` if the bundled library failed to load (reported by library commands).
     pub library: Result<Arc<Library>, AppError>,
     pub auth: RwLock<Option<Authenticated>>,
@@ -74,9 +70,8 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(tenants: Result<Vec<Tenant>, AppError>, library: Result<Library, AppError>) -> Self {
+    pub fn new(library: Result<Library, AppError>) -> Self {
         Self {
-            tenants: tenants.map(Arc::new),
             library: library.map(Arc::new),
             auth: RwLock::new(None),
             session: Mutex::new(None),
@@ -85,20 +80,6 @@ impl AppState {
             activity: Arc::new(ActivityLog::new()),
             raw_history: Mutex::new(RawHistory::default()),
         }
-    }
-
-    /// The baked-in tenants or the load error.
-    pub fn tenants(&self) -> AppResult<Arc<Vec<Tenant>>> {
-        self.tenants.clone()
-    }
-
-    /// One tenant by key.
-    pub fn tenant(&self, key: &str) -> AppResult<Tenant> {
-        self.tenants()?
-            .iter()
-            .find(|t| t.key == key)
-            .cloned()
-            .ok_or_else(|| AppError::NotFound(format!("tenant {key}")))
     }
 
     /// The loaded library or the load error.
@@ -271,7 +252,7 @@ mod tests {
     use crate::library::Library;
 
     fn state() -> AppState {
-        AppState::new(Ok(Vec::new()), Ok(Library::default()))
+        AppState::new(Ok(Library::default()))
     }
 
     /// Finding 17: a start in progress keeps a second one out without holding the session lock.

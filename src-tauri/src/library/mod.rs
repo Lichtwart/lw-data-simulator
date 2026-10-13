@@ -6,8 +6,7 @@
 //! `Arc`). Library version == app version.
 //!
 //! Ownership:
-//! - [`loader`]: read `tenants.json` (separately, [`loader::load_tenants`]), `items/*.json`,
-//!   `demos/*.json` and the floorplan layouts the demos reference. Bad files are skipped with a
+//! - [`loader`]: read `items/*.json`, `demos/*.json` and the floorplan layouts the demos reference. Bad files are skipped with a
 //!   warning.
 //! - [`validate`]: semantic checks beyond serde / JSON schema (id rules, lengths, limits,
 //!   references), reported with file + JSON path. JSON-schema validation of every file runs in

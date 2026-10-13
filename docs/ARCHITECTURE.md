@@ -24,7 +24,6 @@ Feature work fills in function bodies behind this contract; changing the contrac
 ```
 docs/                 PRD.md, ARCHITECTURE.md (this), research/ (other agents)
 library/              bundled demo library (Tauri resource) — PRD §11
-  tenants.json        baked-in tenants (no passwords)
   items/ demos/ floorplans/<demoId>/
   schema/             JSON schemas (draft 2020-12; `npm run validate:library` + `cargo test`)
 src/                  React + TypeScript frontend
@@ -49,21 +48,21 @@ src-tauri/            Rust backend (crate `lichtwart-demo-simulator`, lib `lw_si
 
 | Module | Owns | Notes |
 |---|---|---|
-| `lib.rs` | `run()`, plugin setup (updater, process, dialog, log), `specta_builder()` (= `commands::collect()` + `events::collect()`), `export_bindings()` | In `setup` loads tenants (`library::loader::load_tenants`) and the library (`load`) **separately** from the resource dir and `manage`s `AppState`. |
+| `lib.rs` | `run()`, plugin setup (updater, process, dialog, log), `specta_builder()` (= `commands::collect()` + `events::collect()`), `export_bindings()` | In `setup` loads the library (`load`) from the resource dir and `manage`s `AppState`. No tenants are bundled (PRD §5). |
 | `commands/` | every `#[tauri::command]`, one file per area: `app`, `auth`, `library`, `devices`, `session`, `raw`, `activity` | Thin adapters. All return `AppResult<T>`. Each file ends with a `<area>_commands!` macro listing its own commands; `commands::collect()` chains them, so two agents working on different areas never touch the same file. |
 | `events.rs` | every emitted event (struct + name) and `collect()` | Name = kebab-case struct name unless `#[tauri_specta(event_name = …)]`. |
 | `model/` | every serde type crossing IPC + library file format | `auth`, `library`, `device`, `session`, `ops`, `raw`, `activity`, `app`. camelCase JSON. |
 | `error.rs` | `AppError` (single serializable error), `AppResult<T>` | Serialized as `{ code, details? }`; frontend maps `code` → `errors.<code>` i18n key. |
 | `state.rs` | `AppState`, `Authenticated`, shared session helpers (`stop_session`, `stop_session_for`, `session_sender`, `session_snapshot`, `expire_auth`) | See §7. |
-| `c8y/client.rs` | `C8yClient`: Basic auth (`UseXBasic: true`, always `tenantId/user` — `basic_auth_user`), transport, error mapping, activity logging (`record`), 401 handling (`check_unauthorized`), generic `get_json` / `post_json` / `put_json` / `delete` / `request_json`, `current_user`, `now_iso` | **Implemented + tested.** Takes an `Arc<dyn EventSink>`. 30 s request (`with_request_timeout` overrides it; per-request `RequestSpec::timeout` wins: realtime, binaries 120 s) / 10 s connect timeout; cookie store on (server affinity). Errors: transport → `network`, 401 → `auth-expired` (only if it really ended the login) + `notAuthenticated` (`current_user`: `authFailed` with the server's reason), other non-2xx → `http {status, message}` (message from the Cumulocity error body). POSTs to measurements / alarms / events get `time = now` if missing (also per element of a collection). |
+| `c8y/client.rs` | `C8yClient`: Basic auth (`UseXBasic: true`, always `tenantId/user` — `basic_auth_user`; `parse_tenant` turns the entered tenant id + URL into a `Tenant`), transport, error mapping, activity logging (`record`), 401 handling (`check_unauthorized`), generic `get_json` / `post_json` / `put_json` / `delete` / `request_json`, `current_user`, `now_iso` | **Implemented + tested.** Takes an `Arc<dyn EventSink>`. 30 s request (`with_request_timeout` overrides it; per-request `RequestSpec::timeout` wins: realtime, binaries 120 s) / 10 s connect timeout; cookie store on (server affinity). Errors: transport → `network`, 401 → `auth-expired` (only if it really ended the login) + `notAuthenticated` (`current_user`: `authFailed` with the server's reason), other non-2xx → `http {status, message}` (message from the Cumulocity error body). POSTs to measurements / alarms / events get `time = now` if missing (also per element of a collection). |
 | `c8y/api.rs` | typed helpers on `C8yClient` (see §15) | **Implemented + tested.** Bodies / results are `serde_json::Value`. |
 | `c8y/media.rs` | `application/vnd.com.nsn.cumulocity.*` media types; `for_request(method, path, body)` picks `Accept` / `Content-Type` | **Implemented + tested.** Used by every request and by `to_curl`. |
 | `c8y/fake.rs` | `#[cfg(test)]` fake Cumulocity HTTP server (axum) | See §15. |
 | `c8y/sink.rs` | `EventSink` trait, `TauriSink` (emits `activity-logged`; on 401 clears `AppState.auth`, stops the session, emits `auth-expired`), `NoopSink` | **Implemented.** The client never knows Tauri. |
-| `c8y/credentials.rs` | "Remember me": password in the OS keychain (`keyring-core` + native store), user name in `<app config dir>/saved-logins.json` | **Implemented + tested.** Keychain service `io.lichtwart.demo-simulator`, account = tenant key, secret = the password. Listing logins reads only the file (no keychain prompt); only `login_saved` reads the secret. |
+| `c8y/credentials.rs` | "Remember me": password in the OS keychain (`keyring-core` + native store), tenant id, URL and user name in `<app config dir>/saved-logins.json` | **Implemented + tested.** Keychain service `io.lichtwart.demo-simulator`, account = tenant key (`<tenantId>@<host>`), secret = the password. Entries of the 0.1 format (`{ key: username }`) are skipped. Listing logins reads only the file (no keychain prompt); only `login_saved` reads the secret. |
 | `c8y/realtime.rs` | Bayeux/CometD long-polling on `/notification/realtime`, subscriptions to `/operations/<deviceId>` and `/alarms/<deviceId>` (one client) | **Implemented + tested.** `subscribe_device` spawns the task and returns at once; `RealtimeSubscription` (cancel-on-drop, `recv()` → `RealtimeMsg::{Connected, Disconnected(err), Operation(json), PendingOperation(json), Alarm(json), OpenAlarms {alarms, fetched_at}}`). handshake → subscribe both channels → GET PENDING ops + open alarms → `Connected` + ops + `OpenAlarms` → connect loop (D9: an alarm DELETE arrives as `CLEARED`). `402::Unknown client` / `advice.reconnect=handshake` → silent re-handshake (first one at once, repeats with backoff; then `Connected` + PENDING again); errors → `Disconnected` + backoff 1 s … 30 s; 401 / 403 / `reconnect: none` → `Disconnected` and the task ends. See §15 "Realtime". Realtime payload `{realtimeAction, data}` is unwrapped; `DELETE` skipped. **Ops may arrive more than once** (PENDING list + CREATE, UPDATEs) — the worker drops repeats and status regressions per id (`OpDedup`); the session must still ignore the UPDATE echo of its own status changes. Quiet long-polls are not logged. |
 | `c8y/activity.rs` | `ActivityLog` ring buffer (500) + `to_curl(entry)` | **Implemented.** Entries carry `baseUrl` + `user`, so `to_curl` needs no client; password masked as `-u 'tenant/user:****'`, headers are never logged (`to_curl` derives `Accept` / `Content-Type` again via `media::for_request`; a binary upload becomes `-F` parts). Bodies cut at 2 kB; binary responses logged as `[N bytes]`. |
-| `library/` | `Library` (immutable, loaded once; no tenants; items / slaves / demos + referenced floorplan layouts + `origins` per file), `loader` (`load_tenants`, `load` skip bad files with a warning, check `type` + `schemaVersion`), `validate` (`validate`, `validate_custom` for D6; findings with file + JSON path), `select` (`select_items` / `select_by` = tags ∪ includes − excludes, `search`, `filter_chips` / `matches_chips`), `series` ("generate series"), `schema_tests` (files ⇄ schema ⇄ serde) | **Implemented + tested** (fixture library `src-tauri/tests/fixtures/library/`). |
+| `library/` | `Library` (immutable, loaded once; items / slaves / demos + referenced floorplan layouts + `origins` per file), `loader` (`load` skips bad files with a warning, check `type` + `schemaVersion`), `validate` (`validate`, `validate_custom` for D6; findings with file + JSON path), `select` (`select_items` / `select_by` = tags ∪ includes − excludes, `search`, `filter_chips` / `matches_chips`), `series` ("generate series"), `schema_tests` (files ⇄ schema ⇄ serde) | **Implemented + tested** (fixture library `src-tauri/tests/fixtures/library/`). |
 | `payload/naming.rs` | native names for every item kind (`item_naming`), DI series `Value<NN>` / `ImpulseCounter<NN>` (D1), DALI/brightness/motion/system names + units, slave id/address assignment (`assign_slaves`, keeps existing), register address assignment (`assign_registers`), alarm types / texts, alarm-name rules (D2) | **Implemented + tested**, checked against `research/firmware-core-v2.md`. |
 | `payload/measurement.rs` | `item_values` / `dali_lamp_values` → `MeasurementValue`s, `build_measurement_bodies` (collections in firmware order, ≤ 6 DALI lamps each, `time` on all, empty units omitted) | **Implemented + tested.** |
 | `payload/alarm.rs` | `AlarmSpec`, native lamp / bus / brightness / motion alarms (firmware texts + severities), slave timeout / custom alarms, `device_custom_alarm`, `fault_catalog` + `resolve_fault` (`FaultSetup`), `build_alarm`, `build_alarm_clear` | **Implemented + tested.** |
@@ -81,7 +80,7 @@ src-tauri/            Rust backend (crate `lichtwart-demo-simulator`, lib `lw_si
 
 ## 4. IPC contract — commands
 
-TS name = camelCase of the Rust name (`list_tenants` → `api.listTenants()`); argument names
+TS name = camelCase of the Rust name (`login_saved` → `api.loginSaved()`); argument names
 are camelCase in TS. Every command returns `Result<T, AppError>`; `api.*` unwraps and throws
 `ApiError`. "Status": **impl** = works now, **plumb** = wired end-to-end but depends on a
 stubbed module function, **stub** = module function returns an error until implemented. Today every
@@ -98,12 +97,11 @@ Files: `app`, `auth`, `library`, `devices`, `session`, `raw`, `activity` in
 ### Auth (PRD §5)
 | Command | Args | Returns | Owner | Status |
 |---|---|---|---|---|
-| `list_tenants` | — | `Tenant[]` | library | impl |
-| `login` | `request: LoginRequest` | `AuthState` | c8y | impl; validates via `GET /user/currentUser` (401 → `authFailed`, empty fields → `invalidInput`); stops a running session and emits `session-changed(null)` |
+| `login` | `request: LoginRequest` (`tenantId`, `baseUrl`, `username`, `password`, `remember`) | `AuthState` | c8y | impl; tenant from `parse_tenant` (bad id / URL → `invalidInput`); validates via `GET /user/currentUser` (401 → `authFailed`, empty fields → `invalidInput`); stops a running session and emits `session-changed(null)` |
 | `login_saved` | `tenantKey` | `AuthState` | c8y | impl (reads the keychain secret here, and only here) |
 | `logout` | — | `null` | state | impl |
 | `current_auth` | — | `AuthState \| null` | state | impl |
-| `saved_logins` | — | `SavedLogin[]` | c8y::credentials | impl (reads the config file only; any problem = empty list) |
+| `saved_logins` | — | `SavedLogin[]` (`{ tenant, username }`) | c8y::credentials | impl (reads the config file only; any problem = empty list; the login screen's tenant choice) |
 | `forget_login` | `tenantKey` | `null` | c8y::credentials | impl (keychain secret + stored user name) |
 
 ### Library (PRD §11)
@@ -217,7 +215,6 @@ so adding a variant without i18n keys fails `npm run typecheck`.
 
 | Field | Type | Rule |
 |---|---|---|
-| `tenants` | `Result<Arc<Vec<Tenant>>, AppError>` | Loaded on its own from `tenants.json`, immutable; a broken item / demo file never blocks login. |
 | `library` | `Result<Arc<Library>, AppError>` | Immutable after startup; no lock. Bad item / demo files are skipped and listed in `LibraryInfo.warnings`. |
 | `auth` | `tokio::RwLock<Option<Authenticated>>` | Written on login/logout. Clone the client (`state.client().await?`) — never hold the guard across network I/O. |
 | `stop_gate` | `tokio::Mutex<()>` | Held for the whole of a stop (the handle is out of `session` while the task drains for up to 5 s). `start_session` waits for it (`wait_for_stops`), so the old task cannot clear the new lock. |

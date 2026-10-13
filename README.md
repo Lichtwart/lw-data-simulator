@@ -53,6 +53,6 @@ update check fails (it is logged once on start and shown as "check failed" in Se
 ```
 src/         React + TypeScript UI (Tailwind, shadcn/ui, react-i18next)
 src-tauri/   Rust backend: Cumulocity I/O, simulation engine, library, device management
-library/     bundled demo library (tenants, items, demos, floorplans, schemas)
+library/     bundled demo library (items, demos, floorplans, schemas)
 docs/        PRD, decisions, architecture, releasing, reviews, research
 ```

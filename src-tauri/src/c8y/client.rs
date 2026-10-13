@@ -34,6 +34,49 @@ pub fn basic_auth_user(tenant_id: &str, username: &str) -> String {
     }
 }
 
+/// The tenant a login goes to, from what the user typed (PRD §5): tenant id plus URL.
+/// `https://` is added when the scheme is missing; a path, query or trailing slash is dropped
+/// (a copied browser URL such as `https://x.example.com/apps/cockpit/` works). Only `https` is
+/// accepted: the password is sent with every request.
+pub fn parse_tenant(tenant_id: &str, url: &str) -> AppResult<Tenant> {
+    let tenant_id = tenant_id.trim();
+    if tenant_id.is_empty()
+        || !tenant_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(AppError::InvalidInput(format!(
+            "tenant id {tenant_id:?}: letters, digits, - and _ only"
+        )));
+    }
+    let url = url.trim();
+    let with_scheme = if url.contains("://") {
+        url.to_owned()
+    } else {
+        format!("https://{url}")
+    };
+    let invalid = || AppError::InvalidInput(format!("tenant URL {url:?}"));
+    let parsed = reqwest::Url::parse(&with_scheme).map_err(|_| invalid())?;
+    if parsed.scheme() != "https" {
+        return Err(AppError::InvalidInput(format!(
+            "tenant URL {url:?}: https only"
+        )));
+    }
+    let host = parsed
+        .host_str()
+        .filter(|h| !h.is_empty())
+        .ok_or_else(invalid)?;
+    let authority = match parsed.port() {
+        Some(port) => format!("{host}:{port}"),
+        None => host.to_owned(),
+    };
+    Ok(Tenant {
+        key: format!("{tenant_id}@{authority}"),
+        tenant_id: tenant_id.to_owned(),
+        base_url: format!("https://{authority}"),
+    })
+}
+
 /// Cut `s` to at most `limit` bytes on a char boundary, marking the cut with `…`.
 pub fn truncate_body(s: &str, limit: usize) -> String {
     if s.len() <= limit {
@@ -540,9 +583,38 @@ mod tests {
 
     #[test]
     fn auth_user_always_carries_the_tenant() {
-        assert_eq!(basic_auth_user("t819292026", "sl"), "t819292026/sl");
+        assert_eq!(basic_auth_user("t12345", "sl"), "t12345/sl");
         assert_eq!(basic_auth_user("t1", "t1/sl"), "t1/sl");
         assert_eq!(basic_auth_user("", "sl"), "sl");
+    }
+
+    #[test]
+    fn tenant_from_user_input() {
+        let t = parse_tenant(" t12345 ", "https://x.example.com/apps/cockpit/#/home").unwrap();
+        assert_eq!(t.tenant_id, "t12345");
+        assert_eq!(t.base_url, "https://x.example.com");
+        assert_eq!(t.key, "t12345@x.example.com");
+        // Scheme added, trailing slash and case of the host normalized, port kept.
+        let t = parse_tenant("t1", "X.Example.com:8443/").unwrap();
+        assert_eq!(t.base_url, "https://x.example.com:8443");
+        assert_eq!(t.key, "t1@x.example.com:8443");
+    }
+
+    #[test]
+    fn tenant_input_is_rejected_when_unusable() {
+        for (id, url) in [
+            ("", "https://x.example.com"),
+            ("t1/x", "https://x.example.com"),
+            ("t1", ""),
+            ("t1", "http://x.example.com"),
+            ("t1", "https://"),
+            ("t1", "not a url"),
+        ] {
+            assert!(
+                matches!(parse_tenant(id, url), Err(AppError::InvalidInput(_))),
+                "{id:?} {url:?}"
+            );
+        }
     }
 
     #[test]

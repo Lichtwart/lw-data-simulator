@@ -49,7 +49,7 @@ use tokio::sync::Notify;
 use super::activity::ActivityLog;
 use super::client::{C8yClient, now_iso};
 use super::sink::EventSink;
-use crate::model::{ActivityEntry, LocalizedText, Tenant};
+use crate::model::{ActivityEntry, Tenant};
 
 pub const TENANT_ID: &str = "t100";
 pub const USER: &str = "demo";
@@ -243,10 +243,6 @@ impl FakeC8y {
     pub fn tenant(&self) -> Tenant {
         Tenant {
             key: "fake".into(),
-            label: LocalizedText {
-                de: "Fake".into(),
-                en: "Fake".into(),
-            },
             tenant_id: TENANT_ID.into(),
             base_url: self.base_url.clone(),
         }

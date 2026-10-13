@@ -80,16 +80,11 @@ pub fn run() {
                 .path()
                 .resolve("library", BaseDirectory::Resource)
                 .map_err(|e| error::AppError::Library(e.to_string()));
-            // Tenants and items / demos load separately: a bad item file must not block login.
-            let tenants = root.clone().and_then(|r| library::loader::load_tenants(&r));
             let library = root.and_then(|r| library::loader::load(&r, &version));
-            if let Err(e) = &tenants {
-                log::error!("tenants failed to load: {e}");
-            }
             if let Err(e) = &library {
                 log::error!("library failed to load: {e}");
             }
-            app.manage(AppState::new(tenants, library));
+            app.manage(AppState::new(library));
             Ok(())
         })
         .build(tauri::generate_context!())

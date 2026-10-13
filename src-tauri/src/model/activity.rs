@@ -12,7 +12,7 @@ pub struct ActivityEntry {
     /// ISO-8601 request start time.
     pub time: String,
     pub method: String,
-    /// Base URL of the tenant, e.g. `https://test.ram.m2m.telekom.com` (for `to_curl`).
+    /// Base URL of the tenant, e.g. `https://example.cumulocity.com` (for `to_curl`).
     pub base_url: String,
     /// Basic-auth user name as sent (`tenantId/user` on foreign domains). The password and
     /// request headers are never stored.

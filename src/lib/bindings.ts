@@ -9,10 +9,8 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**  App + library version and platform. */
 	appInfo: () => typedError<AppInfo, AppError>(__TAURI_INVOKE("app_info")),
-	/**  Tenants baked into the app (`library/tenants.json`). */
-	listTenants: () => typedError<Tenant[], AppError>(__TAURI_INVOKE("list_tenants")),
 	/**
-	 *  Log in with username + password (Basic auth, validated via `GET /user/currentUser`).
+	 *  Log in to the tenant `tenantId` at `baseUrl` with username + password (Basic auth, validated via `GET /user/currentUser`).
 	 *  With `remember`, stores the password in the OS keychain (and the user name in the app
 	 *  config) for that tenant. Replaces any existing login (stops a running session and emits
 	 *  `session-changed(null)`).
@@ -37,8 +35,9 @@ export const commands = {
 	displayName: string | null,
 } | null, AppError>(__TAURI_INVOKE("current_auth")),
 	/**
-	 *  Tenants with a remembered login (user names only). Reads the app config file, never the
-	 *  keychain, so it cannot trigger keychain prompts; any problem yields an empty list.
+	 *  Remembered logins (tenant + user name, no secrets): the tenant choice on the login screen.
+	 *  Reads the app config file, never the keychain, so it cannot trigger keychain prompts; any
+	 *  problem yields an empty list.
 	 */
 	savedLogins: () => typedError<SavedLogin[], AppError>(__TAURI_INVOKE("saved_logins")),
 	/**  Delete the remembered login of a tenant (keychain secret + stored user name). */
@@ -277,7 +276,7 @@ export type ActivityEntry = {
 	/**  ISO-8601 request start time. */
 	time: string,
 	method: string,
-	/**  Base URL of the tenant, e.g. `https://test.ram.m2m.telekom.com` (for `to_curl`). */
+	/**  Base URL of the tenant, e.g. `https://example.cumulocity.com` (for `to_curl`). */
 	baseUrl: string,
 	/**
 	 *  Basic-auth user name as sent (`tenantId/user` on foreign domains). The password and
@@ -1204,7 +1203,10 @@ export type LockInfo = {
 
 /**  Arguments of the `login` command. `Debug` is written by hand: it must never print the password. */
 export type LoginRequest = {
-	tenantKey: string,
+	/**  Cumulocity tenant id as entered. */
+	tenantId: string,
+	/**  Tenant URL as entered (`https://` is added when missing; a path is ignored). */
+	baseUrl: string,
 	/**  Plain user name; the backend prefixes `tenantId/` when needed. */
 	username: string,
 	password: string,
@@ -1485,7 +1487,7 @@ export type ResetDeviceRequest = {
 
 /**  A credential stored in the keychain (the password never leaves Rust). */
 export type SavedLogin = {
-	tenantKey: string,
+	tenant: Tenant,
 	username: string,
 };
 
@@ -1635,15 +1637,16 @@ export type SystemKind =
 /**  `c8y_TemperatureMeasurement.T`, unit `C`. */
 "temperature";
 
-/**  A tenant baked into the app via `library/tenants.json`. */
+/**
+ *  The Cumulocity tenant a login goes to. Entered by the user (tenant id + URL); nothing
+ *  tenant-specific is bundled with the app.
+ */
 export type Tenant = {
-	/**  Stable key used in commands and keychain entries, e.g. `test`, `production`. */
+	/**  Stable key used in commands and keychain entries: `<tenantId>@<host>`. */
 	key: string,
-	/**  Display label. */
-	label: LocalizedText,
-	/**  Cumulocity tenant id, e.g. `t819292026`. */
+	/**  Cumulocity tenant id, e.g. `t12345`. */
 	tenantId: string,
-	/**  Base URL without trailing slash, e.g. `https://test.ram.m2m.telekom.com`. */
+	/**  Base URL without path or trailing slash, e.g. `https://example.cumulocity.com`. */
 	baseUrl: string,
 };
 

@@ -23,7 +23,8 @@
   "login": {
     "title": "Log in",
     "subtitle": "Connect to a Lichtwart tenant.",
-    "tenant": "Tenant",
+    "url": "URL",
+    "tenantId": "Tenant ID",
     "username": "User name",
     "password": "Password",
     "remember": "Remember me (keychain)",

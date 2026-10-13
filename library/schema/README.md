@@ -4,7 +4,6 @@ JSON Schema draft 2020-12, the normative spec of the library files (PRD §11.1, 
 
 | Schema | Files | `type` |
 |---|---|---|
-| `tenants.schema.json` | `tenants.json` | `lw-tenants` |
 | `items.schema.json` | `items/*.json` | `lw-demo-items` |
 | `demo.schema.json` | `demos/*.json` | `lw-demo` |
 | `floorplan.schema.json` | `floorplans/<demoId>/*.json` | `lw-demo-floorplan` |

@@ -21,7 +21,7 @@ Legend: **impl** = implemented and checked in code; **partial**; **missing**. `r
 ### §5 Login and tenants
 | Requirement | Status | Evidence |
 |---|---|---|
-| Tenants baked in (`t819292026` test, `t134875661` prod), no passwords | impl | `library/tenants.json`; `rs/lib.rs:79-84` |
+| Tenants baked in (test, prod), no passwords | impl (superseded: tenants are entered at login now, PRD §5) | — |
 | Basic auth + `UseXBasic: true`, user always `tenantId/user` | impl | `rs/c8y/client.rs:29-33,316-317` |
 | Validate via `GET /user/currentUser` | impl | `rs/c8y/client.rs:427-430`; `rs/commands/auth.rs:63` |
 | Remember me in the OS keychain per tenant, otherwise memory only | impl | `rs/c8y/credentials.rs`; `ui/features/auth/LoginScreen.tsx:189` |

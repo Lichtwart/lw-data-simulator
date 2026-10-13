@@ -105,7 +105,6 @@ device's `lw_configDigitalInputs`). Firmware length limits count UTF-8 **bytes**
 links"` is 20 bytes): validation is the byte gate, the schema's `maxLength` counts characters.
 
 ```
-library/tenants.json                        lw-tenants
 library/items/<topic>.json                  lw-demo-items   {slaves?, items}
 library/demos/<demoId>.json                 lw-demo
 library/floorplans/<demoId>/<name>.json     lw-demo-floorplan (+ <image>.png|jpg|svg next to it)

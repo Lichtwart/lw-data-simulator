@@ -32,7 +32,6 @@ const validator = (name) => {
 function schemaFor(rel) {
   const parts = rel.split(sep);
   if (parts[0] === "schema" || !rel.endsWith(".json")) return null;
-  if (rel === "tenants.json") return "tenants.schema.json";
   if (parts[0] === "items" && parts.length === 2) return "items.schema.json";
   if (parts[0] === "demos" && parts.length === 2) return "demo.schema.json";
   if (parts[0] === "floorplans" && parts.length === 3) return "floorplan.schema.json";

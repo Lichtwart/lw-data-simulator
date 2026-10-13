@@ -5,9 +5,10 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Manager, State};
 
+use crate::c8y::client::parse_tenant;
 use crate::c8y::{C8yClient, TauriSink, credentials};
 use crate::error::{AppError, AppResult};
-use crate::model::{AuthState, LoginRequest, SavedLogin, Tenant};
+use crate::model::{AuthState, LoginRequest, SavedLogin};
 use crate::state::{AppState, Authenticated};
 
 fn config_dir(app: &AppHandle) -> AppResult<PathBuf> {
@@ -16,14 +17,7 @@ fn config_dir(app: &AppHandle) -> AppResult<PathBuf> {
         .map_err(|e| AppError::Io(e.to_string()))
 }
 
-/// Tenants baked into the app (`library/tenants.json`).
-#[tauri::command]
-#[specta::specta]
-pub fn list_tenants(state: State<'_, AppState>) -> AppResult<Vec<Tenant>> {
-    Ok(state.tenants()?.as_ref().clone())
-}
-
-/// Log in with username + password (Basic auth, validated via `GET /user/currentUser`).
+/// Log in to the tenant `tenantId` at `baseUrl` with username + password (Basic auth, validated via `GET /user/currentUser`).
 /// With `remember`, stores the password in the OS keychain (and the user name in the app
 /// config) for that tenant. Replaces any existing login (stops a running session and emits
 /// `session-changed(null)`).
@@ -48,14 +42,10 @@ async fn do_login(
             "username and password are required".into(),
         ));
     }
-    let request = LoginRequest {
-        username,
-        ..request
-    };
-    let tenant = state.tenant(&request.tenant_key)?;
+    let tenant = parse_tenant(&request.tenant_id, &request.base_url)?;
     let client = C8yClient::new(
-        tenant,
-        request.username.clone(),
+        tenant.clone(),
+        username.clone(),
         request.password.clone(),
         state.activity.clone(),
         Arc::new(TauriSink::new(app.clone())),
@@ -64,18 +54,16 @@ async fn do_login(
     if request.remember {
         // "Remember me" is optional (PRD §5): a refused keychain prompt or a locked keychain
         // must not block a valid login.
-        let saved = config_dir(app).and_then(|dir| {
-            credentials::save(
-                &dir,
-                &request.tenant_key,
-                &request.username,
-                &request.password,
-            )
-        });
+        let login = SavedLogin {
+            tenant: tenant.clone(),
+            username,
+        };
+        let saved =
+            config_dir(app).and_then(|dir| credentials::save(&dir, &login, &request.password));
         if let Err(e) = saved {
             log::warn!(
                 "remember-me failed for tenant {}: {e}; logged in anyway",
-                request.tenant_key
+                tenant.key
             );
         }
     }
@@ -96,7 +84,7 @@ pub async fn login_saved(
     state: State<'_, AppState>,
     tenant_key: String,
 ) -> AppResult<AuthState> {
-    let username = credentials::saved_username(&config_dir(&app)?, &tenant_key)
+    let saved = credentials::saved_login(&config_dir(&app)?, &tenant_key)
         .ok_or_else(|| AppError::NotFound(format!("saved login {tenant_key}")))?;
     let password = credentials::load_password(&tenant_key)?
         .ok_or_else(|| AppError::NotFound(format!("saved login {tenant_key}")))?;
@@ -104,8 +92,9 @@ pub async fn login_saved(
         &app,
         &state,
         LoginRequest {
-            tenant_key,
-            username,
+            tenant_id: saved.tenant.tenant_id,
+            base_url: saved.tenant.base_url,
+            username: saved.username,
             password,
             remember: true,
         },
@@ -130,16 +119,15 @@ pub async fn current_auth(state: State<'_, AppState>) -> AppResult<Option<AuthSt
     Ok(state.auth.read().await.as_ref().map(|a| a.user.clone()))
 }
 
-/// Tenants with a remembered login (user names only). Reads the app config file, never the
-/// keychain, so it cannot trigger keychain prompts; any problem yields an empty list.
+/// Remembered logins (tenant + user name, no secrets): the tenant choice on the login screen.
+/// Reads the app config file, never the keychain, so it cannot trigger keychain prompts; any
+/// problem yields an empty list.
 #[tauri::command]
 #[specta::specta]
-pub fn saved_logins(app: AppHandle, state: State<'_, AppState>) -> AppResult<Vec<SavedLogin>> {
-    let (Ok(dir), Ok(tenants)) = (config_dir(&app), state.tenants()) else {
-        return Ok(Vec::new());
-    };
-    let keys: Vec<String> = tenants.iter().map(|t| t.key.clone()).collect();
-    Ok(credentials::saved_logins(&dir, &keys))
+pub fn saved_logins(app: AppHandle) -> AppResult<Vec<SavedLogin>> {
+    Ok(config_dir(&app)
+        .map(|dir| credentials::saved_logins(&dir))
+        .unwrap_or_default())
 }
 
 /// Delete the remembered login of a tenant (keychain secret + stored user name).
@@ -154,7 +142,6 @@ macro_rules! auth_commands {
     ([$($acc:tt)*] $($rest:ident)*) => {
         $crate::commands::collect_all!(
             [$($acc)*
-                $crate::commands::auth::list_tenants,
                 $crate::commands::auth::login,
                 $crate::commands::auth::login_saved,
                 $crate::commands::auth::logout,

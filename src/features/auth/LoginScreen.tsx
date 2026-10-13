@@ -10,23 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { api, errorKey, errorValues, isTauri, type SavedLogin, type Tenant } from "@/lib/api";
+import { api, errorKey, errorValues, isTauri, type SavedLogin } from "@/lib/api";
 
 import { useAuth } from "./AuthProvider";
+import { tenantLabel } from "./tenant";
 
-/** Login (PRD §5): tenant, user name + password, remember-me, saved logins. */
+/**
+ * Login (PRD §5): tenant id + URL, user name + password, remember-me. No tenant ships with the
+ * app; the remembered logins are the tenant choice.
+ */
 export function LoginScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { auth, login, loginSaved } = useAuth();
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantKey, setTenantKey] = useState("");
+  const [tenantId, setTenantId] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
@@ -36,30 +33,17 @@ export function LoginScreen() {
 
   useEffect(() => {
     if (!isTauri()) return;
-    api
-      .listTenants()
-      .then((list) => {
-        setTenants(list);
-        setTenantKey((k) => k || list[0]?.key || "");
-      })
-      .catch((e) => setError(e ?? new Error("unknown")));
-  }, []);
-
-  useEffect(() => {
-    if (!isTauri()) return;
     api.savedLogins().then(setSaved, () => setSaved([]));
   }, []);
 
   if (auth) return <Navigate to="/devices" replace />;
-
-  const lang = i18n.language === "en" ? "en" : "de";
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await login({ tenantKey, username, password, remember });
+      await login({ tenantId, baseUrl, username, password, remember });
     } catch (err) {
       setError(err ?? new Error("unknown"));
     } finally {
@@ -82,16 +66,11 @@ export function LoginScreen() {
   async function onForget(key: string) {
     try {
       await api.forgetLogin(key);
-      setSaved((list) => list.filter((l) => l.tenantKey !== key));
+      setSaved((list) => list.filter((l) => l.tenant.key !== key));
     } catch (err) {
       setError(err ?? new Error("unknown"));
     }
   }
-
-  const tenantLabel = (key: string) => {
-    const tn = tenants.find((x) => x.key === key);
-    return tn ? tn.label[lang] : key;
-  };
 
   return (
     <div className="flex h-full items-center justify-center p-8">
@@ -120,19 +99,19 @@ export function LoginScreen() {
               </h2>
               <ul className="flex flex-col gap-2">
                 {saved.map((l) => (
-                  <li key={l.tenantKey} className="flex items-center gap-2">
+                  <li key={l.tenant.key} className="flex items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       className="h-auto flex-1 justify-start py-2 text-left"
                       disabled={busy}
-                      onClick={() => void onSaved(l.tenantKey)}
+                      onClick={() => void onSaved(l.tenant.key)}
                     >
                       <KeyRoundIcon />
                       <span className="flex flex-col">
                         <span>{l.username}</span>
                         <span className="text-xs font-normal text-muted-foreground">
-                          {tenantLabel(l.tenantKey)}
+                          {tenantLabel(l.tenant)}
                         </span>
                       </span>
                     </Button>
@@ -141,7 +120,7 @@ export function LoginScreen() {
                       variant="ghost"
                       size="icon"
                       aria-label={t("login.forget", { user: l.username })}
-                      onClick={() => void onForget(l.tenantKey)}
+                      onClick={() => void onForget(l.tenant.key)}
                     >
                       <XIcon />
                     </Button>
@@ -152,19 +131,28 @@ export function LoginScreen() {
           )}
           <form className="flex flex-col gap-4" onSubmit={onSubmit}>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="tenant">{t("login.tenant")}</Label>
-              <Select value={tenantKey} onValueChange={setTenantKey}>
-                <SelectTrigger id="tenant">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenants.map((tn) => (
-                    <SelectItem key={tn.key} value={tn.key}>
-                      {tn.label[lang]} — {tn.tenantId}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="base-url">{t("login.url")}</Label>
+              <Input
+                id="base-url"
+                inputMode="url"
+                autoComplete="url"
+                spellCheck={false}
+                placeholder="https://"
+                className="font-mono"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tenant-id">{t("login.tenantId")}</Label>
+              <Input
+                id="tenant-id"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+              />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="username">{t("login.username")}</Label>
@@ -195,7 +183,7 @@ export function LoginScreen() {
             <Button
               type="submit"
               variant="signal"
-              disabled={busy || !tenantKey || !username || !password}
+              disabled={busy || !tenantId.trim() || !baseUrl.trim() || !username || !password}
             >
               {t("login.submit")}
             </Button>

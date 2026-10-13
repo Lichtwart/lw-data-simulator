@@ -1883,10 +1883,14 @@ mod fake {
                 .any(|a| a["type"] == "lw_modbus_20_timeoutError" && a["status"] == "CLEARED")
         })
         .await;
-        assert!(
-            fake.state().events.iter().any(|e| e["type"] == "lw_alarm"
-                && e["text"] == "Alarm cleared: lw_modbus_20_timeoutError")
-        );
+        // The clear is queued before the "Alarm cleared" event (faults.rs: put_alarm_clear, then
+        // end_fault), so the event may still be in flight when the alarm reads CLEARED.
+        wait_for("alarm cleared event", || {
+            fake.state().events.iter().any(|e| {
+                e["type"] == "lw_alarm" && e["text"] == "Alarm cleared: lw_modbus_20_timeoutError"
+            })
+        })
+        .await;
         h.stop().await.unwrap();
     }
 }

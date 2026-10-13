@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
-use super::{apply, crud, demo_state, export, upgrade};
+use super::{apply, crud, demo_state, export, setup, upgrade};
 use crate::c8y::C8yClient;
 use crate::c8y::fake::FakeC8y;
 use crate::library::{Library, loader};
@@ -440,6 +440,100 @@ async fn patch_setup_assigns_custom_slaves_without_renumbering() {
             .await
             .is_err()
     );
+}
+
+/// Scenarios edited on the device: validated on save, exported into the pack, and a pack that
+/// changes something the start scenario does not reset gets an export warning.
+#[tokio::test]
+async fn device_scenarios_are_validated_and_exported() {
+    use crate::model::{Scenario, ScenarioStep};
+    let fake = FakeC8y::start().await;
+    let client = fake.client();
+    let lib = fixture("1.0.0");
+    let dev = new_device(&client, &lib, "Szenarien").await;
+    apply::apply(&client, &lib, &dev, &req("fixture", false, false))
+        .await
+        .unwrap();
+    let sc = |j: serde_json::Value| serde_json::from_value::<Scenario>(j).unwrap();
+    let door = sc(json!({
+        "id": "door", "name": { "de": "Tür offen", "en": "Door open" },
+        "description": { "de": "Die Kühlraumtür bleibt offen.", "en": "The cold room door stays open." },
+        "set": [{ "kind": "fault", "target": { "kind": "customAlarm", "itemId": "doorOpen" }, "active": true }]
+    }));
+    let patch = |custom: Vec<Scenario>, hidden: Vec<String>| DemoSetupPatch {
+        custom_scenarios: Some(custom),
+        hidden_scenarios: Some(hidden),
+        ..Default::default()
+    };
+
+    // A step outside the control range is rejected, nothing is written.
+    let bad = sc(json!({
+        "id": "bad", "name": { "de": "Falsch", "en": "Bad" },
+        "set": [{ "kind": "value", "itemId": "ac_setpoint", "value": 99 }]
+    }));
+    let err = demo_state::patch_setup(&client, &lib, &dev, &patch(vec![bad], vec![]))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("value 99 outside 16…28"), "{err}");
+    assert!(demo_of(&fake, &dev).custom_scenarios.is_empty());
+
+    let st = demo_state::patch_setup(
+        &client,
+        &lib,
+        &dev,
+        &patch(vec![door.clone()], vec!["trouble".into()]),
+    )
+    .await
+    .unwrap();
+    assert_eq!(st.custom_scenarios, vec![door.clone()]);
+    let ids: Vec<String> = setup::effective_scenarios(&lib, &demo_of(&fake, &dev))
+        .into_iter()
+        .map(|s| s.id)
+        .collect();
+    assert_eq!(ids, vec!["normal", "door"]);
+
+    let out = temp_dir("export-scenarios");
+    let export_req = ExportRequest {
+        device_id: dev.clone(),
+        demo_id: "zz-scenarios".into(),
+        target_dir: out.display().to_string(),
+    };
+    let res = export::export(&client, &lib, &export_req).await.unwrap();
+    assert!(res.warnings.is_empty(), "{:?}", res.warnings);
+    let merged = temp_dir("merged-scenarios");
+    copy_dir(&fixture_root(), &merged);
+    copy_dir(&out, &merged);
+    let lib2 = loader::load(&merged, "1.0.0").unwrap();
+    assert!(
+        !lib2.warnings.iter().any(|w| w.contains("zz-scenarios")),
+        "{:?}",
+        lib2.warnings
+    );
+    let exported = lib2.demo("zz-scenarios").unwrap();
+    let ids: Vec<&str> = exported.scenarios.iter().map(|s| s.id.as_str()).collect();
+    assert_eq!(ids, vec!["normal", "door"]);
+    assert_eq!(exported.scenarios[1].description, door.description);
+
+    // A value the start scenario does not reset: allowed on the device, a warning on export.
+    let warm = sc(json!({
+        "id": "warm", "name": { "de": "Warm", "en": "Warm" },
+        "set": [{ "kind": "value", "itemId": "ac_setpoint", "value": 26 }]
+    }));
+    demo_state::patch_setup(&client, &lib, &dev, &patch(vec![warm], vec![]))
+        .await
+        .unwrap();
+    let res = export::export(&client, &lib, &export_req).await.unwrap();
+    assert!(
+        res.warnings
+            .iter()
+            .any(|w| w.contains("the start scenario does not reset it")),
+        "{:?}",
+        res.warnings
+    );
+    assert!(matches!(
+        &setup::effective_scenarios(&lib, &demo_of(&fake, &dev))[2].set[0],
+        ScenarioStep::Value { item_id, .. } if item_id == "ac_setpoint"
+    ));
 }
 
 #[tokio::test]

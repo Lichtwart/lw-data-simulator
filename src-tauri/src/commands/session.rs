@@ -120,7 +120,7 @@ pub async fn set_item_generator(
     .await
 }
 
-/// Apply a scenario of the device's demo pack.
+/// Apply a scenario of the device (its demo pack's, as edited on the device).
 #[tauri::command]
 #[specta::specta]
 pub async fn apply_scenario(
@@ -129,6 +129,14 @@ pub async fn apply_scenario(
     scenario_id: String,
 ) -> AppResult<()> {
     send(&app, &state, SessionCommand::ApplyScenario { scenario_id }).await
+}
+
+/// "Reset to defaults": clear every open alarm of the device (like "Clear all", every effect
+/// ends) and set every item back to its default value and generator; counters keep their value.
+#[tauri::command]
+#[specta::specta]
+pub async fn reset_to_defaults(app: AppHandle, state: State<'_, AppState>) -> AppResult<()> {
+    send(&app, &state, SessionCommand::ResetToDefaults).await
 }
 
 /// Switch a DALI group locally (same effect as a confirmed `lw_switchGroupMode`).
@@ -256,6 +264,7 @@ macro_rules! session_commands {
                 $crate::commands::session::resume_generator,
                 $crate::commands::session::set_item_generator,
                 $crate::commands::session::apply_scenario,
+                $crate::commands::session::reset_to_defaults,
                 $crate::commands::session::set_group_mode,
                 $crate::commands::session::fire_fault,
                 $crate::commands::session::clear_all_alarms,

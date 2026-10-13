@@ -2,8 +2,9 @@
 //!
 //! Writes a `library/`-shaped tree into the target folder:
 //! - `demos/<demoId>.json`: `lw_demo` tags / includes / excludes / lamp count / interval,
-//!   `lw_configGroups` → `daliGroups`, `lw_configDigitalInputs` → `digitalInputs`, the library
-//!   demo's scenarios plus a `start` scenario carrying generator overrides of library items;
+//!   `lw_configGroups` → `daliGroups`, `lw_configDigitalInputs` → `digitalInputs`, the
+//!   device's scenarios (library demo's with `lw_demo.customScenarios` / `hiddenScenarios`
+//!   applied) plus a `start` scenario carrying generator overrides of library items;
 //! - `items/<demoId>.json` (only if needed): custom slaves / items (generator overrides applied,
 //!   DI titles from the device config) and DI items created for inputs without one;
 //! - `floorplans/<demoId>/<name>.json` + image: widgets mapped back to item references
@@ -20,7 +21,7 @@ use super::setup::{self, ResolvedSetup};
 use super::{crud, demo_state, floorplan};
 use crate::c8y::C8yClient;
 use crate::error::{AppError, AppResult};
-use crate::library::Library;
+use crate::library::{Library, validate};
 use crate::model::{
     AlarmRef, DemoPack, DeviceConfig, DigitalInputConfig, DigitalInputType, ExportRequest,
     ExportResult, FloorplanLayout, FloorplanWidget, ItemLibraryFile, LibraryItem, LocalizedText,
@@ -531,11 +532,9 @@ pub fn build(
         }
     }
 
-    // ── scenarios ──
+    // ── scenarios: the library demo's as edited on the device (custom / hidden) ──
     let library_demo = st.demo_id.as_deref().and_then(|d| lib.demo(d));
-    let mut scenarios: Vec<Scenario> = library_demo
-        .map(|d| d.scenarios.clone())
-        .unwrap_or_default();
+    let mut scenarios: Vec<Scenario> = setup::effective_scenarios(lib, st);
     if !start_steps.is_empty() {
         match scenarios.iter_mut().find(|s| s.start) {
             Some(s) => s.set.extend(start_steps),
@@ -545,6 +544,7 @@ pub fn build(
                     de: "Start".into(),
                     en: "Start".into(),
                 },
+                description: None,
                 start: true,
                 set: start_steps,
             }),
@@ -653,6 +653,12 @@ pub fn build(
         scenarios,
         floorplans: fp_paths,
     };
+    // Scenarios edited on the device need not reset each other; the library does (warn).
+    warnings.extend(
+        validate::scenario_reset_findings(&format!("demos/{id}.json"), &demo, &export_setup.items)
+            .iter()
+            .map(ToString::to_string),
+    );
     files.insert(0, json_file(format!("demos/{id}.json"), &demo)?);
     if !custom.is_empty() || !st.custom_slaves.is_empty() {
         let items_file = ItemLibraryFile {

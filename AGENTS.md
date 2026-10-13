@@ -159,10 +159,10 @@ type: measurement | daliAction (+highLevelAction/lowLevelAction/groups) | impuls
 omitted and is taken from the item; its German title becomes `lw_configDigitalInputs[].title`;
 actions are exactly `on` | `off` | `auto`, lowercase; every selected DI item needs an active
 entry, like every selected lamp needs a group), `daliLampCount` may be omitted (default: highest
-converter / selected lamp index), `sendIntervalSec` 5–899, `scenarios[]` `{id, name,
+converter / selected lamp index), `sendIntervalSec` 5–899, `scenarios[]` `{id, name, description? {de,en},
 start? (≤ 1), set: [{kind:"value",itemId,value} | {kind:"generator",itemId,generator} |
 {kind:"fault",target,active}]}` (`active: true` fires the alarm, `false` clears it in Cumulocity; DECISIONS D9) with targets `daliLamp {lamp,alarmType}`, `daliBus {alarmType}`,
-`slaveTimeout {slaveKey}`, `slaveAlarm {slaveKey,alarmName}`, `customAlarm {itemId}`;
+`slaveTimeout {slaveKey}`, `slaveAlarm {slaveKey,alarmName}`, `customAlarm {itemId}` (edits on a device: `lw_demo.customScenarios` / `hiddenScenarios`, DECISIONS D10);
 `floorplans: ["floorplans/<demoId>/<name>.json"]` (a layout no demo references, or a folder
 without a demo, is reported as a load warning). Max 20 slaves / 40 registers per slave among the
 selected items. `lw_configCore.maxControlGears` is `max(55, daliLampCount)`.

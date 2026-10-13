@@ -9,6 +9,7 @@ import { DaliGroupsEditor } from "./DaliGroupsEditor";
 import { DigitalInputsEditor } from "./DigitalInputsEditor";
 import { SetupDirtyGuard } from "./dirtyGuard";
 import { ExportCard } from "./ExportCard";
+import { ScenariosEditor } from "./ScenariosEditor";
 import { SetupSettingsCard } from "./SetupSettingsCard";
 import { UpgradeCard } from "./UpgradeCard";
 import { useDeviceConfig } from "./useDeviceConfig";
@@ -47,6 +48,7 @@ export function SetupPanel() {
           </>
         )}
         <CustomEditor />
+        <ScenariosEditor />
         <ExportCard />
       </div>
     </SetupDirtyGuard>

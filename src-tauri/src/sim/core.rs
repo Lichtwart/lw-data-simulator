@@ -177,6 +177,8 @@ pub struct SessionParams {
     pub resolved: ResolvedSetup,
     pub groups: Vec<DaliGroup>,
     pub inputs: Vec<DigitalInputEntry>,
+    /// The library demo's scenarios; `demo.customScenarios` / `hiddenScenarios` are applied on
+    /// top (`setup::merge_scenarios`).
     pub scenarios: Vec<Scenario>,
     pub auto_accept: bool,
     /// Newest stored value per counter item (counters never go backwards across restarts).
@@ -245,6 +247,10 @@ pub struct SessionCore {
     pub(super) groups: Vec<(DaliGroup, GroupMode)>,
     pub(super) inputs: Vec<DigitalInputEntry>,
     pub(super) lamps: BTreeMap<u32, Lamp>,
+    /// The library demo's scenarios (the base of `scenarios`).
+    library_scenarios: Vec<Scenario>,
+    /// The scenarios of the device (library ones edited by `lw_demo`, see
+    /// `setup::merge_scenarios`), refreshed by `setup_changed`.
     pub(super) scenarios: Vec<Scenario>,
     pub(super) faults: Vec<ActiveFault>,
     pub(super) alarms: BTreeMap<String, AlarmTrack>,
@@ -458,7 +464,12 @@ impl SessionCore {
             groups: p.groups.into_iter().map(|g| (g, GroupMode::Auto)).collect(),
             inputs: p.inputs,
             lamps,
-            scenarios: p.scenarios,
+            scenarios: crate::device::setup::merge_scenarios(
+                &p.scenarios,
+                &p.demo.custom_scenarios,
+                &p.demo.hidden_scenarios,
+            ),
+            library_scenarios: p.scenarios,
             faults: Vec::new(),
             alarms: BTreeMap::new(),
             bus_cascade: BTreeSet::new(),
@@ -1211,6 +1222,13 @@ impl SessionCore {
                 self.ui_changed.insert(idx);
             }
         }
+        // Edited scenarios apply at once (a step on an item the session does not have fails
+        // when the scenario is applied).
+        self.scenarios = crate::device::setup::merge_scenarios(
+            &self.library_scenarios,
+            &demo.custom_scenarios,
+            &demo.hidden_scenarios,
+        );
         self.demo = demo;
         self.emit_changed = true;
     }

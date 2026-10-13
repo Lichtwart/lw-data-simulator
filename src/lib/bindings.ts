@@ -192,8 +192,13 @@ period: number; amplitude: number;
 center: number | null } | { kind: "dailyProfile"; 
 /**  Exactly 24 hourly points (local time), linearly interpolated. */
 points: number[] } | { kind: "counter"; ratePerHour: number } | null) => typedError<null, AppError>(__TAURI_INVOKE("set_item_generator", { itemId, generator })),
-	/**  Apply a scenario of the device's demo pack. */
+	/**  Apply a scenario of the device (its demo pack's, as edited on the device). */
 	applyScenario: (scenarioId: string) => typedError<null, AppError>(__TAURI_INVOKE("apply_scenario", { scenarioId })),
+	/**
+	 *  "Reset to defaults": clear every open alarm of the device (like "Clear all", every effect
+	 *  ends) and set every item back to its default value and generator; counters keep their value.
+	 */
+	resetToDefaults: () => typedError<null, AppError>(__TAURI_INVOKE("reset_to_defaults")),
 	/**  Switch a DALI group locally (same effect as a confirmed `lw_switchGroupMode`). */
 	setGroupMode: (groupId: number, mode: GroupMode) => typedError<null, AppError>(__TAURI_INVOKE("set_group_mode", { groupId, mode })),
 	/**
@@ -579,7 +584,7 @@ export type DemoPack_Deserialize = {
 	daliGroups?: DaliGroup_Deserialize[],
 	digitalInputs?: DigitalInputConfig_Deserialize[],
 	sendIntervalSec: number,
-	scenarios?: Scenario[],
+	scenarios?: Scenario_Deserialize[],
 	/**  Paths relative to `library/`, e.g. `floorplans/gas-station/ground-floor.json`. */
 	floorplans?: string[],
 };
@@ -602,7 +607,7 @@ export type DemoPack_Serialize = {
 	daliGroups: DaliGroup_Serialize[],
 	digitalInputs: DigitalInputConfig_Serialize[],
 	sendIntervalSec: number,
-	scenarios: Scenario[],
+	scenarios: Scenario_Serialize[],
 	/**  Paths relative to `library/`, e.g. `floorplans/gas-station/ground-floor.json`. */
 	floorplans: string[],
 };
@@ -620,6 +625,13 @@ export type DemoSetupPatch_Deserialize = {
 	customSlaves: SlaveDefinition[] | null,
 	/**  Replaces the custom items (D6). New Modbus items get register addresses on write. */
 	customItems: LibraryItem_Deserialize[] | null,
+	/**
+	 *  Replaces the device's scenarios (edited / new ones, `lw_demo.customScenarios`). Validated
+	 *  against the device's items and faults; a running session takes them at once.
+	 */
+	customScenarios?: Scenario_Deserialize[] | null,
+	/**  Replaces the ids of library scenarios deleted on this device. */
+	hiddenScenarios?: string[] | null,
 	/**
 	 *  Replaces the whole override map (an item missing from it falls back to its library
 	 *  generator).
@@ -639,6 +651,13 @@ export type DemoSetupPatch_Serialize = {
 	customSlaves: SlaveDefinition[] | null,
 	/**  Replaces the custom items (D6). New Modbus items get register addresses on write. */
 	customItems: LibraryItem_Serialize[] | null,
+	/**
+	 *  Replaces the device's scenarios (edited / new ones, `lw_demo.customScenarios`). Validated
+	 *  against the device's items and faults; a running session takes them at once.
+	 */
+	customScenarios: Scenario_Serialize[] | null,
+	/**  Replaces the ids of library scenarios deleted on this device. */
+	hiddenScenarios: string[] | null,
 	/**
 	 *  Replaces the whole override map (an item missing from it falls back to its library
 	 *  generator).
@@ -1241,6 +1260,13 @@ export type LwDemoState_Deserialize = {
 	 *  Merged with the library's items; ids must not collide with library ids.
 	 */
 	customItems?: LibraryItem_Deserialize[],
+	/**
+	 *  Scenarios edited or created on this device. One with the id of a library scenario
+	 *  replaces it (in place); the others follow the library's (`setup::merge_scenarios`).
+	 */
+	customScenarios?: Scenario_Deserialize[],
+	/**  Ids of library scenarios deleted on this device. */
+	hiddenScenarios?: string[],
 	generators?: { [key in string]: GeneratorConfig },
 	sendIntervalSec: number,
 	realisticMode?: boolean,
@@ -1290,6 +1316,13 @@ export type LwDemoState_Serialize = {
 	 *  Merged with the library's items; ids must not collide with library ids.
 	 */
 	customItems: LibraryItem_Serialize[],
+	/**
+	 *  Scenarios edited or created on this device. One with the id of a library scenario
+	 *  replaces it (in place); the others follow the library's (`setup::merge_scenarios`).
+	 */
+	customScenarios?: Scenario_Serialize[],
+	/**  Ids of library scenarios deleted on this device. */
+	hiddenScenarios?: string[],
 	generators: { [key in string]: GeneratorConfig },
 	sendIntervalSec: number,
 	realisticMode: boolean,
@@ -1492,18 +1525,34 @@ export type SavedLogin = {
 };
 
 /**  Named preset (PRD §8). */
-export type Scenario = {
-	id: string,
-	name: LocalizedText,
-	/**  Applied automatically on session start. */
-	start?: boolean,
-	set: ScenarioStep[],
-};
+export type Scenario = Scenario_Serialize | Scenario_Deserialize;
 
 /**  One step of a scenario (PRD §8): set a value, set a generator, or raise / clear a fault. */
 export type ScenarioStep = { kind: "value"; itemId: string; value: number } | { kind: "generator"; itemId: string; generator: GeneratorConfig } | 
 /**  `true` raises, `false` clears. */
 { kind: "fault"; target: FaultTarget; active: boolean };
+
+/**  Named preset (PRD §8). */
+export type Scenario_Deserialize = {
+	id: string,
+	name: LocalizedText,
+	/**  What the scenario shows (shown where scenarios are picked). Optional. */
+	description?: LocalizedText | null,
+	/**  Applied automatically on session start. */
+	start?: boolean,
+	set: ScenarioStep[],
+};
+
+/**  Named preset (PRD §8). */
+export type Scenario_Serialize = {
+	id: string,
+	name: LocalizedText,
+	/**  What the scenario shows (shown where scenarios are picked). Optional. */
+	description?: LocalizedText | null,
+	/**  Applied automatically on session start. */
+	start: boolean,
+	set: ScenarioStep[],
+};
 
 /**  One option of a `select` control. */
 export type SelectOption = {

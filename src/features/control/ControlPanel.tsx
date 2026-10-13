@@ -2,15 +2,12 @@ import { PlayIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { toast } from "sonner";
 
 import { ErrorNotice } from "@/components/ErrorNotice";
 import { Button } from "@/components/ui/button";
 import { api, type FaultDefinition } from "@/lib/api";
-import { errorMessage } from "@/lib/errors";
-import { loadLibrary, mergeItems, mergeSlaves } from "@/lib/library";
+import { loadLibrary, mergeItems, mergeScenarios, mergeSlaves } from "@/lib/library";
 import { useAsync } from "@/lib/useAsync";
-import { usePending } from "@/lib/usePending";
 
 import { useDevice } from "../devices/DeviceContext";
 import { useDeviceSession, useDeviceSessionHead, useSession } from "../session/SessionProvider";
@@ -30,11 +27,12 @@ import {
   type Lang,
 } from "./itemFilter";
 import { compareItems } from "./itemOrder";
+import { ScenarioBar } from "./ScenarioBar";
 import { SessionBar } from "./SessionBar";
 
 /**
- * Control tab (PRD §8): session bar, scenarios, groups, one filterable list of item cards and
- * alarm cards (lamp alarms on the lamp, slave alarms with the slave's registers).
+ * Control tab (PRD §8): session bar, scenarios + reset, groups, one filterable list of item cards
+ * and alarm cards (lamp alarms on the lamp, slave alarms with the slave's registers).
  */
 export function ControlPanel({ deviceId }: { deviceId: string }) {
   // Head only: the value-tick subscription lives in `Running`, so the tab switch doesn't re-render per tick.
@@ -81,7 +79,6 @@ function Running({ deviceId }: { deviceId: string }) {
     [deviceId, session?.startedAt],
   );
   const [filter, setFilter] = useState<ItemFilter>(EMPTY_FILTER);
-  const scenarioCalls = usePending();
   const [genItemId, setGenItemId] = useState<string | null>(null);
 
   const customItems = device.demo?.customItems;
@@ -124,6 +121,12 @@ function Running({ deviceId }: { deviceId: string }) {
   );
   const chipGroups = useMemo(() => buildChipGroups(entries), [entries]);
   const pack = library.data?.demos.find((d) => d.id === device.demo?.demoId);
+  const customScenarios = device.demo?.customScenarios;
+  const hiddenScenarios = device.demo?.hiddenScenarios;
+  const scenarios = useMemo(
+    () => mergeScenarios(pack?.scenarios ?? [], customScenarios ?? [], hiddenScenarios ?? []),
+    [pack, customScenarios, hiddenScenarios],
+  );
 
   if (!session) return null;
 
@@ -156,34 +159,7 @@ function Running({ deviceId }: { deviceId: string }) {
         </p>
       )}
 
-      {pack && pack.scenarios.length > 0 && (
-        <section className="flex flex-wrap items-center gap-2">
-          <h3 className="mr-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-            {t("control.scenarios")}
-          </h3>
-          {pack.scenarios.map((s) => (
-            <Button
-              key={s.id}
-              size="sm"
-              variant="outline"
-              disabled={scenarioCalls.isPending(s.id)}
-              onClick={() =>
-                void scenarioCalls.run(s.id, () =>
-                  api
-                    .applyScenario(s.id)
-                    .then(() => toast.success(t("control.scenarioApplied", { name: s.name[lang] })))
-                    .catch((e) => toast.error(errorMessage(e))),
-                )
-              }
-            >
-              {s.name[lang]}
-              {s.start && (
-                <span className="text-xs text-muted-foreground">{t("control.scenarioStart")}</span>
-              )}
-            </Button>
-          ))}
-        </section>
-      )}
+      <ScenarioBar scenarios={scenarios} lang={lang} />
 
       <GroupModes groups={session.groups} />
       {catalog.error !== null && <ErrorNotice error={catalog.error} />}

@@ -12,7 +12,7 @@ use crate::error::{AppError, AppResult};
 use crate::library::{Library, select};
 use crate::model::{
     DaliGroup, DemoPack, DeviceConfig, DigitalInputEntry, DigitalInputSettings, DigitalInputType,
-    LibraryItem, LwDemoState, ModbusRegisterType, SlaveAssignment, SlaveDefinition,
+    LibraryItem, LwDemoState, ModbusRegisterType, Scenario, SlaveAssignment, SlaveDefinition,
 };
 use crate::payload::config::{digital_input_entry, digital_inputs_fragment, groups_fragment};
 use crate::payload::naming::{assign_registers, assign_slaves};
@@ -165,6 +165,41 @@ pub fn resolve(library: &Library, demo: &LwDemoState) -> AppResult<ResolvedSetup
         slaves,
         retired,
     })
+}
+
+/// The scenarios of a device: the library demo's (`base`, in order) without the `hidden` ones,
+/// each replaced by the custom scenario with the same id, followed by the other custom ones.
+pub fn merge_scenarios(base: &[Scenario], custom: &[Scenario], hidden: &[String]) -> Vec<Scenario> {
+    let mut out: Vec<Scenario> = base
+        .iter()
+        .filter(|s| !hidden.contains(&s.id))
+        .map(|s| custom.iter().find(|c| c.id == s.id).unwrap_or(s).clone())
+        .collect();
+    for c in custom {
+        if !base.iter().any(|s| s.id == c.id) {
+            out.push(c.clone());
+        }
+    }
+    out
+}
+
+/// The library scenarios of the device's demo (none without a demo or for an unknown one).
+pub fn library_scenarios(library: &Library, demo: &LwDemoState) -> Vec<Scenario> {
+    demo.demo_id
+        .as_deref()
+        .and_then(|d| library.demo(d))
+        .map(|d| d.scenarios.clone())
+        .unwrap_or_default()
+}
+
+/// The scenarios the presenter sees on a device ([`merge_scenarios`] of the library demo's and
+/// `lw_demo.customScenarios` / `hiddenScenarios`).
+pub fn effective_scenarios(library: &Library, demo: &LwDemoState) -> Vec<Scenario> {
+    merge_scenarios(
+        &library_scenarios(library, demo),
+        &demo.custom_scenarios,
+        &demo.hidden_scenarios,
+    )
 }
 
 impl ResolvedSetup {
@@ -499,5 +534,29 @@ mod tests {
     fn digest_is_stable_and_sensitive() {
         assert_eq!(digest(&json!({"a": 1})), digest(&json!({"a": 1})));
         assert_ne!(digest(&json!({"a": 1})), digest(&json!({"a": 2})));
+    }
+
+    #[test]
+    fn device_scenarios_replace_hide_and_append() {
+        let sc = |id: &str, de: &str| Scenario {
+            id: id.into(),
+            name: crate::model::LocalizedText {
+                de: de.into(),
+                en: de.into(),
+            },
+            description: None,
+            start: false,
+            set: vec![],
+        };
+        let base = vec![
+            sc("normal", "Normal"),
+            sc("night", "Nacht"),
+            sc("fault", "Fehler"),
+        ];
+        let custom = vec![sc("new", "Neu"), sc("night", "Nacht 2")];
+        let out = merge_scenarios(&base, &custom, &["fault".into()]);
+        let names: Vec<_> = out.iter().map(|s| s.name.de.as_str()).collect();
+        assert_eq!(names, vec!["Normal", "Nacht 2", "Neu"]);
+        assert_eq!(merge_scenarios(&base, &[], &[]), base);
     }
 }

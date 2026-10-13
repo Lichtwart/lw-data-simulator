@@ -49,6 +49,8 @@ pub fn empty_state() -> LwDemoState {
         slaves: Vec::new(),
         custom_slaves: Vec::new(),
         custom_items: Vec::new(),
+        custom_scenarios: Vec::new(),
+        hidden_scenarios: Vec::new(),
         generators: Default::default(),
         send_interval_sec: DEFAULT_SEND_INTERVAL_SEC,
         realistic_mode: false,
@@ -284,6 +286,28 @@ pub fn apply_patch(
     let (slaves, retired) = setup::assign_all(&state.slaves, &state.retired_slaves, &items)?;
     state.slaves = slaves;
     state.retired_slaves = retired;
+    // Scenarios are checked when they are edited (a later selection change must not block
+    // other edits; a step on an item that is gone fails when the scenario is applied).
+    if let Some(v) = &patch.hidden_scenarios {
+        state.hidden_scenarios = v.clone();
+    }
+    if let Some(v) = &patch.custom_scenarios {
+        state.custom_scenarios = v.clone();
+        let refs: Vec<&LibraryItem> = items.iter().collect();
+        let lamps = crate::sim::faults::lamp_count(state.dali_lamp_count, &refs);
+        let findings = validate::validate_device_scenarios(
+            library,
+            &state.custom_slaves,
+            &items,
+            lamps,
+            &state.custom_scenarios,
+            &setup::effective_scenarios(library, state),
+        );
+        if !findings.is_empty() {
+            let msg: Vec<String> = findings.iter().map(ToString::to_string).collect();
+            return Err(AppError::InvalidInput(msg.join("; ")));
+        }
+    }
     Ok(())
 }
 

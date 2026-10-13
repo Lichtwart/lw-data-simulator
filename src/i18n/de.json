@@ -161,7 +161,11 @@
     "scenarioStart": "(Start)",
     "editGenerator": "Generator von {{name}} bearbeiten",
     "intervalMin": "Das Sendeintervall beträgt mindestens {{min}} s.",
-    "restartNeeded": "Das Setup wurde während der Session geändert (Auswahl, eigene Items oder Eingangstyp). Session neu starten, damit die Änderung wirkt."
+    "restartNeeded": "Das Setup wurde während der Session geändert (Auswahl, eigene Items oder Eingangstyp). Session neu starten, damit die Änderung wirkt.",
+    "resetDefaults": "Standardwerte",
+    "resetDefaultsTitle": "Alles auf Standardwerte setzen?",
+    "resetDefaultsText": "Setzt jeden Wert auf seinen Standard zurück, stellt die Generatoren wieder her und hebt jeden offenen Alarm des Geräts in Cumulocity auf. Zähler behalten ihren Stand.",
+    "resetDone": "Standardwerte gesetzt. Alarme werden aufgehoben."
   },
   "raw": {
     "title": "Raw Fire",
@@ -489,7 +493,65 @@
     "discard": "Verwerfen",
     "leaveTitle": "Ungespeicherte Änderungen verwerfen?",
     "leaveText": "Auf dem Tab Einrichtung gibt es Änderungen, die noch nicht gespeichert sind. Sie gehen verloren.",
-    "leave": "Verwerfen und verlassen"
+    "leave": "Verwerfen und verlassen",
+    "scenarios": {
+      "title": "Szenarien",
+      "description": "Werte, Generatoren und Alarme, die zusammen angewendet werden. Änderungen gelten für dieses Gerät und gehen in den Export ein.",
+      "add": "Neues Szenario",
+      "none": "Keine Szenarien.",
+      "start": "Start",
+      "origin": {
+        "edited": "Geändert",
+        "custom": "Eigenes"
+      },
+      "stepCount_one": "{{count}} Schritt",
+      "stepCount_other": "{{count}} Schritte",
+      "duplicate": "Duplizieren",
+      "copySuffix": "(Kopie)",
+      "restore": "Bibliotheksfassung wiederherstellen",
+      "deleted": "Gelöscht:",
+      "newTitle": "Neues Szenario",
+      "editTitle": "Szenario bearbeiten",
+      "editorHint": "Plane Messwerte, Generatoren und Alarme. Die Schritte laufen beim Anwenden der Reihe nach.",
+      "nameDe": "Name (Deutsch)",
+      "nameEn": "Name (Englisch)",
+      "descriptionDe": "Beschreibung (Deutsch)",
+      "descriptionEn": "Beschreibung (Englisch)",
+      "startLabel": "Beim Session-Start anwenden",
+      "startHint": "Nur ein Szenario ist das Start-Szenario. Von Hand angewendet hebt es zuerst alle Alarme auf.",
+      "id": "ID",
+      "steps": "Schritte",
+      "noSteps": "Noch keine Schritte.",
+      "addValue": "Messwert",
+      "addGenerator": "Generator",
+      "addFault": "Alarm",
+      "kinds": {
+        "value": "Messwert",
+        "generator": "Generator",
+        "fault": "Alarm"
+      },
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "item": "Element",
+      "itemPlaceholder": "Element wählen",
+      "value": "Wert",
+      "range": "{{min}} bis {{max}} {{unit}}",
+      "counterMin": "ab {{min}} (Zähler)",
+      "alarm": "Alarm",
+      "alarmPlaceholder": "Alarm wählen",
+      "action": "Aktion",
+      "raise": "Auslösen",
+      "clear": "Aufheben",
+      "problems": {
+        "name": "Name auf Deutsch und Englisch angeben.",
+        "description": "Beschreibung in beiden Sprachen angeben oder leer lassen.",
+        "noSteps": "Mindestens einen Schritt anlegen.",
+        "item": "Element wählen.",
+        "value": "Der Wert passt nicht zum Element.",
+        "generator": "Der Generator passt nicht zum Element.",
+        "fault": "Alarm wählen."
+      }
+    }
   },
   "generator": {
     "title": "Generator: {{name}}",

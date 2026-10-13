@@ -3582,6 +3582,7 @@ mod cloud_clear {
                 de: "Repariert".into(),
                 en: "Fixed".into(),
             },
+            description: None,
             start: false,
             set: vec![ScenarioStep::Fault {
                 target: timeout(),
@@ -3706,6 +3707,169 @@ mod cloud_clear {
         r.cloud("T1", "CLEARED").await;
         r.flush().await;
         assert!(!paused(&r, "freezer_temp"));
+    }
+
+    // ───────────── editable scenarios, reset to defaults ─────────────
+
+    fn item(r: &Rig, id: &str) -> crate::model::ItemRuntimeState {
+        r.handle
+            .snapshot()
+            .items
+            .into_iter()
+            .find(|i| i.item_id == id)
+            .unwrap()
+    }
+
+    /// "Reset to defaults" = "Clear all" + every item back to its default and its effective
+    /// generator; counters keep their value.
+    #[tokio::test(start_paused = true)]
+    async fn reset_to_defaults_restores_values_generators_and_clears_alarms() {
+        use crate::model::GeneratorConfig;
+        let lib = fixture();
+        let mut p = prepared(&lib, false, false);
+        // A persisted generator override is what "default" means for that item.
+        let persisted = GeneratorConfig::Sine {
+            period: 600.0,
+            amplitude: 1.0,
+            center: Some(-18.0),
+        };
+        p.params
+            .demo
+            .generators
+            .insert("freezer_temp".into(), persisted.clone());
+        let mut r = rig_with(p);
+        r.settle().await;
+        r.drain();
+
+        r.cmd(SessionCommand::SetValue {
+            item_id: "freezer_temp".into(),
+            value: -5.0,
+        })
+        .await
+        .unwrap();
+        r.cmd(SessionCommand::SetGenerator {
+            item_id: "freezer_temp".into(),
+            generator: None,
+        })
+        .await
+        .unwrap();
+        for (id, v) in [
+            ("ac_setpoint", 26.0),
+            ("hood_fan", 1.0),
+            ("gas-meter", 2000.0),
+        ] {
+            r.cmd(SessionCommand::SetValue {
+                item_id: id.into(),
+                value: v,
+            })
+            .await
+            .unwrap();
+        }
+        r.cmd(fire(&timeout())).await.unwrap();
+        r.cmd(fire(&door())).await.unwrap();
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        r.flush().await;
+        assert_eq!(r.handle.snapshot().active_faults.len(), 2);
+        assert!(item(&r, "ac_setpoint").manual_override);
+
+        r.cmd(SessionCommand::ResetToDefaults).await.unwrap();
+        let items = r.flush().await;
+        assert_eq!(bulk_clears(&items), 1, "every open alarm is cleared");
+        assert!(r.handle.snapshot().active_faults.is_empty());
+        assert!(!paused(&r, "freezer_temp"), "the slave sends again");
+
+        let ac = item(&r, "ac_setpoint");
+        assert_eq!((ac.value, ac.manual_override), (21.0, false));
+        assert_eq!(item(&r, "hood_fan").value, 0.0);
+        let freezer = item(&r, "freezer_temp");
+        assert_eq!(freezer.value, -18.0);
+        assert!(!freezer.manual_override);
+        assert_eq!(
+            freezer.generator,
+            Some(persisted),
+            "persisted override restored"
+        );
+        assert_eq!(
+            item(&r, "gas-meter").value,
+            2000.0,
+            "counters never go back"
+        );
+
+        let ms = measurements(&items);
+        assert_eq!(
+            has_series(&ms, "LW_Modbus_Slave_20_240", "freezer_temp"),
+            Some(-18.0),
+            "changed values are sent at once"
+        );
+        assert!(
+            ms.iter()
+                .any(|m| m.as_object().is_some_and(|o| o.values().any(|f| f
+                    .get("ac_setpoint")
+                    .and_then(|s| s.get("value"))
+                    .and_then(Value::as_f64)
+                    == Some(21.0)))),
+            "{ms:#?}"
+        );
+    }
+
+    /// Scenarios edited in the Setup tab reach a running session (`SetupChanged`).
+    #[tokio::test(start_paused = true)]
+    async fn edited_scenarios_reach_the_running_session() {
+        use crate::model::{LocalizedText, Scenario};
+        let lib = fixture();
+        let p = prepared(&lib, false, false);
+        let mut demo = p.params.demo.clone();
+        let r = rig_with(p);
+        r.settle().await;
+        assert!(
+            r.cmd(SessionCommand::ApplyScenario {
+                scenario_id: "warm".into()
+            })
+            .await
+            .is_err(),
+            "not there yet"
+        );
+
+        demo.custom_scenarios.push(Scenario {
+            id: "warm".into(),
+            name: LocalizedText {
+                de: "Warm".into(),
+                en: "Warm".into(),
+            },
+            description: Some(LocalizedText {
+                de: "Klima auf 26 °C".into(),
+                en: "AC at 26 °C".into(),
+            }),
+            start: false,
+            set: vec![ScenarioStep::Value {
+                item_id: "ac_setpoint".into(),
+                value: 26.0,
+            }],
+        });
+        demo.hidden_scenarios.push("trouble".into());
+        r.cmd(SessionCommand::SetupChanged {
+            demo: Box::new(demo),
+        })
+        .await
+        .unwrap();
+
+        r.cmd(SessionCommand::ApplyScenario {
+            scenario_id: "warm".into(),
+        })
+        .await
+        .unwrap();
+        assert_eq!(item(&r, "ac_setpoint").value, 26.0);
+        assert!(
+            matches!(
+                r.cmd(SessionCommand::ApplyScenario {
+                    scenario_id: "trouble".into()
+                })
+                .await,
+                Err(crate::error::AppError::NotFound(_))
+            ),
+            "a deleted library scenario is gone"
+        );
+        assert!(!r.handle.snapshot().restart_needed);
     }
 
     mod fake {

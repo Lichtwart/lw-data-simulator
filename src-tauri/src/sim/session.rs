@@ -53,6 +53,9 @@ pub enum SessionCommand {
     },
     /// "Clear all": end every effect and clear every open alarm of the device (D9).
     ClearAllAlarms,
+    /// "Reset to defaults": "Clear all", then every item back to its default value and its
+    /// effective generator (counters keep their value).
+    ResetToDefaults,
     SetSendInterval {
         seconds: u32,
     },
@@ -437,12 +440,7 @@ pub async fn prepare(
     // Everything that can fail on the setup comes before anything is written.
     let resolved = setup::resolve(library, &demo)?;
     let config = demo_state::config_of(&mo);
-    let scenarios = demo
-        .demo_id
-        .as_deref()
-        .and_then(|d| library.demo(d))
-        .map(|d| d.scenarios.clone())
-        .unwrap_or_default();
+    let scenarios = setup::library_scenarios(library, &demo);
 
     // Counters never go backwards: seed them from the newest stored measurement.
     let mut counter_queries = Vec::new();
@@ -705,6 +703,10 @@ fn command(core: &mut SessionCore, cmd: SessionCommand, now: Instant) -> AppResu
         SessionCommand::SetFault { target, active } => core.set_fault(&target, active),
         SessionCommand::ClearAllAlarms => {
             core.clear_all_alarms();
+            Ok(())
+        }
+        SessionCommand::ResetToDefaults => {
+            core.reset_to_defaults();
             Ok(())
         }
         SessionCommand::SetSendInterval { seconds } => core.set_send_interval(seconds, now),

@@ -764,6 +764,9 @@ pub enum ScenarioStep {
 pub struct Scenario {
     pub id: String,
     pub name: LocalizedText,
+    /// What the scenario shows (shown where scenarios are picked). Optional.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<LocalizedText>,
     /// Applied automatically on session start.
     #[serde(default)]
     pub start: bool,

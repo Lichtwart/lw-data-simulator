@@ -190,6 +190,10 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
         "name": { "$ref": "common.schema.json#/$defs/localizedText" },
+        "description": {
+          "description": "What the scenario shows; shown where scenarios are picked.",
+          "$ref": "common.schema.json#/$defs/localizedText"
+        },
         "start": {
           "description": "Applied on session start; at most one per demo.",
           "type": "boolean"

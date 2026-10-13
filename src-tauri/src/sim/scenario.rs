@@ -45,7 +45,43 @@ impl SessionCore {
         }
     }
 
-    /// Apply a scenario of the device's demo by id.
+    /// "Reset to defaults": "Clear all" (every effect ends, every open alarm of the device is
+    /// cleared), then every item goes back to its default value (control default, see
+    /// `core::default_value`) and its effective generator (`lw_demo.generators` override, else
+    /// the library's), without a manual override. Counters keep their value (they never go
+    /// backwards). Changed values are sent at once.
+    pub fn reset_to_defaults(&mut self) {
+        self.clear_all_alarms();
+        for idx in 0..self.items.len() {
+            if self.items[idx].naming.is_none() {
+                continue;
+            }
+            let generator = self
+                .demo
+                .generators
+                .get(self.items[idx].def.id())
+                .cloned()
+                .or_else(|| self.items[idx].def.generator().cloned());
+            let counter = self.items[idx].is_counter()
+                || matches!(
+                    generator,
+                    Some(crate::model::GeneratorConfig::Counter { .. })
+                );
+            if !counter {
+                let base = self.items[idx].base;
+                self.set_value(idx, base, Source::Scenario);
+            }
+            let it = &mut self.items[idx];
+            it.manual = false;
+            it.gen_state.last = Some(it.value);
+            it.generator = generator;
+            self.ui_changed.insert(idx);
+        }
+        // `item-values-changed` does not carry the generator: refresh the snapshot as well.
+        self.emit_changed = true;
+    }
+
+    /// Apply a scenario of the device by id (library scenarios as edited on the device).
     pub fn apply_scenario(&mut self, scenario_id: &str, now: Instant) -> AppResult<()> {
         let sc = self
             .scenarios

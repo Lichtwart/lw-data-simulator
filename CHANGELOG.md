@@ -7,6 +7,8 @@ demo library.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-23
+
 ### Added
 
 - Demo devices have a content language (`lw_demo.language`, German or English). A device created

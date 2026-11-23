@@ -7,6 +7,14 @@ demo library.
 
 ## [Unreleased]
 
+### Changed
+
+- Dependency updates: Tauri plugins (updater 2.14, dialog 2.8.4, log 2.10.2) with their npm
+  packages, `@tauri-apps/api` 2.12.5, React 19.3.1, tokio 1.54, keyring-core 1.1 and smaller ones.
+- The update check reports "no update" instead of an error when the newest release is not newer
+  and has no build for this platform; an update's signature is verified before it is installed
+  (tauri-plugin-updater 2.14).
+
 ## [0.3.0] - 2026-11-23
 
 ### Added

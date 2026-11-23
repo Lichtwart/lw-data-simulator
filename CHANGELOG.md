@@ -7,6 +7,8 @@ demo library.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-23
+
 ### Changed
 
 - Dependency updates: Tauri plugins (updater 2.14, dialog 2.8.4, log 2.10.2) with their npm

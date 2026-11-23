@@ -61,6 +61,7 @@ pub fn catalog(library: &Library, state: &LwDemoState) -> Vec<FaultDefinition> {
         lamp_count: lamp_count(state.dali_lamp_count, &items),
         slaves: &slaves,
         items: &items,
+        language: state.language(),
     })
 }
 
@@ -96,6 +97,7 @@ impl SessionCore {
                 lamp_count,
                 slaves: &slaves,
                 items: &items,
+                language: self.language,
             },
         )
     }
@@ -259,7 +261,7 @@ impl SessionCore {
                 &crate::c8y::now_iso(),
                 a.id,
                 a.address,
-                &def.name,
+                def.name.get(self.language),
                 range,
             );
             self.push(OutboundPayload::Event(body), super::core::Purpose::Event);
@@ -537,6 +539,7 @@ impl SessionCore {
             lamp_count: self.lamps.keys().max().copied().unwrap_or(0),
             slaves: &slaves,
             items: &items,
+            language: self.language,
         });
         // Lamp / sensor lost alarms that are open next to an open bus power alarm are the bus
         // failure's (they recover with the bus), not faults of their own.

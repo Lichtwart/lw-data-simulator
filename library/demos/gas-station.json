@@ -19,7 +19,10 @@
   "daliGroups": [
     {
       "id": 1,
-      "name": "Tankstellendach",
+      "name": {
+        "de": "Tankstellendach",
+        "en": "Canopy"
+      },
       "converters": [
         15,
         16,
@@ -34,7 +37,10 @@
     },
     {
       "id": 2,
-      "name": "Verkaufsraum",
+      "name": {
+        "de": "Verkaufsraum",
+        "en": "Sales floor"
+      },
       "converters": [
         19,
         20,
@@ -46,7 +52,10 @@
     },
     {
       "id": 3,
-      "name": "Personal",
+      "name": {
+        "de": "Personal",
+        "en": "Staff"
+      },
       "converters": [
         8,
         9,
@@ -57,7 +66,10 @@
     },
     {
       "id": 4,
-      "name": "WC und Lager",
+      "name": {
+        "de": "WC und Lager",
+        "en": "Restrooms and storage"
+      },
       "converters": [
         13,
         14
@@ -67,7 +79,10 @@
     },
     {
       "id": 5,
-      "name": "Werbung",
+      "name": {
+        "de": "Werbung",
+        "en": "Advertising"
+      },
       "converters": [
         1,
         3
@@ -80,7 +95,10 @@
     },
     {
       "id": 6,
-      "name": "Eingang",
+      "name": {
+        "de": "Eingang",
+        "en": "Entrance"
+      },
       "converters": [
         11,
         12
@@ -759,7 +777,7 @@
       },
       "description": {
         "de": "Alle Ladeplätze belegt, Spitzenstrom mit Leistungsalarm der Ladeinfrastruktur.",
-        "en": "All charging slots busy, peak current with a charging power alarm."
+        "en": "All charging bays busy, peak current with a charging power alarm."
       },
       "set": [
         {
@@ -852,7 +870,7 @@
       },
       "description": {
         "de": "Die Wassermelder in WC und Lager melden Wasser.",
-        "en": "The water leak sensors in the restroom and the dry storage report water."
+        "en": "The water leak sensors in the restroom and dry storage report water."
       },
       "set": [
         {
@@ -875,7 +893,7 @@
       },
       "description": {
         "de": "Diesel-Tank fast leer und undicht, Zapfsäulen gesperrt.",
-        "en": "Diesel tank almost empty and leaking, pumps locked."
+        "en": "Diesel tank almost empty and leaking, fuel pumps locked."
       },
       "set": [
         {

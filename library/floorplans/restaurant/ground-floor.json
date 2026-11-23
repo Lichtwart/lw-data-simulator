@@ -1,8 +1,14 @@
 {
   "type": "lw-demo-floorplan",
   "schemaVersion": 1,
-  "name": "Erdgeschoss",
-  "description": "Restaurant: Küche, Gastraum, Bestellung, Technikraum und Drive-Through",
+  "name": {
+    "de": "Erdgeschoss",
+    "en": "Ground floor"
+  },
+  "description": {
+    "de": "Restaurant: Küche, Gastraum, Bestellung, Technikraum und Drive-Through",
+    "en": "Restaurant: kitchen, dining area, ordering, technical room and drive-through"
+  },
   "icon": "map",
   "image": "ground-floor.svg",
   "imageWidth": 1810,
@@ -14,7 +20,6 @@
       "x": 185,
       "y": 120,
       "icon": "light-bulb",
-      "title": "Küche",
       "confirm": false,
       "control": {
         "type": "dali",
@@ -32,7 +37,10 @@
       "x": 445,
       "y": 120,
       "icon": "thermometer-half",
-      "title": "Klima Küche",
+      "title": {
+        "de": "Klima Küche",
+        "en": "Kitchen AC"
+      },
       "confirm": false,
       "control": {
         "type": "modbus",
@@ -50,7 +58,10 @@
       "x": 185,
       "y": 176,
       "icon": "fan",
-      "title": "Klima Küche Modus",
+      "title": {
+        "de": "Klima Küche Modus",
+        "en": "Kitchen AC mode"
+      },
       "confirm": false,
       "control": {
         "type": "modbus",
@@ -59,27 +70,42 @@
         "options": [
           {
             "value": 0,
-            "label": "Heizen",
+            "label": {
+              "de": "Heizen",
+              "en": "Heat"
+            },
             "icon": "fire"
           },
           {
             "value": 1,
-            "label": "Automatik",
+            "label": {
+              "de": "Automatik",
+              "en": "Auto"
+            },
             "icon": "rotate-right"
           },
           {
             "value": 2,
-            "label": "Kühlen",
+            "label": {
+              "de": "Kühlen",
+              "en": "Cool"
+            },
             "icon": "snowflake-o"
           },
           {
             "value": 3,
-            "label": "Entfeuchten",
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dehumidify"
+            },
             "icon": "air-quality"
           },
           {
             "value": 4,
-            "label": "Befeuchten",
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidify"
+            },
             "icon": "tint"
           }
         ]
@@ -94,7 +120,10 @@
       "measurement": {
         "itemId": "ac_kit_act"
       },
-      "title": "Küche Ist",
+      "title": {
+        "de": "Küche Ist",
+        "en": "Kitchen temperature"
+      },
       "unit": "°C",
       "decimals": 1,
       "ranges": [
@@ -125,7 +154,6 @@
       "measurement": {
         "itemId": "en_kit_kwh"
       },
-      "title": "Energie Küche",
       "unit": "kWh",
       "decimals": 0,
       "locked": true
@@ -139,7 +167,6 @@
       "measurement": {
         "itemId": "en_kit_peak"
       },
-      "title": "Spitzenstrom Küche",
       "unit": "A",
       "decimals": 0,
       "ranges": [
@@ -180,8 +207,14 @@
       "x": 250,
       "y": 332,
       "icon": "warning",
-      "text": "Fritteuse",
-      "note": "Ölwechsel fällig",
+      "text": {
+        "de": "Fritteuse",
+        "en": "Fryer"
+      },
+      "note": {
+        "de": "Ölwechsel fällig",
+        "en": "Oil change due"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -194,8 +227,14 @@
       "id": "w-flurry",
       "kind": "alarm",
       "icon": "warning",
-      "text": "Flurry",
-      "note": "Reinigung fällig",
+      "text": {
+        "de": "Flurry",
+        "en": "Flurry"
+      },
+      "note": {
+        "de": "Reinigung fällig",
+        "en": "Cleaning due"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -212,7 +251,10 @@
       "x": 510,
       "y": 332,
       "icon": "fire",
-      "text": "Grills",
+      "text": {
+        "de": "Grills",
+        "en": "Grills"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -231,7 +273,10 @@
       "x": 640,
       "y": 332,
       "icon": "warning",
-      "text": "Presenter",
+      "text": {
+        "de": "Presenter",
+        "en": "Presenters"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -270,8 +315,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -290,8 +341,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -323,8 +380,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Wasser",
-        "offLabel": "Trocken",
+        "onLabel": {
+          "de": "Wasser",
+          "en": "Water"
+        },
+        "offLabel": {
+          "de": "Trocken",
+          "en": "Dry"
+        },
         "onLevel": "alarm",
         "offLevel": "good"
       },
@@ -342,7 +405,6 @@
       "x": 185,
       "y": 523,
       "icon": "light-bulb",
-      "title": "Gastraum",
       "confirm": false,
       "control": {
         "type": "dali",
@@ -360,7 +422,10 @@
       "x": 445,
       "y": 523,
       "icon": "thermometer-half",
-      "title": "Klima Gastraum",
+      "title": {
+        "de": "Klima Gastraum",
+        "en": "Dining area AC"
+      },
       "confirm": false,
       "control": {
         "type": "modbus",
@@ -378,7 +443,10 @@
       "x": 185,
       "y": 579,
       "icon": "fan",
-      "title": "Klima Gastraum Modus",
+      "title": {
+        "de": "Klima Gastraum Modus",
+        "en": "Dining area AC mode"
+      },
       "confirm": false,
       "control": {
         "type": "modbus",
@@ -387,27 +455,42 @@
         "options": [
           {
             "value": 0,
-            "label": "Heizen",
+            "label": {
+              "de": "Heizen",
+              "en": "Heat"
+            },
             "icon": "fire"
           },
           {
             "value": 1,
-            "label": "Automatik",
+            "label": {
+              "de": "Automatik",
+              "en": "Auto"
+            },
             "icon": "rotate-right"
           },
           {
             "value": 2,
-            "label": "Kühlen",
+            "label": {
+              "de": "Kühlen",
+              "en": "Cool"
+            },
             "icon": "snowflake-o"
           },
           {
             "value": 3,
-            "label": "Entfeuchten",
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dehumidify"
+            },
             "icon": "air-quality"
           },
           {
             "value": 4,
-            "label": "Befeuchten",
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidify"
+            },
             "icon": "tint"
           }
         ]
@@ -422,7 +505,10 @@
       "measurement": {
         "itemId": "ac_din_act"
       },
-      "title": "Gastraum Ist",
+      "title": {
+        "de": "Gastraum Ist",
+        "en": "Dining area temperature"
+      },
       "unit": "°C",
       "decimals": 1,
       "ranges": [
@@ -483,8 +569,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -496,7 +588,10 @@
       "x": 1050,
       "y": 539,
       "icon": "warning",
-      "text": "Bestellterminals",
+      "text": {
+        "de": "Bestellterminals",
+        "en": "Order terminals"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -518,7 +613,10 @@
       "measurement": {
         "itemId": "freezer_temp"
       },
-      "title": "Tiefkühler",
+      "title": {
+        "de": "Tiefkühler",
+        "en": "Freezer"
+      },
       "decimals": 1,
       "staleAfterMin": 15,
       "ranges": [
@@ -555,7 +653,10 @@
       "measurement": {
         "itemId": "cooler_temp"
       },
-      "title": "Kühlzelle",
+      "title": {
+        "de": "Kühlzelle",
+        "en": "Cold room"
+      },
       "decimals": 1,
       "staleAfterMin": 15,
       "ranges": [
@@ -596,8 +697,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -616,8 +723,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -636,8 +749,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Wasser",
-        "offLabel": "Trocken",
+        "onLabel": {
+          "de": "Wasser",
+          "en": "Water"
+        },
+        "offLabel": {
+          "de": "Trocken",
+          "en": "Dry"
+        },
         "onLevel": "alarm",
         "offLevel": "good"
       },
@@ -655,8 +774,14 @@
       "x": 120,
       "y": 886,
       "icon": "air-quality",
-      "text": "CO₂-Tank",
-      "note": "Leck: Raum lüften",
+      "text": {
+        "de": "CO₂-Tank",
+        "en": "CO₂ tank"
+      },
+      "note": {
+        "de": "Leck: Raum lüften",
+        "en": "Leak: ventilate room"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -675,7 +800,10 @@
       "x": 250,
       "y": 886,
       "icon": "bell",
-      "text": "Sicherungen",
+      "text": {
+        "de": "Sicherungen",
+        "en": "Fuses"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -756,8 +884,14 @@
       "id": "w-subdist",
       "kind": "alarm",
       "icon": "warning",
-      "text": "Unterverteilung",
-      "note": "Energiezähler Störung",
+      "text": {
+        "de": "Unterverteilung",
+        "en": "Sub-distribution"
+      },
+      "note": {
+        "de": "Energiezähler Störung",
+        "en": "Energy meter fault"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -785,7 +919,6 @@
       "measurement": {
         "itemId": "energy_total"
       },
-      "title": "Energie gesamt",
       "unit": "kWh",
       "decimals": 0,
       "locked": true
@@ -799,7 +932,10 @@
       "measurement": {
         "itemId": "current_peak_total"
       },
-      "title": "Spitzenstrom",
+      "title": {
+        "de": "Spitzenstrom",
+        "en": "Peak current"
+      },
       "unit": "A",
       "decimals": 0,
       "ranges": [
@@ -827,7 +963,10 @@
       "x": 745,
       "y": 870,
       "icon": "light-bulb",
-      "title": "Außen und Drive",
+      "title": {
+        "de": "Außen und Drive",
+        "en": "Outside and drive-through"
+      },
       "confirm": false,
       "control": {
         "type": "dali",
@@ -848,7 +987,6 @@
       "measurement": {
         "itemId": "lux-1"
       },
-      "title": "Außenhelligkeit",
       "unit": "lx",
       "decimals": 0,
       "locked": true

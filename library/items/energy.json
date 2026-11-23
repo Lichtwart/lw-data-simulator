@@ -4,68 +4,104 @@
   "slaves": [
     {
       "key": "energie_shop",
-      "name": "Energie Shop",
+      "name": {
+        "de": "Energie Shop",
+        "en": "Energy Shop"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "en_cms_alarm",
-          "text": "Energie Crew/Manager/Support: Störung",
+          "text": {
+            "de": "Energie Crew/Manager/Support: Störung",
+            "en": "Crew/Manager/Support energy: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_wc_alarm",
-          "text": "Energie WC: Störung",
+          "text": {
+            "de": "Energie WC: Störung",
+            "en": "Restroom energy: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "energie_kueche",
-      "name": "Energie Kueche",
+      "name": {
+        "de": "Energie Kueche",
+        "en": "Energy Kitchen"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "en_kit_alarm",
-          "text": "Energie Küche: Störung",
+          "text": {
+            "de": "Energie Küche: Störung",
+            "en": "Kitchen energy: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_ord_alarm",
-          "text": "Energie Bestellung: Störung",
+          "text": {
+            "de": "Energie Bestellung: Störung",
+            "en": "Ordering energy: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_din_alarm",
-          "text": "Energie Gastraum: Störung",
+          "text": {
+            "de": "Energie Gastraum: Störung",
+            "en": "Dining area energy: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "energie_aussen",
-      "name": "Energie Aussen",
+      "name": {
+        "de": "Energie Aussen",
+        "en": "Energy Outside"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "en_sign_alarm",
-          "text": "Energie Außenwerbung: Störung",
+          "text": {
+            "de": "Energie Außenwerbung: Störung",
+            "en": "Outdoor signage energy: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_totem_alarm",
-          "text": "Energie Totem: Störung",
+          "text": {
+            "de": "Energie Totem: Störung",
+            "en": "Totem energy: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "energie_gesamt",
-      "name": "Energie Gesamt",
+      "name": {
+        "de": "Energie Gesamt",
+        "en": "Energy Total"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "ev_power_alarm",
-          "text": "Ladeinfrastruktur: Leistungsalarm",
+          "text": {
+            "de": "Ladeinfrastruktur: Leistungsalarm",
+            "en": "EV charging: power alarm"
+          },
           "severity": "MAJOR"
         }
       ]
@@ -82,7 +118,7 @@
       "writable": false,
       "title": {
         "de": "Energie Küche",
-        "en": "Energy kitchen"
+        "en": "Kitchen energy"
       },
       "tags": [
         "restaurant",
@@ -108,7 +144,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Küche",
-        "en": "Peak current kitchen"
+        "en": "Kitchen peak current"
       },
       "tags": [
         "restaurant",
@@ -162,7 +198,7 @@
       "writable": false,
       "title": {
         "de": "Energie Crew/Manager/Support",
-        "en": "Energy crew/manager/support"
+        "en": "Crew/Manager/Support energy"
       },
       "tags": [
         "retail",
@@ -190,7 +226,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Crew/Manager/Support",
-        "en": "Peak current crew/manager/support"
+        "en": "Crew/Manager/Support peak current"
       },
       "tags": [
         "retail",
@@ -246,7 +282,7 @@
       "writable": false,
       "title": {
         "de": "Energie Bestellung",
-        "en": "Energy order"
+        "en": "Ordering energy"
       },
       "tags": [
         "restaurant",
@@ -272,7 +308,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Bestellung",
-        "en": "Peak current order"
+        "en": "Ordering peak current"
       },
       "tags": [
         "restaurant",
@@ -326,7 +362,7 @@
       "writable": false,
       "title": {
         "de": "Energie WC",
-        "en": "Energy restrooms"
+        "en": "Restroom energy"
       },
       "tags": [
         "retail",
@@ -354,7 +390,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom WC",
-        "en": "Peak current restrooms"
+        "en": "Restroom peak current"
       },
       "tags": [
         "retail",
@@ -410,7 +446,7 @@
       "writable": false,
       "title": {
         "de": "Energie Gastraum",
-        "en": "Energy dining"
+        "en": "Dining area energy"
       },
       "tags": [
         "restaurant",
@@ -436,7 +472,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Gastraum",
-        "en": "Peak current dining"
+        "en": "Dining area peak current"
       },
       "tags": [
         "restaurant",
@@ -490,7 +526,7 @@
       "writable": false,
       "title": {
         "de": "Energie Außenwerbung",
-        "en": "Energy outside signage"
+        "en": "Outdoor signage energy"
       },
       "tags": [
         "retail",
@@ -518,7 +554,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Außenwerbung",
-        "en": "Peak current outside signage"
+        "en": "Outdoor signage peak current"
       },
       "tags": [
         "retail",
@@ -574,7 +610,7 @@
       "writable": false,
       "title": {
         "de": "Energie Totem",
-        "en": "Energy totem"
+        "en": "Totem energy"
       },
       "tags": [
         "retail",
@@ -602,7 +638,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Totem",
-        "en": "Peak current totem"
+        "en": "Totem peak current"
       },
       "tags": [
         "retail",

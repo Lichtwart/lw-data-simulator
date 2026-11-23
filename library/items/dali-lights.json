@@ -75,7 +75,7 @@
       "index": 4,
       "title": {
         "de": "Gastraum Fenster",
-        "en": "Dining windows"
+        "en": "Dining area windows"
       },
       "tags": [
         "restaurant",
@@ -96,7 +96,7 @@
       "index": 5,
       "title": {
         "de": "Gastraum Decke",
-        "en": "Dining ceiling"
+        "en": "Dining area ceiling"
       },
       "tags": [
         "restaurant",
@@ -117,7 +117,7 @@
       "index": 6,
       "title": {
         "de": "Küchenlicht",
-        "en": "Kitchen lights"
+        "en": "Kitchen light"
       },
       "tags": [
         "restaurant",
@@ -138,7 +138,7 @@
       "index": 7,
       "title": {
         "de": "Spülküchenlicht",
-        "en": "Scullery lights"
+        "en": "Dishwashing area light"
       },
       "tags": [
         "restaurant",

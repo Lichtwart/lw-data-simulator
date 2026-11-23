@@ -8,7 +8,8 @@ use serde_json::{Map, Value, json};
 use super::json_number;
 use crate::error::{AppError, AppResult};
 use crate::model::{
-    DigitalInputConfig, DigitalInputEntry, DigitalInputType, LibraryItem, LwDemoState, Position,
+    DigitalInputConfig, DigitalInputEntry, DigitalInputType, Language, LibraryItem, LwDemoState,
+    Position,
 };
 
 /// Max length of a digital input `unit` in UTF-8 bytes (the firmware truncates longer values),
@@ -144,11 +145,13 @@ pub fn missing_required_fragments(mo: &Value) -> Option<Value> {
     (!patch.is_empty()).then_some(Value::Object(patch))
 }
 
-/// Device-side entry for one demo digital input: the item's German title becomes the
-/// `title` (D1: the item is the single source of truth, the demo entry only references it).
+/// Device-side entry for one demo digital input: the item's title in the device language `lang`
+/// becomes the `title` (D1: the item is the single source of truth, the demo entry only
+/// references it; D12).
 pub fn digital_input_entry(
     cfg: &DigitalInputConfig,
     items: &[&LibraryItem],
+    lang: Language,
 ) -> AppResult<DigitalInputEntry> {
     let item = items
         .iter()
@@ -180,7 +183,7 @@ pub fn digital_input_entry(
     }
     Ok(DigitalInputEntry {
         index: cfg.index,
-        title: item.title().de.clone(),
+        title: item.title().get(lang).to_owned(),
         settings: cfg.settings.clone(),
     })
 }
@@ -204,7 +207,7 @@ mod tests {
             id.to_owned(),
             LocalizedText {
                 de: de.into(),
-                en: de.into(),
+                en: format!("{de} (en)"),
             },
             vec![],
             None,
@@ -269,6 +272,7 @@ mod tests {
                 settings: pump_settings.clone(),
             },
             &items,
+            Language::De,
         )
         .unwrap();
         assert_eq!(pump_entry.title, "Zapfsäule 1");
@@ -277,13 +281,26 @@ mod tests {
             &DigitalInputConfig {
                 index: 3,
                 item_id: "gas".into(),
-                settings: gas_settings,
+                settings: gas_settings.clone(),
             },
             &items,
+            Language::De,
         )
         .unwrap();
         assert_eq!(gas_entry.title, "Gaszähler");
         assert_eq!(gas_entry.settings.init_count, Some(1000));
+        // An English device stores the English title (D12).
+        let gas_en = digital_input_entry(
+            &DigitalInputConfig {
+                index: 3,
+                item_id: "gas".into(),
+                settings: gas_settings,
+            },
+            &items,
+            Language::En,
+        )
+        .unwrap();
+        assert_eq!(gas_en.title, "Gaszähler (en)");
         // A counter item cannot be a plain input.
         assert!(
             digital_input_entry(
@@ -293,6 +310,7 @@ mod tests {
                     settings: settings(DigitalInputType::Measurement),
                 },
                 &items,
+                Language::De,
             )
             .is_err()
         );
@@ -306,13 +324,13 @@ mod tests {
             item_id: "door".into(),
             settings: settings(DigitalInputType::Measurement),
         };
-        assert!(digital_input_entry(&cfg, &[&door]).is_err());
+        assert!(digital_input_entry(&cfg, &[&door], Language::De).is_err());
         let cfg = DigitalInputConfig {
             index: 2,
             item_id: "missing".into(),
             settings: settings(DigitalInputType::Measurement),
         };
-        assert!(digital_input_entry(&cfg, &[&door]).is_err());
+        assert!(digital_input_entry(&cfg, &[&door], Language::De).is_err());
     }
 
     #[test]

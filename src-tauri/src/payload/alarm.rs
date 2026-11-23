@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 use super::naming::{self, MAX_SLAVES};
 use crate::error::{AppError, AppResult};
 use crate::model::{
-    FaultDefinition, FaultTarget, LibraryItem, Severity, SlaveAssignment, SlaveDefinition,
+    FaultDefinition, FaultTarget, Language, LibraryItem, Severity, SlaveAssignment, SlaveDefinition,
 };
 
 /// A resolved alarm: Cumulocity `type`, `text`, `severity`.
@@ -349,38 +349,46 @@ pub fn is_native_alarm_type(alarm_type: &str) -> bool {
 }
 
 /// `lw_modbus_<id:02>_timeoutError`, text `Modbus <id:02>-<addr:03> Timeout Error <name>`, MAJOR.
-pub fn slave_timeout_alarm(slave: &SlaveDefinition, assignment: &SlaveAssignment) -> AlarmSpec {
+/// The firmware text is English; the slave name is in the device language `lang` (D12).
+pub fn slave_timeout_alarm(
+    slave: &SlaveDefinition,
+    assignment: &SlaveAssignment,
+    lang: Language,
+) -> AlarmSpec {
     AlarmSpec {
         alarm_type: naming::slave_timeout_alarm_type(assignment.id),
-        text: naming::slave_timeout_text(assignment.id, assignment.address, &slave.name),
+        text: naming::slave_timeout_text(assignment.id, assignment.address, slave.name.get(lang)),
         severity: Severity::Major,
     }
 }
 
-/// Every custom alarm of a slave: `lw_demo_<id:02>_<name>` with the pack's text / severity (D2).
+/// Every custom alarm of a slave: `lw_demo_<id:02>_<name>` with the pack's text (in the device
+/// language `lang`, D12) / severity (D2).
 pub fn slave_custom_alarms(
     slave: &SlaveDefinition,
     assignment: &SlaveAssignment,
+    lang: Language,
 ) -> Vec<AlarmSpec> {
     slave
         .alarms
         .iter()
         .map(|a| AlarmSpec {
             alarm_type: naming::slave_alarm_type(assignment.id, &a.name),
-            text: a.text.clone(),
+            text: a.text.get(lang).to_owned(),
             severity: a.severity,
         })
         .collect()
 }
 
-/// Device-level custom alarm `lw_demo_<id>` of a `customAlarm` item (D2); `None` for other kinds.
-pub fn device_custom_alarm(item: &LibraryItem) -> Option<AlarmSpec> {
+/// Device-level custom alarm `lw_demo_<id>` of a `customAlarm` item (D2), text in the device
+/// language `lang` (D12); `None` for other kinds.
+pub fn device_custom_alarm(item: &LibraryItem, lang: Language) -> Option<AlarmSpec> {
     match item {
         LibraryItem::CustomAlarm {
             id, severity, text, ..
         } => Some(AlarmSpec {
             alarm_type: naming::device_alarm_type(id),
-            text: text.clone(),
+            text: text.get(lang).to_owned(),
             severity: *severity,
         }),
         _ => None,
@@ -395,6 +403,8 @@ pub struct FaultSetup<'a> {
     pub lamp_count: u32,
     pub slaves: &'a [(&'a SlaveDefinition, &'a SlaveAssignment)],
     pub items: &'a [&'a LibraryItem],
+    /// Content language of the device: library alarm texts and slave names (D12).
+    pub language: Language,
 }
 
 impl FaultSetup<'_> {
@@ -447,11 +457,15 @@ pub fn fault_catalog(setup: &FaultSetup<'_>) -> Vec<FaultDefinition> {
         let target = FaultTarget::SlaveTimeout {
             slave_key: slave.key.clone(),
         };
-        out.push(definition(target, slave_timeout_alarm(slave, assignment)));
-        for (def, spec) in slave
-            .alarms
-            .iter()
-            .zip(slave_custom_alarms(slave, assignment))
+        out.push(definition(
+            target,
+            slave_timeout_alarm(slave, assignment, setup.language),
+        ));
+        for (def, spec) in
+            slave
+                .alarms
+                .iter()
+                .zip(slave_custom_alarms(slave, assignment, setup.language))
         {
             let target = FaultTarget::SlaveAlarm {
                 slave_key: slave.key.clone(),
@@ -461,7 +475,7 @@ pub fn fault_catalog(setup: &FaultSetup<'_>) -> Vec<FaultDefinition> {
         }
     }
     for item in setup.items {
-        if let Some(spec) = device_custom_alarm(item) {
+        if let Some(spec) = device_custom_alarm(item, setup.language) {
             let target = FaultTarget::CustomAlarm {
                 item_id: item.id().to_owned(),
             };
@@ -490,7 +504,7 @@ pub fn resolve_fault(target: &FaultTarget, setup: &FaultSetup<'_>) -> AppResult<
             .ok_or_else(|| unknown(format!("bus alarm type {alarm_type}"))),
         FaultTarget::SlaveTimeout { slave_key } => {
             let (def, a) = setup.slave(slave_key)?;
-            Ok(slave_timeout_alarm(def, a))
+            Ok(slave_timeout_alarm(def, a, setup.language))
         }
         FaultTarget::SlaveAlarm {
             slave_key,
@@ -504,7 +518,7 @@ pub fn resolve_fault(target: &FaultTarget, setup: &FaultSetup<'_>) -> AppResult<
                 .ok_or_else(|| unknown(format!("alarm {alarm_name} of slave {slave_key}")))?;
             Ok(AlarmSpec {
                 alarm_type: naming::slave_alarm_type(a.id, &alarm.name),
-                text: alarm.text.clone(),
+                text: alarm.text.get(setup.language).to_owned(),
                 severity: alarm.severity,
             })
         }
@@ -512,7 +526,7 @@ pub fn resolve_fault(target: &FaultTarget, setup: &FaultSetup<'_>) -> AppResult<
             .items
             .iter()
             .find(|i| i.id() == item_id)
-            .and_then(|i| device_custom_alarm(i))
+            .and_then(|i| device_custom_alarm(i, setup.language))
             .ok_or_else(|| unknown(format!("custom alarm item {item_id}"))),
         FaultTarget::Sensor {
             sensor_kind,
@@ -569,7 +583,11 @@ mod tests {
                 alarms: vec![
                     SlaveAlarmDefinition {
                         name: "co2Leakage".into(),
-                        text: "CO2 Leckage".into(),
+                        text: LocalizedText {
+                            de: "CO2 Leckage".into(),
+                            en: "CO2 leak".into(),
+                        }
+                        .into(),
                         severity: Severity::Critical,
                     },
                     SlaveAlarmDefinition {
@@ -597,7 +615,11 @@ mod tests {
             },
             tags: vec![],
             severity: Severity::Major,
-            text: "Hintertür offen".into(),
+            text: LocalizedText {
+                de: "Hintertür offen".into(),
+                en: "Back door open".into(),
+            }
+            .into(),
         }
     }
 
@@ -697,16 +719,61 @@ mod tests {
     #[test]
     fn modbus_and_custom_alarms() {
         let (s, a) = kuehlung();
-        let t = slave_timeout_alarm(&s, &a);
+        let t = slave_timeout_alarm(&s, &a, Language::De);
         assert_eq!(t.alarm_type, "lw_modbus_20_timeoutError");
         assert_eq!(t.text, "Modbus 20-240 Timeout Error Kuehlung");
         assert_eq!(t.severity, Severity::Major);
-        let c = slave_custom_alarms(&s, &a);
+        let c = slave_custom_alarms(&s, &a, Language::De);
         assert_eq!(c[0].alarm_type, "lw_demo_20_co2Leakage");
+        assert_eq!(c[0].text, "CO2 Leckage");
         assert_eq!(c[1].severity, Severity::Minor);
-        let d = device_custom_alarm(&door()).unwrap();
+        let d = device_custom_alarm(&door(), Language::De).unwrap();
         assert_eq!(d.alarm_type, "lw_demo_doorOpen");
         assert_eq!(d.text, "Hintertür offen");
+    }
+
+    /// An English device sends the English library texts; a plain text is the same in both
+    /// languages; types do not change (D12).
+    #[test]
+    fn library_alarm_texts_follow_the_device_language() {
+        let (mut s, a) = kuehlung();
+        s.name = LocalizedText {
+            de: "Kuehlung".into(),
+            en: "Cooling".into(),
+        }
+        .into();
+        let t = slave_timeout_alarm(&s, &a, Language::En);
+        assert_eq!(t.alarm_type, "lw_modbus_20_timeoutError");
+        assert_eq!(t.text, "Modbus 20-240 Timeout Error Cooling");
+        let c = slave_custom_alarms(&s, &a, Language::En);
+        assert_eq!(c[0].text, "CO2 leak");
+        assert_eq!(c[1].text, "Tür offen");
+        assert_eq!(c[0].alarm_type, "lw_demo_20_co2Leakage");
+        let d = device_custom_alarm(&door(), Language::En).unwrap();
+        assert_eq!(
+            (d.alarm_type.as_str(), d.text.as_str()),
+            ("lw_demo_doorOpen", "Back door open")
+        );
+        let slaves = [(&s, &a)];
+        let door = door();
+        let items = [&door];
+        let setup = FaultSetup {
+            lamp_count: 0,
+            slaves: &slaves,
+            items: &items,
+            language: Language::En,
+        };
+        let cat = fault_catalog(&setup);
+        assert!(cat.iter().any(|f| f.text == "Back door open"));
+        let spec = resolve_fault(
+            &FaultTarget::SlaveAlarm {
+                slave_key: "kuehlung".into(),
+                alarm_name: "co2Leakage".into(),
+            },
+            &setup,
+        )
+        .unwrap();
+        assert_eq!(spec.text, "CO2 leak");
     }
 
     #[test]
@@ -719,6 +786,7 @@ mod tests {
             lamp_count: 2,
             slaves: &slaves,
             items: &items,
+            language: Language::De,
         };
         let cat = fault_catalog(&setup);
         assert_eq!(cat.len(), 2 * 14 + 6 + 1 + 2 + 1);

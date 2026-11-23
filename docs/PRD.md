@@ -107,7 +107,8 @@ Demo devices are separate managed objects — the app never simulates on real de
   `c8y_DeviceGroup`. Full-text search on name/description.
 - Actions:
   - **Create**: name, description, map position (lat/lng fields + map picker), optional parent group, optional
-    demo pack to apply immediately.
+    demo pack to apply immediately. The pack is applied in the UI language: the device's **content language**
+    (changed 2026-11-23, see DECISIONS.md D12).
   - **Reuse**: open an existing demo device.
   - **Edit** name, description, position.
   - **Reset**: stop the session, clear ACTIVE/ACKNOWLEDGED alarms, optionally delete floorplans the app
@@ -134,6 +135,7 @@ All setup lives on the device, so any laptop restores it.
   "daliGroups": [{ "id": 1, "name": "Shop", "converters": [1, 2], "minLevel": 0, "maxLevel": 100 }],
   "digitalInputs": [{ "index": 1, "title": "Zapfsäule 1", "type": "measurement", "isActive": true }],
   "timeZone": "Europe/Berlin",
+  "language": "de",
   "generators": { "freezer_temp": { "kind": "randomWalk", "center": -18, "spread": 1.5 } },
   "sendIntervalSec": 30,
   "realisticMode": false,
@@ -149,6 +151,11 @@ All setup lives on the device, so any laptop restores it.
   time zone of `dailyProfile` (default `Europe/Berlin`) (changed 2026-10-13, see DECISIONS.md D10). A device set up
   by an older app version has no `daliGroups` / `digitalInputs` yet: the library demo's values apply until the next
   apply or edit.
+- `language` (`de` | `en`) is the device's **content language** (changed 2026-11-23, see DECISIONS.md D12): every
+  name and text the simulator takes from the library (measurement fragments, DI titles, group names, alarm and
+  event texts, floorplans) is in it; `daliGroups` / `digitalInputs` titles are stored in it. Absent = `de` (devices
+  set up before D12). It is set when a demo is applied (create: the UI language; re-apply: selectable, the
+  confirmation warns that measurements get new fragments) and kept by upgrades.
 - Setup is written when it changes. Live values are written only on **"Save snapshot"**.
 - The lock is advisory only. It shows "in use by X since …" and is ignored after 10 min. There is no hard
   locking.
@@ -157,7 +164,8 @@ All setup lives on the device, so any laptop restores it.
 
 Every demo device simulates the standard Core v2 set: values, units, alarms, events and operations as the
 firmware sends them (`../firmware-core-v2`). **Measurement names** are not the firmware's (changed 2026-10-13, see
-DECISIONS.md D10): every measurement is named from the app's own config, **fragment = the item's German title,
+DECISIONS.md D10): every measurement is named from the app's own config, **fragment = the item's title in the
+device's content language (`lw_demo.language`, German by default; changed 2026-11-23, see DECISIONS.md D12),
 series = the item id**, so the floorplan plugin's measurement picker shows e.g. `Attika 1.light-5` or
 `Zapfsäule 1.di-3`. A title is made safe for a fragment key: `.` and `$` become `_`, leading / trailing spaces are
 trimmed; umlauts and inner spaces stay. Ids are unique, so two items never share a series. Units and value
@@ -180,7 +188,8 @@ ranges stay as the firmware sends them.
   | `<id> Converter Status` | — |
   | `<id> Converter Runtime` | `hr` |
 
-  A grouped lamp without an item is sent as `DALI Leuchte NN.lamp-NN`. At most 6 lamps per message.
+  A grouped lamp without an item is sent as `DALI Leuchte NN.lamp-NN` (`DALI Lamp NN.lamp-NN` on an English
+  device, D12). At most 6 lamps per message.
 - **Lamps per demo**: the pack sets `daliLampCount` (1–64). Tags decide which lamps are visible in the
   control panel.
 - **Groups**: 16 groups in `lw_demo.daliGroups`, taken from the pack (changed 2026-10-13, see DECISIONS.md D10).
@@ -205,7 +214,7 @@ ranges stay as the firmware sends them.
   - type `digitalInput`: value 0/1
   - type `impulseCounter`: counter (unit from the device's input config)
 - The inputs (incl. title, type, `unit` / `initCount` / `increment`, actions) are stored in `lw_demo.digitalInputs`;
-  the title comes from the item's German title and can be edited on the device. A new title is a new fragment
+  the title comes from the item's title in the device language (D12) and can be edited on the device. A new title is a new fragment
   (a running session takes it over at once).
 - When a floorplan is applied, the widget label is the input's title (the item title when the input has none).
 
@@ -359,7 +368,10 @@ library/
 ```
 
 - `kind`: `dali`, `daliBrightness`, `daliMotion`, `digitalInput`, `impulseCounter`, `system`, `modbus`, `customAlarm` (changed 2026-10-12, see DECISIONS.md).
-  Native kinds carry `index` instead of `slave`; a `customAlarm` carries neither (device-level), only `title`, `severity` and `text`; every item's German `title` is the fragment of its measurement (changed 2026-10-13, see DECISIONS.md D10).
+  Native kinds carry `index` instead of `slave`; a `customAlarm` carries neither (device-level), only `title`, `severity` and `text`; every item's `title` in the device language is the fragment of its measurement (changed 2026-10-13 and 2026-11-23, see DECISIONS.md D10, D12).
+- Human-readable texts that are not `{de, en}` yet (slave `name`, alarm `text`s, effect `text`s, demo
+  `daliGroups[].name`, floorplan texts) take either a plain string (both languages) or `{de, en}` (changed
+  2026-11-23, see DECISIONS.md D12; list in `library/schema/README.md`).
 - Item ids are globally unique, `[A-Za-z0-9_-]`, ≤ 19 chars (they become Modbus register names).
 - **One item = one thing** (light-1 … light-64 exist once and are tagged into many demos). The editor
   has a "generate series" helper.
@@ -388,7 +400,7 @@ Modbus items carry `registerType` (`coil` | `holding` | `input`; default `holdin
 }
 ```
 
-A digital input references its item by `itemId`; the item's German title becomes the input's title on the device (`lw_demo.digitalInputs[].title`, changed 2026-10-13, see DECISIONS.md D10). `type` is `daliAction` | `impulseCounter` | `measurement`, plus `isActive`, `initCount`, `increment`, `unit`, `highLevelAction`, `lowLevelAction`, `groups` as the firmware config defines them (changed 2026-10-12, see DECISIONS.md D1, D6).
+A digital input references its item by `itemId`; the item's title in the device language becomes the input's title on the device (`lw_demo.digitalInputs[].title`, changed 2026-10-13 and 2026-11-23, see DECISIONS.md D10, D12). `type` is `daliAction` | `impulseCounter` | `measurement`, plus `isActive`, `initCount`, `increment`, `unit`, `highLevelAction`, `lowLevelAction`, `groups` as the firmware config defines them (changed 2026-10-12, see DECISIONS.md D1, D6).
 
 Demo selection = items matching `tags` ∪ `includes` − `excludes` (8c).
 
@@ -416,7 +428,10 @@ Demo selection = items matching `tags` ∪ `includes` − `excludes` (8c).
   - Modbus control targets come from the assigned slave address. DALI group and Modbus write controls are still
     generated, but the plugin reads `lw_configGroups` / `lw_configModbusSlaves` for them, which demo devices no
     longer have: they stay inactive until the plugin is adapted (DECISIONS.md D10).
-- **Re-applying** the same demo replaces an existing floorplan of the same name, after confirmation.
+  - Name, description, widget titles, texts and labels are written in the device language (changed 2026-11-23,
+    see DECISIONS.md D12).
+- **Re-applying** the same demo replaces an existing floorplan of the same name (in either language, so a language
+  change replaces the old-language floorplan), after confirmation.
 - A floorplan is never required: raw simulation works without one.
 
 ## 13. Export device → demo pack
@@ -426,6 +441,8 @@ Demo selection = items matching `tags` ∪ `includes` − `excludes` (8c).
   - DALI groups, DI titles, scenarios
   - floorplans, with widget measurements mapped back to item ids (the series is the item id, D10), and their
     images downloaded
+  - texts as plain strings in the device's language; widget titles equal to their default are dropped (changed
+    2026-11-23, see DECISIONS.md D12)
 - Workflow:
   1. Tune a device by hand.
   2. Export it, or ask Claude Code to do it with the same format (documented in `AGENTS.md`).

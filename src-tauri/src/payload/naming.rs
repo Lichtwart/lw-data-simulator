@@ -1,16 +1,16 @@
 //! Naming rules (PRD §7.2–§7.4, DECISIONS D2, D10).
 //!
 //! Measurements are named from the demo app's own config, not after the firmware (D10): the
-//! fragment is the item's German title (made safe for a fragment key, [`fragment_name`]), the
-//! series is the item id. Ids are unique, so two items never share a series; the measurement
+//! fragment is the item's title in the device's content language (D12; made safe for a fragment
+//! key, [`fragment_name`]), the series is the item id. Ids are unique, so two items never share a series; the measurement
 //! picker of the floorplan plugin shows e.g. `Attika 1.light-5`. Alarm types, slave ids /
 //! addresses and register addresses still follow the firmware (checked against
 //! `docs/research/firmware-core-v2.md`, section numbers in the doc comments).
 
 use crate::error::{AppError, AppResult};
 use crate::model::{
-    DigitalInputEntry, DigitalInputType, LibraryItem, MeasurementNaming, ModbusRegisterType,
-    RegisterAssignment, SeriesNaming, SlaveAssignment, SystemKind,
+    DigitalInputEntry, DigitalInputType, Language, LibraryItem, MeasurementNaming,
+    ModbusRegisterType, RegisterAssignment, SeriesNaming, SlaveAssignment, SystemKind,
 };
 
 /// Max Modbus slaves per device.
@@ -119,22 +119,25 @@ fn dali_naming(fragment: String, id: &str) -> MeasurementNaming {
 }
 
 /// Naming of a lamp that is in a group but has no item (so no title and no id): fragment
-/// `DALI Leuchte NN`, series `lamp-NN`.
-pub fn hidden_lamp_naming(lamp: u32) -> MeasurementNaming {
-    dali_naming(
-        format!("DALI Leuchte {lamp:02}"),
-        &format!("lamp-{lamp:02}"),
-    )
+/// `DALI Leuchte NN` (`DALI Lamp NN` on an English device, D12), series `lamp-NN`.
+pub fn hidden_lamp_naming(lamp: u32, lang: Language) -> MeasurementNaming {
+    let fragment = match lang {
+        Language::De => format!("DALI Leuchte {lamp:02}"),
+        Language::En => format!("DALI Lamp {lamp:02}"),
+    };
+    dali_naming(fragment, &format!("lamp-{lamp:02}"))
 }
 
-/// Naming of an item's measurement; `None` for items without one (`customAlarm`) and for
-/// a `modbus` item whose `slave` assignment is missing. Digital-input items use the library
-/// item's kind, title and unit; use [`item_naming_with_di`] once the device's DI entry is known.
+/// Naming of an item's measurement on a device in `lang`; `None` for items without one
+/// (`customAlarm`) and for a `modbus` item whose `slave` assignment is missing. Digital-input
+/// items use the library item's kind, title and unit; use [`item_naming_with_di`] once the
+/// device's DI entry is known.
 pub fn item_naming(
     item: &LibraryItem,
     slave: Option<&SlaveAssignment>,
+    lang: Language,
 ) -> Option<MeasurementNaming> {
-    item_naming_with_di(item, slave, None)
+    item_naming_with_di(item, slave, None, lang)
 }
 
 /// [`item_naming`] where a digital-input item follows the device's digital input entry `di`
@@ -143,14 +146,16 @@ pub fn item_naming(
 /// entry `title` is the fragment. Without an entry the item's own kind, title and unit apply.
 /// `di` is ignored for other kinds.
 ///
-/// Fragment = German title ([`fragment_name`]), series = item id (D10).
+/// Fragment = the title in the device language `lang` ([`fragment_name`], D12), series = item id
+/// (D10). The entry title is already in the device language.
 pub fn item_naming_with_di(
     item: &LibraryItem,
     slave: Option<&SlaveAssignment>,
     di: Option<&DigitalInputEntry>,
+    lang: Language,
 ) -> Option<MeasurementNaming> {
     let id = item.id();
-    let fragment = fragment_name(&item.title().de, id);
+    let fragment = fragment_name(item.title().get(lang), id);
     let single = |measurement_type: &str, fragment: String, unit: Option<&str>| MeasurementNaming {
         measurement_type: measurement_type.to_owned(),
         fragment,
@@ -524,10 +529,14 @@ mod tests {
             dali_library_series("lamp-03 Converter Runtime"),
             "Converter Runtime"
         );
-        let hidden = hidden_lamp_naming(3);
+        let hidden = hidden_lamp_naming(3, Language::De);
         assert_eq!(hidden.fragment, "DALI Leuchte 03");
         assert_eq!(hidden.series[3].name, "lamp-03");
         assert_eq!(hidden.series[1].name, "lamp-03 Lamp Status");
+        // English device (D12): only the fragment changes.
+        let hidden_en = hidden_lamp_naming(3, Language::En);
+        assert_eq!(hidden_en.fragment, "DALI Lamp 03");
+        assert_eq!(hidden_en.series, hidden.series);
     }
 
     #[test]
@@ -537,7 +546,7 @@ mod tests {
             *id = "light-5".into();
             title.de = "Attika 1".into();
         }
-        let n = item_naming(&lamp, None).unwrap();
+        let n = item_naming(&lamp, None, Language::De).unwrap();
         assert_eq!(n.measurement_type, "daliControlGear");
         assert_eq!(n.fragment, "Attika 1");
         let series: Vec<(&str, Option<&str>)> = n
@@ -555,7 +564,7 @@ mod tests {
             ]
         );
 
-        let n = item_naming(&native(brightness, 2, None), None).unwrap();
+        let n = item_naming(&native(brightness, 2, None), None, Language::De).unwrap();
         assert_eq!(
             (n.measurement_type.as_str(), n.fragment.as_str()),
             ("daliBrightness", "x")
@@ -563,16 +572,16 @@ mod tests {
         assert_eq!(n.series[0].name, "item");
         assert_eq!(n.series[0].unit.as_deref(), Some("Lux"));
 
-        let n = item_naming(&native(motion, 10, None), None).unwrap();
+        let n = item_naming(&native(motion, 10, None), None, Language::De).unwrap();
         assert_eq!(n.measurement_type, "daliMotion");
         assert_eq!(n.series[0].name, "item");
         assert_eq!(n.series[0].unit, None);
 
-        let n = item_naming(&native(input, 3, None), None).unwrap();
+        let n = item_naming(&native(input, 3, None), None, Language::De).unwrap();
         assert_eq!(n.measurement_type, "digitalInput");
         assert_eq!(n.series[0].name, "item");
         assert_eq!(n.series[0].unit, None);
-        let n = item_naming(&native(counter, 4, Some("m3")), None).unwrap();
+        let n = item_naming(&native(counter, 4, Some("m3")), None, Language::De).unwrap();
         assert_eq!(n.measurement_type, "impulseCounter");
         assert_eq!(n.series[0].name, "item");
         assert_eq!(n.series[0].unit.as_deref(), Some("m3"));
@@ -583,7 +592,7 @@ mod tests {
             *id = "di-3".into();
             title.de = "Zapfsäule 1.2".into();
         }
-        let n = item_naming(&di, None).unwrap();
+        let n = item_naming(&di, None, Language::De).unwrap();
         assert_eq!(
             (n.fragment.as_str(), n.series[0].name.as_str()),
             ("Zapfsäule 1_2", "di-3")
@@ -603,12 +612,12 @@ mod tests {
             control: None,
             generator: None,
         };
-        let n = item_naming(&sys(SystemKind::Rssi), None).unwrap();
+        let n = item_naming(&sys(SystemKind::Rssi), None, Language::De).unwrap();
         assert_eq!(n.measurement_type, "c8y_SignalStrength");
         assert_eq!(n.fragment, "Signalstärke");
         assert_eq!(n.series[0].name, "rssi");
         assert_eq!(n.series[0].unit.as_deref(), Some("dBm"));
-        let n = item_naming(&sys(SystemKind::Temperature), None).unwrap();
+        let n = item_naming(&sys(SystemKind::Temperature), None, Language::De).unwrap();
         assert_eq!(n.measurement_type, "c8y_TemperatureMeasurement");
         assert_eq!(n.series[0].unit.as_deref(), Some("C"));
     }
@@ -631,13 +640,19 @@ mod tests {
             generator: None,
             effects: vec![],
         };
-        assert!(item_naming(&item, None).is_none());
-        assert!(item_naming(&item, Some(&slave("other", 19, 239))).is_none());
-        let n = item_naming(&item, Some(&slave("kuehlung", 20, 240))).unwrap();
+        assert!(item_naming(&item, None, Language::De).is_none());
+        assert!(item_naming(&item, Some(&slave("other", 19, 239)), Language::De).is_none());
+        let n = item_naming(&item, Some(&slave("kuehlung", 20, 240)), Language::De).unwrap();
         assert_eq!(n.measurement_type, "modbus");
         assert_eq!(n.fragment, "Tiefkühler");
         assert_eq!(n.series[0].name, "freezer_temp");
         assert_eq!(n.series[0].unit.as_deref(), Some("°C"));
+        // An English device names the fragment after the English title; series and unit stay
+        // (D12).
+        let en = item_naming(&item, Some(&slave("kuehlung", 20, 240)), Language::En).unwrap();
+        assert_eq!(en.fragment, "Freezer");
+        assert_eq!(en.series, n.series);
+        assert_eq!(en.measurement_type, n.measurement_type);
 
         let alarm = LibraryItem::CustomAlarm {
             id: "co2".into(),
@@ -646,7 +661,7 @@ mod tests {
             severity: Severity::Major,
             text: "CO2".into(),
         };
-        assert!(item_naming(&alarm, None).is_none());
+        assert!(item_naming(&alarm, None, Language::De).is_none());
     }
 
     #[test]
@@ -780,6 +795,7 @@ mod tests {
             &item,
             None,
             Some(&entry(DigitalInputType::ImpulseCounter, Some("kWh"))),
+            Language::De,
         )
         .unwrap();
         assert_eq!(n.measurement_type, "impulseCounter");
@@ -791,6 +807,7 @@ mod tests {
             &item,
             None,
             Some(&entry(DigitalInputType::Measurement, None)),
+            Language::De,
         )
         .unwrap();
         assert_eq!(n.measurement_type, "digitalInput");
@@ -798,12 +815,21 @@ mod tests {
         // An empty entry title keeps the item title.
         let mut untitled = entry(DigitalInputType::ImpulseCounter, None);
         untitled.title = " ".into();
-        let n = item_naming_with_di(&item, None, Some(&untitled)).unwrap();
+        let n = item_naming_with_di(&item, None, Some(&untitled), Language::De).unwrap();
         assert_eq!(n.fragment, "x");
+        // The entry title is the device's (already in its language): it wins in every language.
+        let n = item_naming_with_di(
+            &item,
+            None,
+            Some(&entry(DigitalInputType::ImpulseCounter, None)),
+            Language::En,
+        )
+        .unwrap();
+        assert_eq!(n.fragment, "Gaszähler");
         // An entry of another input is ignored.
         let mut other = entry(DigitalInputType::Measurement, None);
         other.index = 5;
-        let n = item_naming_with_di(&item, None, Some(&other)).unwrap();
+        let n = item_naming_with_di(&item, None, Some(&other), Language::De).unwrap();
         assert_eq!(n.measurement_type, "impulseCounter");
         assert_eq!(n.fragment, "x");
         assert_eq!(n.series[0].unit.as_deref(), Some("m3"));

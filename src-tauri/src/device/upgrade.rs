@@ -11,6 +11,9 @@
 //! three-way per field: when the device still has what was applied, the new library value is
 //! taken; otherwise the local value is kept and listed as "kept local override".
 //!
+//! The device keeps its content language (`lw_demo.language`, D12): library values are resolved
+//! in it, floorplans are keyed by their name in it.
+//!
 //! Floorplans: removed / replaced ones are deleted only when the app created them
 //! (`lw_demo.floorplanIds`) and nobody edited them in the plugin. A same-name floorplan the app
 //! did not create is never touched (the layout is skipped and listed as a conflict); an edited
@@ -33,7 +36,7 @@ use crate::error::{AppError, AppResult};
 use crate::library::Library;
 use crate::model::{
     DaliGroup, DemoDevice, DemoPack, DeviceConfig, DigitalInputEntry, FloorplanLayout,
-    FloorplanRef, LwDemoState, UpgradePreview,
+    FloorplanRef, Language, LwDemoState, UpgradePreview,
 };
 
 /// Diff of digests: (added, removed, changed), each sorted.
@@ -59,14 +62,21 @@ fn diff(
     (added, removed, changed)
 }
 
+/// Library floorplans of `demo` by their name in the device language `lang`.
 fn floorplan_digests<'a>(
     library: &'a Library,
     demo: &DemoPack,
+    lang: Language,
 ) -> BTreeMap<String, (&'a str, &'a FloorplanLayout, String)> {
     demo.floorplans
         .iter()
         .filter_map(|p| library.floorplans.get_key_value(p.as_str()))
-        .map(|(p, l)| (l.name.clone(), (p.as_str(), l, setup::digest(l))))
+        .map(|(p, l)| {
+            (
+                l.name.get(lang).to_owned(),
+                (p.as_str(), l, setup::digest(l)),
+            )
+        })
         .collect()
 }
 
@@ -90,6 +100,7 @@ fn plan_upgrade(
     config: &DeviceConfig,
 ) -> AppResult<UpgradePlan> {
     let mut next = state.clone();
+    let lang = state.language();
     let mut changes = Vec::new();
     let mut kept = Vec::new();
 
@@ -100,7 +111,7 @@ fn plan_upgrade(
     // Digests of the library values need the new selection (digital inputs read item titles):
     // fields that decide the selection come first.
     let selection_items: Vec<&crate::model::LibraryItem> = library.demo_items(demo);
-    let lib_now = setup::demo_digests(demo, &selection_items)?;
+    let lib_now = setup::demo_digests(demo, &selection_items, lang)?;
     let mut decide = |field: &str| -> bool {
         if !merge {
             return false;
@@ -143,11 +154,11 @@ fn plan_upgrade(
     let resolved = setup::resolve(library, &next)?;
     resolved.store_assignments(&mut next);
     next.applied_items = setup::item_digests(library, &resolved.items);
-    next.applied_demo = setup::demo_digests(demo, &resolved.item_refs())?;
+    next.applied_demo = setup::demo_digests(demo, &resolved.item_refs(), lang)?;
 
-    let groups = take_groups.then(|| demo.dali_groups.clone());
+    let groups = take_groups.then(|| setup::demo_groups(demo, lang));
     let inputs = if take_inputs {
-        Some(setup::demo_inputs(demo, &resolved.item_refs())?)
+        Some(setup::demo_inputs(demo, &resolved.item_refs(), lang)?)
     } else {
         None
     };
@@ -191,7 +202,7 @@ pub fn preview_of(
         items_changed = new_items.keys().cloned().collect();
         items_added.clear();
     }
-    let fps: BTreeMap<String, String> = floorplan_digests(library, demo)
+    let fps: BTreeMap<String, String> = floorplan_digests(library, demo, state.language())
         .into_iter()
         .map(|(n, (_, _, d))| (n, d))
         .collect();
@@ -346,7 +357,7 @@ pub async fn apply(
         .iter()
         .chain(&preview.floorplans_changed)
         .collect();
-    let digests = floorplan_digests(library, demo);
+    let digests = floorplan_digests(library, demo, state.language());
     let layouts: Vec<(&str, &FloorplanLayout)> = digests
         .iter()
         .filter(|(n, _)| wanted.contains(n))

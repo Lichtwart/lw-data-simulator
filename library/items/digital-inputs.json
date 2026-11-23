@@ -8,7 +8,7 @@
       "index": 1,
       "title": {
         "de": "Ladeplatz 1 belegt",
-        "en": "EV slot 1 occupied"
+        "en": "EV bay 1 occupied"
       },
       "tags": [
         "retail",
@@ -27,7 +27,7 @@
       "index": 2,
       "title": {
         "de": "Ladeplatz 2 belegt",
-        "en": "EV slot 2 occupied"
+        "en": "EV bay 2 occupied"
       },
       "tags": [
         "retail",
@@ -46,7 +46,7 @@
       "index": 3,
       "title": {
         "de": "Ladeplatz 3 belegt",
-        "en": "EV slot 3 occupied"
+        "en": "EV bay 3 occupied"
       },
       "tags": [
         "retail",
@@ -85,7 +85,7 @@
       "index": 5,
       "title": {
         "de": "Kühlzelle belegt",
-        "en": "Cooler occupied"
+        "en": "Cold room occupied"
       },
       "tags": [
         "retail",
@@ -105,7 +105,7 @@
       "index": 6,
       "title": {
         "de": "Bestellsäule belegt",
-        "en": "Order column occupied"
+        "en": "Order point occupied"
       },
       "tags": [
         "restaurant",
@@ -163,7 +163,7 @@
       "index": 9,
       "title": {
         "de": "Wassermelder WC",
-        "en": "Restroom water leak"
+        "en": "Restroom water detector"
       },
       "tags": [
         "retail",
@@ -181,7 +181,10 @@
           "kind": "alarm",
           "type": "lw_demo_restroom_leak",
           "severity": "MAJOR",
-          "text": "WC: Wasseraustritt",
+          "text": {
+            "de": "WC: Wasseraustritt",
+            "en": "Restroom: water leak"
+          },
           "threshold": 1
         }
       ]
@@ -192,7 +195,7 @@
       "index": 10,
       "title": {
         "de": "Wassermelder Lager",
-        "en": "Dry storage water leak"
+        "en": "Dry storage water detector"
       },
       "tags": [
         "retail",
@@ -210,7 +213,10 @@
           "kind": "alarm",
           "type": "lw_demo_dry_leak_alarm",
           "severity": "MAJOR",
-          "text": "Trockenlager: Wasseraustritt",
+          "text": {
+            "de": "Trockenlager: Wasseraustritt",
+            "en": "Dry storage: water leak"
+          },
           "threshold": 1
         }
       ]

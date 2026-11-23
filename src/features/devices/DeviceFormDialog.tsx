@@ -24,7 +24,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { api, type DemoDevice_Serialize, type DemoPack_Serialize, type GroupRef } from "@/lib/api";
+import {
+  api,
+  type DemoDevice_Serialize,
+  type DemoPack_Serialize,
+  type GroupRef,
+  type Language,
+} from "@/lib/api";
+import { uiLanguage } from "@/lib/contentLanguage";
 import { formatCoordinate, parsePosition } from "@/lib/format";
 import { loadLibrary } from "@/lib/library";
 import { useAsync } from "@/lib/useAsync";
@@ -55,7 +62,7 @@ export function DeviceFormDialog({
   onSaved: (device: DemoDevice_Serialize) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language === "en" ? "en" : "de";
+  const lang = uiLanguage(i18n.language);
   const editing = Boolean(device);
 
   const [name, setName] = useState("");
@@ -65,6 +72,7 @@ export function DeviceFormDialog({
   const [groupId, setGroupId] = useState(NONE);
   const [demoId, setDemoId] = useState(NONE);
   const [applyFloorplans, setApplyFloorplans] = useState(true);
+  const [language, setLanguage] = useState<Language>(lang);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -77,6 +85,8 @@ export function DeviceFormDialog({
 
   // Reset the form only when the dialog opens, not when the parent passes a new `device` object
   // (e.g. on every session tick) - that would wipe what the user is typing.
+  const langRef = useRef(lang);
+  langRef.current = lang;
   const deviceRef = useRef(device);
   deviceRef.current = device;
   useEffect(() => {
@@ -89,6 +99,7 @@ export function DeviceFormDialog({
     setGroupId(NONE);
     setDemoId(NONE);
     setApplyFloorplans(true);
+    setLanguage(langRef.current);
     setError(null);
   }, [open]);
 
@@ -114,8 +125,11 @@ export function DeviceFormDialog({
           description: desc,
           position: parsed.position,
           parentGroupId: groupId === NONE ? null : groupId,
+          // The content language defaults to the UI language (D12).
           applyDemo:
-            demoId === NONE ? null : { demoId, applyFloorplans, replaceExistingFloorplans: false },
+            demoId === NONE
+              ? null
+              : { demoId, applyFloorplans, replaceExistingFloorplans: false, language },
         });
         saved = created.device;
         for (const w of created.warnings) toast.warning(w);
@@ -235,13 +249,30 @@ export function DeviceFormDialog({
                 </Select>
               </Field>
               {demoId !== NONE && (
-                <Label className="font-normal">
-                  <Checkbox
-                    checked={applyFloorplans}
-                    onCheckedChange={(v) => setApplyFloorplans(v === true)}
-                  />
-                  {t("apply.floorplans")}
-                </Label>
+                <>
+                  <Field
+                    label={t("apply.language")}
+                    htmlFor="dev-language"
+                    hint={t("apply.languageHint")}
+                  >
+                    <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
+                      <SelectTrigger id="dev-language">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="de">{t("languages.de")}</SelectItem>
+                        <SelectItem value="en">{t("languages.en")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Label className="font-normal">
+                    <Checkbox
+                      checked={applyFloorplans}
+                      onCheckedChange={(v) => setApplyFloorplans(v === true)}
+                    />
+                    {t("apply.floorplans")}
+                  </Label>
+                </>
               )}
             </>
           )}

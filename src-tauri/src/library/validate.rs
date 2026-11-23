@@ -11,7 +11,11 @@
 //!   well-formed; generators fit the control (`counter` only on counters, no continuous
 //!   generator on switch / select / DI value / motion) and stay inside a slider range; effects
 //!   cannot write reserved inventory fragments or fake native events.
-//! - slaves: unique keys, name 1–19 bytes, requestInterval 1–99999, alarm names valid and unique.
+//! - slaves: unique keys, name 1–19 bytes (library slaves: ASCII), requestInterval 1–99999, alarm
+//!   names valid and unique.
+//! - texts that may be plain or `{de, en}` (D12) follow their rules in **each** language (non-empty,
+//!   byte limits, ASCII); a `{de, en}` text needs both languages even where the field is optional;
+//!   floorplan names are unique per demo across both languages.
 //! - lengths that mirror firmware buffers count UTF-8 **bytes** (`str::len`); the JSON schema's
 //!   `maxLength` counts code points, so this is the stricter gate.
 //! - demos: unique id, `daliLampCount` 1–64, selected DALI lamps ≤ `daliLampCount` and grouped,
@@ -37,9 +41,9 @@ use super::Library;
 use super::select::{parse_tag, select_items};
 use crate::model::{
     AlarmRef, Control, DemoPack, DigitalInputType, FaultTarget, FloorplanLayout, FloorplanWidget,
-    GeneratorConfig, ItemEffect, ItemKind, LibraryItem, ModbusDatatype, ModbusRegisterType,
-    ModbusValueType, Scenario, ScenarioStep, SensorDisplay, SlaveDefinition, WidgetControl,
-    WidgetRange,
+    GeneratorConfig, ItemEffect, ItemKind, Language, LibraryItem, LocalizableText, ModbusDatatype,
+    ModbusRegisterType, ModbusValueType, Scenario, ScenarioStep, SensorDisplay, SlaveDefinition,
+    WidgetControl, WidgetRange,
 };
 use crate::payload::alarm::{dali_bus_alarms, dali_lamp_alarms, is_native_alarm_type};
 use crate::payload::naming::{
@@ -117,6 +121,55 @@ impl Report {
             path: path.into(),
             message: message.into(),
         });
+    }
+}
+
+/// The texts of a plain-or-`{de, en}` field to check (D12): a plain string once (`None`), else
+/// each language.
+fn text_variants(text: &LocalizableText) -> Vec<(Option<Language>, &str)> {
+    match text {
+        LocalizableText::Plain(s) => vec![(None, s.as_str())],
+        LocalizableText::Localized(_) => text.each().map(|(l, t)| (Some(l), t)).to_vec(),
+    }
+}
+
+/// JSON path of one variant of a text (`<path>/de` for the German part of `{de, en}`).
+fn variant_path(path: &str, lang: Option<Language>) -> String {
+    match lang {
+        Some(l) => format!("{path}/{}", l.code()),
+        None => path.to_owned(),
+    }
+}
+
+/// ` in de` / `` for a finding about one variant of a text.
+fn in_lang(lang: Option<Language>) -> String {
+    lang.map(|l| format!(" in {}", l.code()))
+        .unwrap_or_default()
+}
+
+/// A text that must not be empty in any language: `<what> is empty[ in <lang>]`.
+fn check_required_text(r: &mut Report, file: &str, path: &str, text: &LocalizableText, what: &str) {
+    for (lang, t) in text_variants(text) {
+        if t.trim().is_empty() {
+            r.add(
+                file,
+                variant_path(path, lang),
+                format!("{what} is empty{}", in_lang(lang)),
+            );
+        }
+    }
+}
+
+/// An optional text: when it is given as `{de, en}`, both languages must be filled.
+fn check_optional_text(
+    r: &mut Report,
+    file: &str,
+    path: &str,
+    text: Option<&LocalizableText>,
+    what: &str,
+) {
+    if let Some(t @ LocalizableText::Localized(_)) = text {
+        check_required_text(r, file, path, t, what);
     }
 }
 
@@ -510,9 +563,7 @@ fn check_item<'a>(
                     format!("custom alarm id \"{id}\" must not start with two digits plus _"),
                 );
             }
-            if text.trim().is_empty() {
-                r.add(file, format!("{path}/text"), "alarm text is empty");
-            }
+            check_required_text(r, file, &format!("{path}/text"), text, "alarm text");
         }
         _ => {}
     }
@@ -532,7 +583,7 @@ fn check_item<'a>(
         let p = format!("{path}/effects/{i}");
         match e {
             ItemEffect::Event { event_type, text } => {
-                if event_type.trim().is_empty() || text.trim().is_empty() {
+                if event_type.trim().is_empty() || text.is_blank() {
                     r.add(file, &p, "event effect needs type and text");
                 }
                 if RESERVED_EVENT_TYPES.contains(&event_type.as_str()) {
@@ -578,10 +629,7 @@ fn check_item<'a>(
                 threshold,
                 ..
             } => {
-                if !is_valid_alarm_name(alarm_type)
-                    || text.trim().is_empty()
-                    || !threshold.is_finite()
-                {
+                if !is_valid_alarm_name(alarm_type) || text.is_blank() || !threshold.is_finite() {
                     r.add(
                         file,
                         &p,
@@ -603,7 +651,9 @@ fn check_item<'a>(
     }
 }
 
-fn check_slave(r: &mut Report, file: &str, path: &str, slave: &SlaveDefinition) {
+/// `ascii`: the name must be ASCII (library slaves: the name is in the timeout alarm text and a
+/// real Core may read it; custom slaves on a device are not held to it).
+fn check_slave(r: &mut Report, file: &str, path: &str, slave: &SlaveDefinition, ascii: bool) {
     if !is_valid_key(&slave.key) {
         r.add(
             file,
@@ -611,16 +661,23 @@ fn check_slave(r: &mut Report, file: &str, path: &str, slave: &SlaveDefinition) 
             format!("slave key \"{}\" must be [A-Za-z0-9_-]", slave.key),
         );
     }
-    let len = slave.name.len(); // UTF-8 bytes: the firmware buffer is 20 bytes incl. NUL
-    if len == 0 || len > MAX_NAME_LEN {
-        r.add(
-            file,
-            format!("{path}/name"),
-            format!(
-                "slave name \"{}\" must be 1–{MAX_NAME_LEN} bytes ({len} in UTF-8)",
-                slave.name
-            ),
-        );
+    for (lang, name) in text_variants(&slave.name) {
+        let p = variant_path(&format!("{path}/name"), lang);
+        let len = name.len(); // UTF-8 bytes: the firmware buffer is 20 bytes incl. NUL
+        if len == 0 || len > MAX_NAME_LEN {
+            r.add(
+                file,
+                &p,
+                format!("slave name \"{name}\" must be 1–{MAX_NAME_LEN} bytes ({len} in UTF-8)"),
+            );
+        }
+        if ascii && !name.is_ascii() {
+            r.add(
+                file,
+                &p,
+                format!("slave name \"{name}\" must be ASCII (e.g. ae / oe / ue / ss for umlauts)"),
+            );
+        }
     }
     if slave.request_interval == 0 || slave.request_interval > 99_999 {
         r.add(
@@ -646,9 +703,7 @@ fn check_slave(r: &mut Report, file: &str, path: &str, slave: &SlaveDefinition) 
                 format!("duplicate alarm name \"{}\"", a.name),
             );
         }
-        if a.text.trim().is_empty() {
-            r.add(file, format!("{p}/text"), "alarm text is empty");
-        }
+        check_required_text(r, file, &format!("{p}/text"), &a.text, "alarm text");
     }
 }
 
@@ -678,7 +733,7 @@ pub fn validate(lib: &Library) -> Vec<Finding> {
     for (i, s) in lib.slaves.iter().enumerate() {
         let o = origin(&lib.origins.slaves, i);
         let path = format!("/slaves/{}", o.index);
-        check_slave(&mut r, &o.file, &path, s);
+        check_slave(&mut r, &o.file, &path, s, true);
         if let Some(first) = slave_keys.get(s.key.as_str()) {
             r.add(
                 &o.file,
@@ -750,7 +805,7 @@ pub fn validate_custom(
     let mut keys = BTreeSet::new();
     for (i, s) in slaves.iter().enumerate() {
         let path = format!("/customSlaves/{i}");
-        check_slave(&mut r, FILE, &path, s);
+        check_slave(&mut r, FILE, &path, s, false);
         if lib.slave(&s.key).is_some() || !keys.insert(s.key.as_str()) {
             r.add(
                 FILE,
@@ -950,9 +1005,7 @@ fn check_demo(r: &mut Report, lib: &Library, file: &str, demo: &DemoPack) {
                 format!("duplicate group id {}", g.id),
             );
         }
-        if g.name.trim().is_empty() {
-            r.add(file, format!("{p}/name"), "group name is empty");
-        }
+        check_required_text(r, file, &format!("{p}/name"), &g.name, "group name");
         if g.min_level > 100 || g.max_level > 100 || g.min_level > g.max_level {
             r.add(
                 file,
@@ -1248,12 +1301,32 @@ fn check_demo(r: &mut Report, lib: &Library, file: &str, demo: &DemoPack) {
     check_scenarios(r, file, "/scenarios", &demo.scenarios, &ctx);
     check_scenario_resets(r, file, "/scenarios", &demo.scenarios, &selected_item);
 
-    // Floorplans.
+    // Floorplans. An apply replaces a floorplan whose name matches the layout's name in either
+    // language (D12): a name of one layout must not be any name of another, across languages.
+    let mut fp_names: BTreeMap<&str, &str> = BTreeMap::new();
     for (i, rel) in demo.floorplans.iter().enumerate() {
         let p = format!("/floorplans/{i}");
         let prefix = format!("floorplans/{}/", demo.id);
         if !rel.starts_with(&prefix) || rel[prefix.len()..].contains('/') {
             r.add(file, &p, format!("floorplan must live in {prefix}"));
+        }
+        if let Some(layout) = lib.floorplan(rel) {
+            for (lang, name) in layout.name.each() {
+                match fp_names.get(name) {
+                    Some(first) if first != rel => r.add(
+                        file,
+                        &p,
+                        format!(
+                            "floorplan name \"{name}\" ({}) is also the name of {first}",
+                            lang.code()
+                        ),
+                    ),
+                    Some(_) => {}
+                    None => {
+                        fp_names.insert(name, rel);
+                    }
+                }
+            }
         }
         match lib.floorplan(rel) {
             Some(layout) => check_floorplan(r, lib, rel, layout, demo, &selected),
@@ -1668,9 +1741,14 @@ fn check_floorplan(
     demo: &DemoPack,
     selected: &[&LibraryItem],
 ) {
-    if fp.name.trim().is_empty() {
-        r.add(file, "/name", "floorplan name is empty");
-    }
+    check_required_text(r, file, "/name", &fp.name, "floorplan name");
+    check_optional_text(
+        r,
+        file,
+        "/description",
+        Some(&fp.description),
+        "description",
+    );
     let lower = fp.image.to_ascii_lowercase();
     let ext_ok = [".png", ".jpg", ".jpeg", ".svg"]
         .iter()
@@ -1723,6 +1801,7 @@ fn check_floorplan(
         }
         match w {
             FloorplanWidget::Sensor {
+                title,
                 measurement,
                 ranges,
                 alarms,
@@ -1731,6 +1810,29 @@ fn check_floorplan(
                 stale_after_min,
                 ..
             } => {
+                check_optional_text(r, file, &format!("{p}/title"), title.as_ref(), "title");
+                if let Some(SensorDisplay::Boolean {
+                    on_label,
+                    off_label,
+                    ..
+                }) = display
+                {
+                    let dp = format!("{p}/display");
+                    check_optional_text(
+                        r,
+                        file,
+                        &format!("{dp}/onLabel"),
+                        Some(on_label),
+                        "onLabel",
+                    );
+                    check_optional_text(
+                        r,
+                        file,
+                        &format!("{dp}/offLabel"),
+                        Some(off_label),
+                        "offLabel",
+                    );
+                }
                 if decimals.is_some_and(|d| d > 6) {
                     r.add(file, format!("{p}/decimals"), "decimals must be 0–6");
                 }
@@ -1807,7 +1909,11 @@ fn check_floorplan(
                     &used_slaves,
                 );
             }
-            FloorplanWidget::Alarm { alarms, .. } => {
+            FloorplanWidget::Alarm {
+                text, note, alarms, ..
+            } => {
+                check_optional_text(r, file, &format!("{p}/text"), Some(text), "text");
+                check_optional_text(r, file, &format!("{p}/note"), note.as_ref(), "note");
                 if alarms.is_empty() {
                     r.add(file, format!("{p}/alarms"), "alarm widget needs alarms");
                 }
@@ -1821,7 +1927,8 @@ fn check_floorplan(
                     &used_slaves,
                 );
             }
-            FloorplanWidget::Control { control, .. } => {
+            FloorplanWidget::Control { title, control, .. } => {
+                check_optional_text(r, file, &format!("{p}/title"), title.as_ref(), "title");
                 check_widget_control(
                     r,
                     file,
@@ -1908,6 +2015,29 @@ fn check_widget_control<'a>(
                 return;
             }
             let coil = register_type == Some(ModbusRegisterType::Coil);
+            check_optional_text(
+                r,
+                file,
+                &format!("{p}/onLabel"),
+                on_label.as_ref(),
+                "onLabel",
+            );
+            check_optional_text(
+                r,
+                file,
+                &format!("{p}/offLabel"),
+                off_label.as_ref(),
+                "offLabel",
+            );
+            for (j, o) in options.iter().enumerate() {
+                check_optional_text(
+                    r,
+                    file,
+                    &format!("{p}/options/{j}/label"),
+                    Some(&o.label),
+                    "label",
+                );
+            }
             match value_type {
                 ModbusValueType::Boolean => {
                     if on_label.is_none() || off_label.is_none() {
@@ -2164,7 +2294,7 @@ mod tests {
     #[test]
     fn slave_rules() {
         expect(
-            |l| l.slaves[0].name = "x".repeat(20),
+            |l| l.slaves[0].name = "x".repeat(20).into(),
             "items/cooling.json: /slaves/0/name: slave name",
         );
         expect(
@@ -2563,9 +2693,131 @@ mod tests {
             },
             "unit is longer than 19 bytes",
         );
+        // 17 chars, 19 bytes: fits the buffer; only the library's ASCII rule objects.
         let mut lib = fixture();
-        lib.slaves[0].name = "Kühlraum Tür li".into(); // 17 chars, 19 bytes
-        assert!(validate(&lib).is_empty());
+        lib.slaves[0].name = "Kühlraum Tür li".into();
+        assert_eq!(
+            messages(&validate(&lib)),
+            vec![
+                "items/cooling.json: /slaves/0/name: slave name \"Kühlraum Tür li\" must be ASCII \
+                 (e.g. ae / oe / ue / ss for umlauts)"
+            ]
+        );
+        // A custom slave on a device is not held to ASCII.
+        let custom = lib.slaves[0].clone();
+        let mut custom = custom;
+        custom.key = "own".into();
+        assert!(validate_custom(&fixture(), &[custom], &[]).is_empty());
+    }
+
+    /// Texts given as `{de, en}` (D12) follow the rules in each language; plain strings as before.
+    #[test]
+    fn localized_texts_are_checked_per_language() {
+        let lt = |de: &str, en: &str| -> LocalizableText {
+            crate::model::LocalizedText {
+                de: de.into(),
+                en: en.into(),
+            }
+            .into()
+        };
+        expect(
+            |l| l.slaves[0].name = lt("Kuehlung", &"x".repeat(20)),
+            "/slaves/0/name/en: slave name \"xxxxxxxxxxxxxxxxxxxx\" must be 1–19 bytes",
+        );
+        expect(
+            |l| l.slaves[0].name = lt("Kuehlung", "Kühlung"),
+            "/slaves/0/name/en: slave name \"Kühlung\" must be ASCII",
+        );
+        expect(
+            |l| l.slaves[0].alarms[0].text = lt("CO2", " "),
+            "/slaves/0/alarms/0/text/en: alarm text is empty in en",
+        );
+        expect(
+            |l| {
+                set_json(item_mut(l, "doorOpen"), |j| {
+                    j["text"] = serde_json::json!({"de": "", "en": "Door"});
+                });
+            },
+            "/text/de: alarm text is empty in de",
+        );
+        expect(
+            |l| {
+                set_json(item_mut(l, "ac_mode"), |j| {
+                    j["effects"][0]["text"] = serde_json::json!({"de": "Modus", "en": ""});
+                });
+            },
+            "event effect needs type and text",
+        );
+        expect(
+            |l| l.demos[0].dali_groups[1].name = lt("Aussen", ""),
+            "demos/fixture.json: /daliGroups/1/name/en: group name is empty in en",
+        );
+        expect(
+            |l| l.floorplans.values_mut().next().unwrap().name = lt("", "Ground floor"),
+            "/name/de: floorplan name is empty in de",
+        );
+        expect(
+            |l| {
+                set_json(
+                    &mut l.floorplans.values_mut().next().unwrap().widgets[0],
+                    |j| {
+                        j["title"] = serde_json::json!({"de": "Tiefkühler", "en": ""});
+                    },
+                );
+            },
+            "/widgets/0/title/en: title is empty in en",
+        );
+        expect(
+            |l| {
+                set_json(
+                    &mut l.floorplans.values_mut().next().unwrap().widgets[6],
+                    |j| {
+                        j["control"]["options"][0]["label"] =
+                            serde_json::json!({"de": "Aus", "en": ""});
+                    },
+                );
+            },
+            "/widgets/6/control/options/0/label/en: label is empty in en",
+        );
+        // Two floorplans of a demo must not share a name in either language.
+        let mut lib = fixture();
+        let (path, mut second) = lib
+            .floorplans
+            .iter()
+            .next()
+            .map(|(p, l)| (p.clone(), l.clone()))
+            .unwrap();
+        second.name = lt("Obergeschoss", "Ground floor");
+        let second_path = path.replace("ground.json", "upper.json");
+        lib.floorplans.insert(second_path.clone(), second);
+        lib.demos[0].floorplans.push(second_path);
+        let found = messages(&validate(&lib));
+        assert!(
+            found
+                .iter()
+                .any(|m| m.contains("floorplan name \"Ground floor\" (en) is also the name of")),
+            "{found:#?}"
+        );
+        // Across languages too: an apply matches a floorplan by its name in either language, so
+        // a German name equal to another layout's English name would replace that floorplan.
+        let mut lib = fixture();
+        let (path, mut second) = lib
+            .floorplans
+            .iter()
+            .next()
+            .map(|(p, l)| (p.clone(), l.clone()))
+            .unwrap();
+        second.name = lt("Ground floor", "Upper floor");
+        let second_path = path.replace("ground.json", "upper.json");
+        lib.floorplans.insert(second_path.clone(), second);
+        lib.demos[0].floorplans.push(second_path);
+        let found = messages(&validate(&lib));
+        assert!(
+            found
+                .iter()
+                .any(|m| m.contains("floorplan name \"Ground floor\" (de) is also the name of")),
+            "{found:#?}"
+        );
     }
 
     #[test]

@@ -14,6 +14,20 @@
         "en": { "type": "string", "minLength": 1 }
       }
     },
+    "text": {
+      "description": "Human-readable text (DECISIONS D12): a plain string (the same in both languages) or {de, en}. A device stores it in its content language (lw_demo.language).",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "$ref": "#/$defs/localizedText" }
+      ]
+    },
+    "optionalText": {
+      "description": "Like text, but a plain string may be empty. {de, en} needs both languages.",
+      "oneOf": [
+        { "type": "string" },
+        { "$ref": "#/$defs/localizedText" }
+      ]
+    },
     "severity": { "enum": ["CRITICAL", "MAJOR", "MINOR", "WARNING"] },
     "itemId": {
       "description": "Globally unique item id; becomes the Modbus register name (<= 19 chars).",
@@ -188,9 +202,8 @@
                 "not": { "enum": ["lw_daliGroupChange", "lw_alarm", "lw_modbus"] }
               },
               "text": {
-                "description": "May contain {value} and {label}.",
-                "type": "string",
-                "minLength": 1
+                "description": "May contain {value} and {label}. Plain or {de, en}.",
+                "$ref": "#/$defs/text"
               }
             }
           }
@@ -222,7 +235,7 @@
               "kind": true,
               "type": { "$ref": "#/$defs/alarmType" },
               "severity": { "$ref": "#/$defs/severity" },
-              "text": { "type": "string", "minLength": 1 },
+              "text": { "$ref": "#/$defs/text" },
               "threshold": { "type": "number" }
             }
           }

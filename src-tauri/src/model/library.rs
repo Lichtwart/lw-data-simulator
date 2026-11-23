@@ -10,11 +10,129 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-/// German + English text. Both are required in library files.
+/// German + English text. Both are required in library files; other keys are rejected.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
+#[serde(deny_unknown_fields)]
 pub struct LocalizedText {
     pub de: String,
     pub en: String,
+}
+
+impl LocalizedText {
+    /// The same text in both languages.
+    pub fn both(text: impl Into<String>) -> Self {
+        let text = text.into();
+        Self {
+            de: text.clone(),
+            en: text,
+        }
+    }
+
+    /// The text in `lang`.
+    pub fn get(&self, lang: Language) -> &str {
+        match lang {
+            Language::De => &self.de,
+            Language::En => &self.en,
+        }
+    }
+
+    /// Replace the text in `lang`.
+    pub fn set(&mut self, lang: Language, text: impl Into<String>) {
+        match lang {
+            Language::De => self.de = text.into(),
+            Language::En => self.en = text.into(),
+        }
+    }
+}
+
+/// Content language of a demo device (`lw_demo.language`, DECISIONS D12): the language of
+/// everything the simulator names in Cumulocity from the library (measurement fragments, digital
+/// input titles, group names, alarm / event texts, floorplans). Absent on a device = `de`.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize, Type,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    #[default]
+    De,
+    En,
+}
+
+impl Language {
+    /// Every content language, German first.
+    pub const ALL: [Language; 2] = [Language::De, Language::En];
+
+    /// `de` | `en`.
+    pub fn code(self) -> &'static str {
+        match self {
+            Language::De => "de",
+            Language::En => "en",
+        }
+    }
+}
+
+/// A human-readable library text: a plain string (the same text in both languages; what older
+/// files and device-stored copies have) or `{de, en}`. Resolved to the device language
+/// ([`LocalizableText::get`]) wherever it reaches Cumulocity (DECISIONS D12).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(untagged)]
+pub enum LocalizableText {
+    Plain(String),
+    Localized(LocalizedText),
+}
+
+impl Default for LocalizableText {
+    fn default() -> Self {
+        Self::Plain(String::new())
+    }
+}
+
+impl From<String> for LocalizableText {
+    fn from(s: String) -> Self {
+        Self::Plain(s)
+    }
+}
+
+impl From<&str> for LocalizableText {
+    fn from(s: &str) -> Self {
+        Self::Plain(s.to_owned())
+    }
+}
+
+impl From<LocalizedText> for LocalizableText {
+    fn from(t: LocalizedText) -> Self {
+        Self::Localized(t)
+    }
+}
+
+impl LocalizableText {
+    /// The text in `lang` (a plain string is the same in every language).
+    pub fn get(&self, lang: Language) -> &str {
+        match self {
+            Self::Plain(s) => s,
+            Self::Localized(t) => t.get(lang),
+        }
+    }
+
+    /// `(language, text)` for every language (validation checks each).
+    pub fn each(&self) -> [(Language, &str); 2] {
+        Language::ALL.map(|l| (l, self.get(l)))
+    }
+
+    /// Whether the text is blank in any language.
+    pub fn is_blank(&self) -> bool {
+        self.each().iter().any(|(_, t)| t.trim().is_empty())
+    }
+
+    /// Whether `text` is this text in any language.
+    pub fn matches(&self, text: &str) -> bool {
+        self.each().iter().any(|(_, t)| *t == text)
+    }
+
+    /// The text resolved to `lang` as a plain string (what a device stores).
+    pub fn resolved(&self, lang: Language) -> Self {
+        Self::Plain(self.get(lang).to_owned())
+    }
 }
 
 /// Cumulocity alarm severity.
@@ -28,7 +146,7 @@ pub enum Severity {
 }
 
 /// What an item simulates; decides the measurement type and units (PRD §7, §11.3). Every
-/// measurement is named `<German title>.<item id>` (D10).
+/// measurement is named `<title in the device language>.<item id>` (D10, D12).
 /// Discriminator of [`LibraryItem`] (use [`LibraryItem::kind`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -186,7 +304,8 @@ pub enum ItemEffect {
     Event {
         #[serde(rename = "type")]
         event_type: String,
-        text: String,
+        /// Plain or `{de, en}` (D12).
+        text: LocalizableText,
     },
     /// Write the value (or select label) to a device inventory property.
     Inventory { property: String },
@@ -195,7 +314,8 @@ pub enum ItemEffect {
         #[serde(rename = "type")]
         alarm_type: String,
         severity: Severity,
-        text: String,
+        /// Plain or `{de, en}` (D12).
+        text: LocalizableText,
         #[specta(type = specta_typescript::Number)]
         threshold: f64,
     },
@@ -274,7 +394,7 @@ pub enum LibraryItem {
         id: String,
         /// Sensor / input number: DI 1–10, brightness / motion sensor 1–10.
         index: u32,
-        /// For digital inputs the German title becomes the device's input title (D1).
+        /// For digital inputs the title in the device language becomes the device's input title (D1, D12).
         title: LocalizedText,
         #[serde(default)]
         tags: Vec<String>,
@@ -293,7 +413,7 @@ pub enum LibraryItem {
         id: String,
         /// Sensor / input number: DI 1–10, brightness / motion sensor 1–10.
         index: u32,
-        /// For digital inputs the German title becomes the device's input title (D1).
+        /// For digital inputs the title in the device language becomes the device's input title (D1, D12).
         title: LocalizedText,
         #[serde(default)]
         tags: Vec<String>,
@@ -356,8 +476,8 @@ pub enum LibraryItem {
         #[serde(default)]
         tags: Vec<String>,
         severity: Severity,
-        /// Alarm text sent to Cumulocity.
-        text: String,
+        /// Alarm text sent to Cumulocity; plain or `{de, en}` (D12).
+        text: LocalizableText,
     },
 }
 
@@ -510,7 +630,8 @@ impl LibraryItem {
 pub struct SlaveAlarmDefinition {
     /// `[A-Za-z0-9_-]`; used in the alarm type and as the fault target.
     pub name: String,
-    pub text: String,
+    /// Plain or `{de, en}` (D12).
+    pub text: LocalizableText,
     pub severity: Severity,
 }
 
@@ -519,8 +640,8 @@ pub struct SlaveAlarmDefinition {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SlaveDefinition {
     pub key: String,
-    /// ≤ 19 UTF-8 bytes (firmware buffer).
-    pub name: String,
+    /// ≤ 19 UTF-8 bytes (firmware buffer) in every language; plain or `{de, en}` (D12).
+    pub name: LocalizableText,
     /// Request interval in seconds.
     pub request_interval: u32,
     /// Custom alarms of this slave (D2).
@@ -565,6 +686,67 @@ pub struct DaliGroup {
     pub dynamic_control: bool,
     #[serde(default)]
     pub automatic_switch: bool,
+}
+
+/// DALI group of a demo pack (`daliGroups[]`): a [`DaliGroup`] whose `name` is plain or
+/// `{de, en}` (D12). Applying the demo stores it in the device language
+/// ([`DemoDaliGroup::resolve`]).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DemoDaliGroup {
+    /// 1–16.
+    pub id: u32,
+    pub name: LocalizableText,
+    /// Lamp (converter) numbers 1–64. A lamp is only measured if it is in a group.
+    pub converters: Vec<u32>,
+    /// 0–100 % (firmware integer).
+    pub min_level: u32,
+    /// 0–100 %; the level `lw_switchGroupMode` `on` switches to.
+    pub max_level: u32,
+    /// Lux threshold 0–200000 (firmware default 4500 when absent).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lux_threshold: Option<u32>,
+    /// Id of the master group (`slaveOf`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slave_of: Option<u32>,
+    #[serde(default)]
+    pub dynamic_control: bool,
+    #[serde(default)]
+    pub automatic_switch: bool,
+}
+
+impl DemoDaliGroup {
+    /// The group as a device in `lang` stores it.
+    pub fn resolve(&self, lang: Language) -> DaliGroup {
+        DaliGroup {
+            id: self.id,
+            name: self.name.get(lang).to_owned(),
+            converters: self.converters.clone(),
+            min_level: self.min_level,
+            max_level: self.max_level,
+            lux_threshold: self.lux_threshold,
+            slave_of: self.slave_of,
+            dynamic_control: self.dynamic_control,
+            automatic_switch: self.automatic_switch,
+        }
+    }
+}
+
+impl From<DaliGroup> for DemoDaliGroup {
+    /// A device group (export): its name is a plain string.
+    fn from(g: DaliGroup) -> Self {
+        Self {
+            id: g.id,
+            name: LocalizableText::Plain(g.name),
+            converters: g.converters,
+            min_level: g.min_level,
+            max_level: g.max_level,
+            lux_threshold: g.lux_threshold,
+            slave_of: g.slave_of,
+            dynamic_control: g.dynamic_control,
+            automatic_switch: g.automatic_switch,
+        }
+    }
 }
 
 /// Digital input mode (as in the firmware's input config; `none` is not offered).
@@ -617,8 +799,8 @@ fn default_true() -> bool {
 }
 
 /// Digital input in a demo pack. The title is **not** stored here: the entry references
-/// the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
-/// title (D1, single source of truth).
+/// the `digitalInput` / `impulseCounter` item, whose title (in the device language, D12) becomes
+/// the device's input title (D1, single source of truth).
 ///
 /// Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
 /// would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -795,8 +977,9 @@ pub struct DemoPack {
     /// loaded as the highest converter number in `daliGroups` or selected lamp index.
     #[serde(default)]
     pub dali_lamp_count: u32,
+    /// Group names are plain or `{de, en}` (D12).
     #[serde(default)]
-    pub dali_groups: Vec<DaliGroup>,
+    pub dali_groups: Vec<DemoDaliGroup>,
     #[serde(default)]
     pub digital_inputs: Vec<DigitalInputConfig>,
     pub send_interval_sec: u32,
@@ -852,8 +1035,8 @@ pub enum SensorDisplay {
     Boolean {
         on_value: f64,
         off_value: f64,
-        on_label: String,
-        off_label: String,
+        on_label: LocalizableText,
+        off_label: LocalizableText,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         on_level: Option<WidgetLevel>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -912,7 +1095,7 @@ pub enum ModbusValueType {
 pub struct ModbusControlOption {
     /// Raw register value 0–65535, unique within the control.
     pub value: u32,
-    pub label: String,
+    pub label: LocalizableText,
     pub icon: String,
 }
 
@@ -938,9 +1121,9 @@ pub enum WidgetControl {
         readback: bool,
         value_type: ModbusValueType,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        on_label: Option<String>,
+        on_label: Option<LocalizableText>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        off_label: Option<String>,
+        off_label: Option<LocalizableText>,
         /// `boolean` only: ON writes 0, OFF writes 1.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         invert: bool,
@@ -970,9 +1153,9 @@ pub enum FloorplanWidget {
         #[serde(default)]
         locked: bool,
         icon: String,
-        /// Default: the item's German title (DI: the device's input title).
+        /// Default: the item's title in the device language (DI: the device's input title).
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        title: Option<String>,
+        title: Option<LocalizableText>,
         measurement: WidgetMeasurement,
         /// Shown unit; default: the series unit.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1002,9 +1185,9 @@ pub enum FloorplanWidget {
         #[serde(default)]
         locked: bool,
         icon: String,
-        text: String,
+        text: LocalizableText,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        note: Option<String>,
+        note: Option<LocalizableText>,
         alarms: Vec<AlarmRef>,
     },
     #[serde(rename_all = "camelCase")]
@@ -1015,9 +1198,9 @@ pub enum FloorplanWidget {
         #[serde(default)]
         locked: bool,
         icon: String,
-        /// Default: the item's German title (Modbus) or the group name (DALI).
+        /// Default: the item's title in the device language (Modbus) or the group name (DALI).
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        title: Option<String>,
+        title: Option<LocalizableText>,
         #[serde(default)]
         confirm: bool,
         control: WidgetControl,
@@ -1056,10 +1239,11 @@ pub struct FloorplanLayout {
     #[serde(rename = "type")]
     pub file_type: String,
     pub schema_version: u32,
-    /// `lw_floorplan` MO `name`; re-applying replaces a floorplan of the same name.
-    pub name: String,
+    /// `lw_floorplan` MO `name` (in the device language); re-applying replaces a floorplan with
+    /// this name in either language.
+    pub name: LocalizableText,
     #[serde(default)]
-    pub description: String,
+    pub description: LocalizableText,
     /// c8y icon name; plugin default `map`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,

@@ -73,7 +73,8 @@
       "parentGroup": "Übergeordnete Gruppe",
       "demo": "Demo-Paket",
       "noDemo": "Kein Demo-Paket"
-    }
+    },
+    "contentLanguage": "Inhalte: {{language}}"
   },
   "workspace": {
     "title": "Gerät",
@@ -330,7 +331,12 @@
     "done": "Demo angewendet. Grundrisse: {{created}} neu, {{replaced}} ersetzt.",
     "slaveLine": "{{key}} · ID {{id}} · Adresse {{address}}",
     "takeOverText": "{{user}} verwendet dieses Gerät seit {{since}}. Demo-Paket trotzdem anwenden?",
-    "takeOver": "Übernehmen und anwenden"
+    "takeOver": "Übernehmen und anwenden",
+    "language": "Inhaltssprache",
+    "languageHint": "Messwertnamen, Alarme und Grundrisse werden in dieser Sprache angelegt.",
+    "languageChange": "Die Inhaltssprache wechselt von {{from}} zu {{to}}.",
+    "languageChangeSeries": "Messwerte erhalten neue Namen. Cumulocity beginnt neue Datenreihen, die alten bleiben als Verlauf erhalten.",
+    "languageChangeRewrite": "Eingangstitel, Gruppennamen und Grundrisse werden neu geschrieben."
   },
   "upgrade": {
     "title": "Bibliotheks-Upgrade",

@@ -4,72 +4,108 @@
   "slaves": [
     {
       "key": "klima_kueche",
-      "name": "Klima Kueche",
+      "name": {
+        "de": "Klima Kueche",
+        "en": "AC Kitchen"
+      },
       "requestInterval": 60,
       "alarms": [
         {
           "name": "ac_kit_alarm",
-          "text": "Klima Küche: Störung",
+          "text": {
+            "de": "Klima Küche: Störung",
+            "en": "Kitchen AC: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "klima_gastraum",
-      "name": "Klima Gastraum",
+      "name": {
+        "de": "Klima Gastraum",
+        "en": "AC Dining Area"
+      },
       "requestInterval": 60,
       "alarms": [
         {
           "name": "ac_din_alarm",
-          "text": "Klima Gastraum: Störung",
+          "text": {
+            "de": "Klima Gastraum: Störung",
+            "en": "Dining area AC: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "klima_wc",
-      "name": "Klima WC",
+      "name": {
+        "de": "Klima WC",
+        "en": "AC Restroom"
+      },
       "requestInterval": 60,
       "alarms": [
         {
           "name": "ac_wc_alarm",
-          "text": "Klima WC: Störung",
+          "text": {
+            "de": "Klima WC: Störung",
+            "en": "Restroom AC: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "klima_trocken",
-      "name": "Klima Trockenlager",
+      "name": {
+        "de": "Klima Trockenlager",
+        "en": "AC Dry Storage"
+      },
       "requestInterval": 60,
       "alarms": [
         {
           "name": "ac_dry_alarm",
-          "text": "Klima Trockenlager: Störung",
+          "text": {
+            "de": "Klima Trockenlager: Störung",
+            "en": "Dry storage AC: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "klima_manager",
-      "name": "Klima Manager",
+      "name": {
+        "de": "Klima Manager",
+        "en": "AC Manager"
+      },
       "requestInterval": 60,
       "alarms": [
         {
           "name": "ac_mgr_alarm",
-          "text": "Klima Manager: Störung",
+          "text": {
+            "de": "Klima Manager: Störung",
+            "en": "Manager AC: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "klima_crew",
-      "name": "Klima Crew",
+      "name": {
+        "de": "Klima Crew",
+        "en": "AC Crew Room"
+      },
       "requestInterval": 60,
       "alarms": [
         {
           "name": "ac_crew_alarm",
-          "text": "Klima Crew: Störung",
+          "text": {
+            "de": "Klima Crew: Störung",
+            "en": "Crew room AC: fault"
+          },
           "severity": "MAJOR"
         }
       ]
@@ -85,7 +121,7 @@
       "writable": true,
       "title": {
         "de": "Klima Soll Küche",
-        "en": "AC setpoint kitchen"
+        "en": "Kitchen AC setpoint"
       },
       "tags": [
         "restaurant",
@@ -110,7 +146,7 @@
       "writable": false,
       "title": {
         "de": "Klima Ist Küche",
-        "en": "AC actual kitchen"
+        "en": "Kitchen AC temperature"
       },
       "tags": [
         "restaurant",
@@ -140,7 +176,7 @@
       "writable": true,
       "title": {
         "de": "Klima Modus Küche",
-        "en": "AC mode kitchen"
+        "en": "Kitchen AC mode"
       },
       "tags": [
         "restaurant",
@@ -155,35 +191,35 @@
             "value": 0,
             "label": {
               "de": "Heizen",
-              "en": "Heating"
+              "en": "Heat"
             }
           },
           {
             "value": 1,
             "label": {
               "de": "Automatik",
-              "en": "Automatic"
+              "en": "Auto"
             }
           },
           {
             "value": 2,
             "label": {
               "de": "Kühlen",
-              "en": "Cooling"
+              "en": "Cool"
             }
           },
           {
             "value": 3,
             "label": {
               "de": "Entfeuchten",
-              "en": "Dry"
+              "en": "Dehumidify"
             }
           },
           {
             "value": 4,
             "label": {
               "de": "Befeuchten",
-              "en": "Humidification"
+              "en": "Humidify"
             }
           }
         ]
@@ -192,7 +228,10 @@
         {
           "kind": "event",
           "type": "lw_demo_ac_kit_mode",
-          "text": "Klima Küche Modus: {label}"
+          "text": {
+            "de": "Klima Küche Modus: {label}",
+            "en": "Kitchen AC mode: {label}"
+          }
         },
         {
           "kind": "inventory",
@@ -209,7 +248,7 @@
       "writable": true,
       "title": {
         "de": "Klima Soll Gastraum",
-        "en": "AC setpoint dining area"
+        "en": "Dining area AC setpoint"
       },
       "tags": [
         "restaurant",
@@ -234,7 +273,7 @@
       "writable": false,
       "title": {
         "de": "Klima Ist Gastraum",
-        "en": "AC actual dining area"
+        "en": "Dining area AC temperature"
       },
       "tags": [
         "restaurant",
@@ -264,7 +303,7 @@
       "writable": true,
       "title": {
         "de": "Klima Modus Gastraum",
-        "en": "AC mode dining area"
+        "en": "Dining area AC mode"
       },
       "tags": [
         "restaurant",
@@ -279,35 +318,35 @@
             "value": 0,
             "label": {
               "de": "Heizen",
-              "en": "Heating"
+              "en": "Heat"
             }
           },
           {
             "value": 1,
             "label": {
               "de": "Automatik",
-              "en": "Automatic"
+              "en": "Auto"
             }
           },
           {
             "value": 2,
             "label": {
               "de": "Kühlen",
-              "en": "Cooling"
+              "en": "Cool"
             }
           },
           {
             "value": 3,
             "label": {
               "de": "Entfeuchten",
-              "en": "Dry"
+              "en": "Dehumidify"
             }
           },
           {
             "value": 4,
             "label": {
               "de": "Befeuchten",
-              "en": "Humidification"
+              "en": "Humidify"
             }
           }
         ]
@@ -316,7 +355,10 @@
         {
           "kind": "event",
           "type": "lw_demo_ac_din_mode",
-          "text": "Klima Gastraum Modus: {label}"
+          "text": {
+            "de": "Klima Gastraum Modus: {label}",
+            "en": "Dining area AC mode: {label}"
+          }
         },
         {
           "kind": "inventory",
@@ -333,7 +375,7 @@
       "writable": true,
       "title": {
         "de": "Klima Soll WC",
-        "en": "AC setpoint restrooms"
+        "en": "Restroom AC setpoint"
       },
       "tags": [
         "retail",
@@ -359,7 +401,7 @@
       "writable": false,
       "title": {
         "de": "Klima Ist WC",
-        "en": "AC actual restrooms"
+        "en": "Restroom AC temperature"
       },
       "tags": [
         "retail",
@@ -390,7 +432,7 @@
       "writable": true,
       "title": {
         "de": "Klima Modus WC",
-        "en": "AC mode restrooms"
+        "en": "Restroom AC mode"
       },
       "tags": [
         "retail",
@@ -406,35 +448,35 @@
             "value": 0,
             "label": {
               "de": "Heizen",
-              "en": "Heating"
+              "en": "Heat"
             }
           },
           {
             "value": 1,
             "label": {
               "de": "Automatik",
-              "en": "Automatic"
+              "en": "Auto"
             }
           },
           {
             "value": 2,
             "label": {
               "de": "Kühlen",
-              "en": "Cooling"
+              "en": "Cool"
             }
           },
           {
             "value": 3,
             "label": {
               "de": "Entfeuchten",
-              "en": "Dry"
+              "en": "Dehumidify"
             }
           },
           {
             "value": 4,
             "label": {
               "de": "Befeuchten",
-              "en": "Humidification"
+              "en": "Humidify"
             }
           }
         ]
@@ -443,7 +485,10 @@
         {
           "kind": "event",
           "type": "lw_demo_ac_wc_mode",
-          "text": "Klima WC Modus: {label}"
+          "text": {
+            "de": "Klima WC Modus: {label}",
+            "en": "Restroom AC mode: {label}"
+          }
         },
         {
           "kind": "inventory",
@@ -460,7 +505,7 @@
       "writable": true,
       "title": {
         "de": "Klima Soll Trockenlager",
-        "en": "AC setpoint dry storage"
+        "en": "Dry storage AC setpoint"
       },
       "tags": [
         "retail",
@@ -486,7 +531,7 @@
       "writable": false,
       "title": {
         "de": "Klima Ist Trockenlager",
-        "en": "AC actual dry storage"
+        "en": "Dry storage AC temperature"
       },
       "tags": [
         "retail",
@@ -517,7 +562,7 @@
       "writable": true,
       "title": {
         "de": "Klima Modus Trockenlager",
-        "en": "AC mode dry storage"
+        "en": "Dry storage AC mode"
       },
       "tags": [
         "retail",
@@ -533,35 +578,35 @@
             "value": 0,
             "label": {
               "de": "Heizen",
-              "en": "Heating"
+              "en": "Heat"
             }
           },
           {
             "value": 1,
             "label": {
               "de": "Automatik",
-              "en": "Automatic"
+              "en": "Auto"
             }
           },
           {
             "value": 2,
             "label": {
               "de": "Kühlen",
-              "en": "Cooling"
+              "en": "Cool"
             }
           },
           {
             "value": 3,
             "label": {
               "de": "Entfeuchten",
-              "en": "Dry"
+              "en": "Dehumidify"
             }
           },
           {
             "value": 4,
             "label": {
               "de": "Befeuchten",
-              "en": "Humidification"
+              "en": "Humidify"
             }
           }
         ]
@@ -570,7 +615,10 @@
         {
           "kind": "event",
           "type": "lw_demo_ac_dry_mode",
-          "text": "Klima Trockenlager Modus: {label}"
+          "text": {
+            "de": "Klima Trockenlager Modus: {label}",
+            "en": "Dry storage AC mode: {label}"
+          }
         },
         {
           "kind": "inventory",
@@ -587,7 +635,7 @@
       "writable": true,
       "title": {
         "de": "Klima Soll Manager",
-        "en": "AC setpoint manager"
+        "en": "Manager AC setpoint"
       },
       "tags": [
         "retail",
@@ -613,7 +661,7 @@
       "writable": false,
       "title": {
         "de": "Klima Ist Manager",
-        "en": "AC actual manager"
+        "en": "Manager AC temperature"
       },
       "tags": [
         "retail",
@@ -644,7 +692,7 @@
       "writable": true,
       "title": {
         "de": "Klima Modus Manager",
-        "en": "AC mode manager"
+        "en": "Manager AC mode"
       },
       "tags": [
         "retail",
@@ -660,35 +708,35 @@
             "value": 0,
             "label": {
               "de": "Heizen",
-              "en": "Heating"
+              "en": "Heat"
             }
           },
           {
             "value": 1,
             "label": {
               "de": "Automatik",
-              "en": "Automatic"
+              "en": "Auto"
             }
           },
           {
             "value": 2,
             "label": {
               "de": "Kühlen",
-              "en": "Cooling"
+              "en": "Cool"
             }
           },
           {
             "value": 3,
             "label": {
               "de": "Entfeuchten",
-              "en": "Dry"
+              "en": "Dehumidify"
             }
           },
           {
             "value": 4,
             "label": {
               "de": "Befeuchten",
-              "en": "Humidification"
+              "en": "Humidify"
             }
           }
         ]
@@ -697,7 +745,10 @@
         {
           "kind": "event",
           "type": "lw_demo_ac_mgr_mode",
-          "text": "Klima Manager Modus: {label}"
+          "text": {
+            "de": "Klima Manager Modus: {label}",
+            "en": "Manager AC mode: {label}"
+          }
         },
         {
           "kind": "inventory",
@@ -714,7 +765,7 @@
       "writable": true,
       "title": {
         "de": "Klima Soll Personalraum",
-        "en": "AC setpoint crew room"
+        "en": "Crew room AC setpoint"
       },
       "tags": [
         "retail",
@@ -740,7 +791,7 @@
       "writable": false,
       "title": {
         "de": "Klima Ist Personalraum",
-        "en": "AC actual crew room"
+        "en": "Crew room AC temperature"
       },
       "tags": [
         "retail",
@@ -771,7 +822,7 @@
       "writable": true,
       "title": {
         "de": "Klima Modus Personalraum",
-        "en": "AC mode crew room"
+        "en": "Crew room AC mode"
       },
       "tags": [
         "retail",
@@ -787,35 +838,35 @@
             "value": 0,
             "label": {
               "de": "Heizen",
-              "en": "Heating"
+              "en": "Heat"
             }
           },
           {
             "value": 1,
             "label": {
               "de": "Automatik",
-              "en": "Automatic"
+              "en": "Auto"
             }
           },
           {
             "value": 2,
             "label": {
               "de": "Kühlen",
-              "en": "Cooling"
+              "en": "Cool"
             }
           },
           {
             "value": 3,
             "label": {
               "de": "Entfeuchten",
-              "en": "Dry"
+              "en": "Dehumidify"
             }
           },
           {
             "value": 4,
             "label": {
               "de": "Befeuchten",
-              "en": "Humidification"
+              "en": "Humidify"
             }
           }
         ]
@@ -824,7 +875,10 @@
         {
           "kind": "event",
           "type": "lw_demo_ac_crew_mode",
-          "text": "Klima Personalraum Modus: {label}"
+          "text": {
+            "de": "Klima Personalraum Modus: {label}",
+            "en": "Crew room AC mode: {label}"
+          }
         },
         {
           "kind": "inventory",

@@ -5,8 +5,11 @@
 //! 2. Write `lw_demo` (incl. the demo's DALI groups and digital inputs) and remove every
 //!    `lw_config*` fragment an older app version left on the device (D10). A fresh advisory
 //!    lock of another presenter stops an apply (unless `force`).
+//!    Everything named from the library is resolved in the device's content language
+//!    (`lw_demo.language`, D12: the request's, else the device's, else `de`).
 //! 3. Optionally upload the floorplans (binary → `lw_floorplan` → child addition). A floorplan
-//!    with the same name is replaced only when the request confirms it; otherwise it is skipped
+//!    with the same name (in either language, so a language change replaces the old one) is
+//!    replaced only when the request confirms it; otherwise it is skipped
 //!    with a warning. Created ids are recorded in `lw_demo.floorplanIds` **after each
 //!    floorplan**, so a failure part-way leaves nothing behind that Reset / Delete cannot find.
 
@@ -21,7 +24,8 @@ use crate::error::{AppError, AppResult};
 use crate::library::{Library, validate};
 use crate::model::{
     ApplyDemoPreview, ApplyDemoRequest, ApplyDemoResult, CreateDeviceRequest, CreateDeviceResult,
-    DaliGroup, DemoPack, DigitalInputEntry, FloorplanLayout, FloorplanRef, LwDemoState,
+    DaliGroup, DemoPack, DigitalInputEntry, FloorplanLayout, FloorplanRef, Language,
+    LanguageChange, LwDemoState,
 };
 use crate::payload::floorplan::FloorplanContext;
 
@@ -31,21 +35,45 @@ pub struct ApplyPlan {
     /// The new `lw_demo`, incl. `daliGroups` / `digitalInputs` of the demo.
     pub state: LwDemoState,
     pub resolved: ResolvedSetup,
+    /// The demo's DALI groups in the device language (already in `state`).
+    pub groups: Vec<DaliGroup>,
     pub inputs: Vec<DigitalInputEntry>,
     pub warnings: Vec<String>,
 }
 
-/// The new `lw_demo` for applying `demo` over `existing` (device-local edits survive: custom
-/// slaves / items, realistic mode, floorplan ids, slave assignments; generators, snapshot and
-/// scenario edits only when the same demo is re-applied).
+/// The content language an apply gives the device: the requested one, else the device's
+/// (`de` for a device without one, D12).
+pub fn target_language(existing: Option<&LwDemoState>, requested: Option<Language>) -> Language {
+    requested.unwrap_or_else(|| existing.map_or_else(Language::default, LwDemoState::language))
+}
+
+/// The language change an apply makes on a device that already has a demo (`None` for a new
+/// device or the same language).
+pub fn language_change(
+    existing: Option<&LwDemoState>,
+    requested: Option<Language>,
+) -> Option<LanguageChange> {
+    let existing = existing.filter(|e| e.demo_id.is_some())?;
+    let (from, to) = (
+        existing.language(),
+        target_language(Some(existing), requested),
+    );
+    (from != to).then_some(LanguageChange { from, to })
+}
+
+/// The new `lw_demo` for applying `demo` over `existing` in `language` (device-local edits
+/// survive: custom slaves / items, realistic mode, floorplan ids, slave assignments; generators,
+/// snapshot and scenario edits only when the same demo is re-applied).
 pub fn new_state(
     library: &Library,
     demo: &DemoPack,
     existing: Option<&LwDemoState>,
+    language: Language,
 ) -> LwDemoState {
     let mut st = existing.cloned().unwrap_or_else(demo_state::empty_state);
     let same_demo = st.demo_id.as_deref() == Some(demo.id.as_str());
     st.schema_version = demo_state::SCHEMA_VERSION;
+    st.language = Some(language);
     st.demo_id = Some(demo.id.clone());
     st.library_version = Some(library.version.clone());
     st.tags = demo.tags.clone();
@@ -63,13 +91,14 @@ pub fn new_state(
     st
 }
 
-/// Compute an apply (pure).
+/// Compute an apply in `language` (pure).
 pub fn plan(
     library: &Library,
     demo: &DemoPack,
     existing: Option<&LwDemoState>,
+    language: Language,
 ) -> AppResult<ApplyPlan> {
-    let mut state = new_state(library, demo, existing);
+    let mut state = new_state(library, demo, existing, language);
     // Custom entries that a released export put into the library are dropped (library wins).
     let mut warnings = setup::drop_library_duplicates(library, &mut state, None).warnings;
     warnings.extend(
@@ -81,9 +110,10 @@ pub fn plan(
     resolved.store_assignments(&mut state);
     state.applied_items = setup::item_digests(library, &resolved.items);
     let items = resolved.item_refs();
-    state.applied_demo = setup::demo_digests(demo, &items)?;
-    let inputs = setup::demo_inputs(demo, &items)?;
-    state.dali_groups = Some(demo.dali_groups.clone());
+    state.applied_demo = setup::demo_digests(demo, &items, language)?;
+    let inputs = setup::demo_inputs(demo, &items, language)?;
+    let groups = setup::demo_groups(demo, language);
+    state.dali_groups = Some(groups.clone());
     state.digital_inputs = Some(inputs.clone());
     for path in &demo.floorplans {
         if library.floorplan(path).is_none() {
@@ -93,9 +123,16 @@ pub fn plan(
     Ok(ApplyPlan {
         state,
         resolved,
+        groups,
         inputs,
         warnings,
     })
+}
+
+/// Whether a floorplan of the device named `name` is (an earlier apply of) `layout`: its name
+/// in either language, so applying in another language replaces it (D12).
+fn same_floorplan(layout: &FloorplanLayout, name: Option<&str>) -> bool {
+    name.is_some_and(|n| layout.name.matches(n))
 }
 
 /// Name → existing floorplan of the device.
@@ -103,7 +140,7 @@ fn conflicts(existing: &[Value], layouts: &[&FloorplanLayout]) -> AppResult<Vec<
     let mut out = Vec::new();
     for mo in existing {
         let r = floorplan::reference(mo)?;
-        if layouts.iter().any(|l| l.name == r.name) {
+        if layouts.iter().any(|l| same_floorplan(l, Some(&r.name))) {
             out.push(r);
         }
     }
@@ -133,8 +170,9 @@ pub async fn preview(
     let demo = demo_of(library, &req.demo_id)?;
     let mo = crud::load_demo_mo(client, device_id).await?;
     let existing = demo_state::read(&mo)?;
+    let language = target_language(existing.as_ref(), req.language);
     let mut warnings = Vec::new();
-    let (item_count, slaves) = match plan(library, demo, existing.as_ref()) {
+    let (item_count, slaves) = match plan(library, demo, existing.as_ref(), language) {
         Ok(p) => {
             warnings.extend(p.warnings);
             (p.resolved.items.len() as u32, p.state.slaves)
@@ -157,6 +195,8 @@ pub async fn preview(
         item_count,
         slaves,
         floorplan_conflicts,
+        language,
+        language_change: language_change(existing.as_ref(), req.language),
         warnings,
     })
 }
@@ -209,26 +249,27 @@ pub async fn apply_floorplans(
     let existing = floorplan::list(client, device_id).await?;
     let items = resolved.item_refs();
     let slaves = resolved.slave_refs();
+    let language = state.language();
     let ctx = FloorplanContext {
         items: &items,
         slaves: &slaves,
         groups,
         digital_inputs: inputs,
+        language,
     };
     for (path, layout) in job.layouts {
+        let name = layout.name.get(language).to_owned();
         let old: Vec<&Value> = existing
             .iter()
-            .filter(|mo| mo.get("name").and_then(Value::as_str) == Some(layout.name.as_str()))
+            .filter(|mo| same_floorplan(layout, mo.get("name").and_then(Value::as_str)))
             .collect();
         let mut to_replace: Vec<FloorplanRef> = Vec::new();
         let mut name_override: Option<String> = None;
         if !old.is_empty() {
             match job.replace {
                 Replace::No => {
-                    out.warnings.push(format!(
-                        "floorplan \"{}\" exists and was not replaced",
-                        layout.name
-                    ));
+                    out.warnings
+                        .push(format!("floorplan \"{name}\" exists and was not replaced"));
                     continue;
                 }
                 Replace::All => {
@@ -247,8 +288,7 @@ pub async fn apply_floorplans(
                     }
                     if owned.is_empty() {
                         out.warnings.push(format!(
-                            "floorplan \"{}\" exists on the device but was not created by the app: not touched, layout skipped",
-                            layout.name
+                            "floorplan \"{name}\" exists on the device but was not created by the app: not touched, layout skipped"
                         ));
                         continue;
                     }
@@ -265,10 +305,9 @@ pub async fn apply_floorplans(
                             state.floorplan_ids.retain(|id| *id != r.id);
                             state.applied_floorplan_bodies.remove(&r.id);
                         }
-                        name_override = Some(format!("{} (v{})", layout.name, library.version));
+                        name_override = Some(format!("{name} (v{})", library.version));
                         out.warnings.push(format!(
-                            "floorplan \"{}\" was edited on the device: kept, the new layout was created next to it",
-                            layout.name
+                            "floorplan \"{name}\" was edited on the device: kept, the new layout was created next to it"
                         ));
                     } else {
                         to_replace = owned.into_iter().map(|(r, _)| r).collect();
@@ -282,15 +321,19 @@ pub async fn apply_floorplans(
         let created = match &name_override {
             Some(name) => {
                 let mut renamed = layout.clone();
-                renamed.name.clone_from(name);
+                renamed.name = name.as_str().into();
                 floorplan::create(client, device_id, &renamed, &dir, &ctx).await?
             }
             None => floorplan::create(client, device_id, layout, &dir, &ctx).await?,
         };
         state.floorplan_ids.push(created.reference.id.clone());
+        // Keyed by the name in the device language: drop the other language's key (D12).
+        for (_, n) in layout.name.each() {
+            state.applied_floorplans.remove(n);
+        }
         state
             .applied_floorplans
-            .insert(layout.name.clone(), setup::digest(layout));
+            .insert(name.clone(), setup::digest(layout));
         state
             .applied_floorplan_bodies
             .insert(created.reference.id.clone(), created.body_digest.clone());
@@ -322,7 +365,8 @@ pub async fn apply(
         // Another presenter may be simulating this device right now.
         demo_state::check_lock(e, client.username(), req.force, chrono::Utc::now())?;
     }
-    let mut p = plan(library, demo, existing.as_ref())?;
+    let language = target_language(existing.as_ref(), req.language);
+    let mut p = plan(library, demo, existing.as_ref(), language)?;
     let mut body = demo_state::patch_body(&p.state)?;
     // Devices from older app versions: drop their `lw_config*` fragments (D10) and add the agent
     // fragment etc. in the same PUT.
@@ -344,7 +388,7 @@ pub async fn apply(
             library,
             device_id,
             &p.resolved,
-            &demo.dali_groups,
+            &p.groups,
             &p.inputs,
             &mut p.state,
             FloorplanJob {

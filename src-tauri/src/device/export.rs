@@ -12,6 +12,11 @@
 //!   Modbus targets → `itemId`, alarm types → alarm refs minus the ones `autoAlarms` adds),
 //!   `deviceId` dropped.
 //!
+//! Texts are the device's (its content language, D12): a DI title maps back to the item title in
+//! that language, everything else is exported as a plain string (the same in both languages). A
+//! widget title equal to its default (item title / DI title / group name in the device language) is
+//! dropped, so the exported pack names it in the language it is applied in.
+//!
 //! The result applies back to an equal device configuration (tested in `device::tests`).
 
 use std::path::{Path, PathBuf};
@@ -25,12 +30,12 @@ use crate::error::{AppError, AppResult};
 use crate::library::{Library, validate};
 use crate::model::{
     AlarmRef, DemoPack, DeviceConfig, DigitalInputConfig, DigitalInputType, ExportRequest,
-    ExportResult, FloorplanLayout, FloorplanWidget, ItemLibraryFile, LibraryItem, LocalizedText,
-    LwDemoState, ModbusControlOption, ModbusValueType, Scenario, ScenarioStep, SensorDisplay,
-    WidgetControl, WidgetMeasurement, WidgetRange,
+    ExportResult, FloorplanLayout, FloorplanWidget, ItemLibraryFile, Language, LibraryItem,
+    LocalizableText, LocalizedText, LwDemoState, ModbusControlOption, ModbusValueType, Scenario,
+    ScenarioStep, SensorDisplay, WidgetControl, WidgetMeasurement, WidgetRange,
 };
 use crate::payload::alarm::device_custom_alarm;
-use crate::payload::floorplan::{FloorplanContext, item_alarm_types};
+use crate::payload::floorplan::{FloorplanContext, control_json, default_title, item_alarm_types};
 use crate::payload::naming::{
     DALI_VALUE_SERIES, MAX_NAME_LEN, dali_library_series, item_naming_with_di, slave_alarm_type,
     slave_timeout_alarm_type,
@@ -169,10 +174,11 @@ fn new_di_item(
     }
 }
 
-fn set_title_de(item: &mut LibraryItem, de: &str) {
+/// Set a DI item's title in the device language `lang` (the device title is in it, D12).
+fn set_title(item: &mut LibraryItem, lang: Language, text: &str) {
     match item {
         LibraryItem::DigitalInput { title, .. } | LibraryItem::ImpulseCounter { title, .. } => {
-            title.de = de.to_owned();
+            title.set(lang, text);
         }
         _ => {}
     }
@@ -195,6 +201,7 @@ fn set_generator(item: &mut LibraryItem, g: crate::model::GeneratorConfig) {
 struct Reverse<'a> {
     resolved: &'a ResolvedSetup,
     inputs: &'a [crate::model::DigitalInputEntry],
+    language: Language,
 }
 
 impl Reverse<'_> {
@@ -214,7 +221,7 @@ impl Reverse<'_> {
                 }
                 _ => None,
             };
-            let Some(n) = item_naming_with_di(item, slave, di) else {
+            let Some(n) = item_naming_with_di(item, slave, di, self.language) else {
                 continue;
             };
             if n.series.iter().any(|s| s.name == series) {
@@ -264,7 +271,8 @@ impl Reverse<'_> {
             }
         }
         for item in &self.resolved.items {
-            if device_custom_alarm(item).is_some_and(|s| s.alarm_type == alarm_type) {
+            if device_custom_alarm(item, self.language).is_some_and(|s| s.alarm_type == alarm_type)
+            {
                 return AlarmRef::Item {
                     item_id: item.id().to_owned(),
                 };
@@ -288,6 +296,11 @@ fn strings(v: Option<&Value>) -> Vec<String> {
 
 fn s(v: &Value, k: &str) -> Option<String> {
     v.get(k).and_then(Value::as_str).map(str::to_owned)
+}
+
+/// A plugin text as a plain library text (the device's language, D12).
+fn text(v: &Value, k: &str) -> Option<LocalizableText> {
+    s(v, k).map(LocalizableText::from)
 }
 
 fn num(v: &Value, k: &str) -> Option<f64> {
@@ -343,17 +356,12 @@ fn widget_back(
                 .transpose()
                 .map_err(|e| format!("widget {id}: ranges {e}"))?
                 .unwrap_or_default();
-            // A DI widget whose title equals the device's DI title gets it back on apply.
-            let di_title = match item {
-                LibraryItem::DigitalInput { index, .. }
-                | LibraryItem::ImpulseCounter { index, .. } => ctx
-                    .digital_inputs
-                    .iter()
-                    .find(|e| e.index == *index && !e.title.is_empty())
-                    .map(|e| e.title.clone()),
-                _ => None,
-            };
-            let title = s(w, "title").filter(|t| di_title.as_deref() != Some(t.as_str()));
+            // A title equal to the default (the device's DI title, the item title in the device
+            // language) gets it back on apply, in the language applied then (D12).
+            let default = default_title(item, ctx);
+            let title = s(w, "title")
+                .filter(|t| *t != default)
+                .map(LocalizableText::from);
             Ok(FloorplanWidget::Sensor {
                 id,
                 x,
@@ -383,8 +391,8 @@ fn widget_back(
             y,
             locked,
             icon,
-            text: s(w, "text").unwrap_or_default(),
-            note: s(w, "note"),
+            text: text(w, "text").unwrap_or_default(),
+            note: text(w, "note"),
             alarms: strings(w.get("alarmTypes"))
                 .iter()
                 .map(|t| rev.alarm_ref(t))
@@ -430,8 +438,8 @@ fn widget_back(
                         item_id,
                         readback: c.get("readback").is_some_and(|r| !r.is_null()),
                         value_type,
-                        on_label: s(&c, "onLabel").filter(|_| is(ModbusValueType::Boolean)),
-                        off_label: s(&c, "offLabel").filter(|_| is(ModbusValueType::Boolean)),
+                        on_label: text(&c, "onLabel").filter(|_| is(ModbusValueType::Boolean)),
+                        off_label: text(&c, "offLabel").filter(|_| is(ModbusValueType::Boolean)),
                         invert: is(ModbusValueType::Boolean)
                             && c.get("invert").and_then(Value::as_bool).unwrap_or(false),
                         min: num(&c, "min").filter(|_| is(ModbusValueType::Number)),
@@ -443,13 +451,18 @@ fn widget_back(
                 }
                 other => return Err(format!("widget {id}: control type {other:?}")),
             };
+            // A title equal to the default (group name / item title) is dropped (D12).
+            let default = control_json(&control, ctx).ok().map(|(_, t)| t);
+            let title = s(w, "title")
+                .filter(|t| default.as_ref() != Some(t))
+                .map(LocalizableText::from);
             Ok(FloorplanWidget::Control {
                 id,
                 x,
                 y,
                 locked,
                 icon,
-                title: s(w, "title"),
+                title,
                 confirm: w.get("confirm").and_then(Value::as_bool).unwrap_or(false),
                 control,
             })
@@ -469,6 +482,7 @@ pub fn build(
         return Err(AppError::InvalidInput(format!("demo id {id} ([a-z0-9-])")));
     }
     let st = input.state;
+    let lang = st.language();
     let mut warnings = Vec::new();
     let resolved = setup::resolve(lib, st)?;
 
@@ -501,16 +515,16 @@ pub fn build(
             Some(item) => {
                 if let Some(c) = custom.iter_mut().find(|c| c.id() == item.id()) {
                     if !e.title.is_empty() {
-                        set_title_de(c, &e.title);
+                        set_title(c, lang, &e.title);
                     }
-                } else if !e.title.is_empty() && item.title().de != e.title {
+                } else if !e.title.is_empty() && item.title().get(lang) != e.title {
                     warnings.push(format!(
                         "digital input {}: title \"{}\" differs from library item {} (\"{}\"); \
                          edit the item to keep it",
                         e.index,
                         e.title,
                         item.id(),
-                        item.title().de
+                        item.title().get(lang)
                     ));
                 }
                 item.id().to_owned()
@@ -580,10 +594,12 @@ pub fn build(
         slaves: &slaves,
         groups: &input.config.groups,
         digital_inputs: &input.config.digital_inputs,
+        language: lang,
     };
     let rev = Reverse {
         resolved: &export_setup,
         inputs: &input.config.digital_inputs,
+        language: lang,
     };
     let mut used_slugs: Vec<String> = Vec::new();
     for fp in input.floorplans {
@@ -610,8 +626,8 @@ pub fn build(
         let layout = FloorplanLayout {
             file_type: "lw-demo-floorplan".into(),
             schema_version: 1,
-            name: name.clone(),
-            description: s(&data, "description").unwrap_or_default(),
+            name: name.as_str().into(),
+            description: text(&data, "description").unwrap_or_default(),
             icon: s(&data, "icon"),
             image: image.clone(),
             image_width: data.get("imageWidth").and_then(Value::as_u64).unwrap_or(0) as u32,
@@ -654,7 +670,13 @@ pub fn build(
         includes,
         excludes: st.excludes.clone(),
         dali_lamp_count: lamp_count,
-        dali_groups: input.config.groups.clone(),
+        dali_groups: input
+            .config
+            .groups
+            .iter()
+            .cloned()
+            .map(Into::into)
+            .collect(),
         digital_inputs,
         send_interval_sec: st.send_interval_sec,
         scenarios,

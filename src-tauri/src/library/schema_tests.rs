@@ -247,6 +247,43 @@ fn schema_and_serde_reject_the_same_breakage() {
         ("title without en", Kind::Items, &items, |d| {
             d["items"][0]["title"].as_object_mut().unwrap().remove("en");
         }),
+        // Texts that are plain or {de, en} (D12).
+        ("slave name {de} without en", Kind::Items, &items, |d| {
+            d["slaves"][0]["name"] = json!({"de": "Kuehlung"});
+        }),
+        (
+            "slave alarm text in a third language",
+            Kind::Items,
+            &items,
+            |d| {
+                d["slaves"][0]["alarms"][0]["text"] = json!({"de": "a", "en": "b", "fr": "c"});
+            },
+        ),
+        ("effect text as a number", Kind::Items, &items, |d| {
+            d["items"][2]["effects"][0]["text"] = json!(5);
+        }),
+        ("custom alarm text as a list", Kind::Items, &alarms, |d| {
+            d["items"][0]["text"] = json!(["Tür"]);
+        }),
+        ("group name {en} without de", Kind::Demo, &demo, |d| {
+            d["daliGroups"][0]["name"] = json!({"en": "Shop"});
+        }),
+        (
+            "floorplan name {de} without en",
+            Kind::Floorplan,
+            &floorplan,
+            |d| {
+                d["name"] = json!({"de": "Erdgeschoss"});
+            },
+        ),
+        (
+            "alarm widget text with a typo key",
+            Kind::Floorplan,
+            &floorplan,
+            |d| {
+                d["widgets"][3]["text"] = json!({"de": "a", "eng": "b"});
+            },
+        ),
         ("demo without sendIntervalSec", Kind::Demo, &demo, |d| {
             d.as_object_mut().unwrap().remove("sendIntervalSec");
         }),

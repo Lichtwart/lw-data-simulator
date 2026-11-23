@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { type ApplyDemoPreview, api } from "@/lib/api";
+import { type ApplyDemoPreview, api, type Language } from "@/lib/api";
+import { defaultContentLanguage, uiLanguage } from "@/lib/contentLanguage";
 import { deviceLockOf } from "@/lib/errors";
 import { formatSince } from "@/lib/format";
 import { loadLibrary } from "@/lib/library";
@@ -26,11 +27,14 @@ import { SectionCard } from "./SectionCard";
 /** Apply a demo pack: choose, preview (`preview_apply_demo`), confirm floorplan replacement, apply. */
 export function ApplyDemoCard() {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language === "en" ? "en" : "de";
+  const lang = uiLanguage(i18n.language);
   const { device, reload, reloadConfig } = useDevice();
   const library = useAsync(() => loadLibrary(), []);
   const [demoId, setDemoId] = useState(device.demo?.demoId ?? "");
   const [applyFloorplans, setApplyFloorplans] = useState(true);
+  // null = not chosen: follow the device's own language (it changes after an apply).
+  const [chosenLanguage, setChosenLanguage] = useState<Language | null>(null);
+  const language = chosenLanguage ?? defaultContentLanguage(device.demo, lang);
   const [preview, setPreview] = useState<ApplyDemoPreview | null>(null);
   const [replace, setReplace] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -54,6 +58,7 @@ export function ApplyDemoCard() {
         demoId,
         applyFloorplans,
         replaceExistingFloorplans: false,
+        language,
       });
       if (token === previewToken.current) setPreview(result);
     } catch (e) {
@@ -73,6 +78,7 @@ export function ApplyDemoCard() {
         demoId,
         applyFloorplans,
         replaceExistingFloorplans: replace,
+        language,
         force,
       });
       toast.success(
@@ -83,6 +89,7 @@ export function ApplyDemoCard() {
       );
       for (const w of result.warnings) toast.warning(w);
       setPreview(null);
+      setChosenLanguage(null);
       setLock(null);
       reload();
       reloadConfig();
@@ -124,6 +131,25 @@ export function ApplyDemoCard() {
             </SelectContent>
           </Select>
         </Field>
+        <Field label={t("apply.language")} htmlFor="apply-language" hint={t("apply.languageHint")}>
+          <Select
+            value={language}
+            onValueChange={(v) => {
+              previewToken.current++;
+              setBusy(false);
+              setChosenLanguage(v as Language);
+              setPreview(null);
+            }}
+          >
+            <SelectTrigger id="apply-language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="de">{t("languages.de")}</SelectItem>
+              <SelectItem value="en">{t("languages.en")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
         <div className="flex items-end">
           <Label className="font-normal">
             <Checkbox
@@ -159,6 +185,21 @@ export function ApplyDemoCard() {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+          {preview.languageChange && (
+            <div
+              role="alert"
+              className="flex flex-col gap-1 rounded-md border border-warning bg-warning-bg p-3"
+            >
+              <p className="font-semibold text-strong">
+                {t("apply.languageChange", {
+                  from: t(`languages.${preview.languageChange.from}`),
+                  to: t(`languages.${preview.languageChange.to}`),
+                })}
+              </p>
+              <p>{t("apply.languageChangeSeries")}</p>
+              <p>{t("apply.languageChangeRewrite")}</p>
             </div>
           )}
           {needsReplace && (

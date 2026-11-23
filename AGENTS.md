@@ -104,6 +104,17 @@ worked example: `src-tauri/tests/fixtures/library/`. Check with `npm run validat
 device's `lw_demo.digitalInputs`). Firmware length limits count UTF-8 **bytes** (`"Kühlraum Tür
 links"` is 20 bytes): validation is the byte gate, the schema's `maxLength` counts characters.
 
+**Two languages** (DECISIONS D12): every demo device has a content language `lw_demo.language`
+(`de` | `en`, absent = `de`, set by an apply, kept by upgrades); everything named from the library
+is resolved in it. `title`, select `label`, demo / scenario `name` / `description` are `{de, en}`;
+these texts take a plain string (both languages) **or** `{de, en}` (`LocalizableText`): slave
+`name` and alarm `text`, `customAlarm` `text`, effect `text`, demo `daliGroups[].name`, floorplan
+`name` / `description`, widget `title` / `text` / `note`, `onLabel` / `offLabel`, Modbus option
+`label`. Rules hold in each language (slave names 1–19 bytes and ASCII; a `{de, en}` text needs
+both); floorplan names are unique per demo across both languages. List and examples:
+`library/schema/README.md`. What a device stores (`lw_demo.daliGroups`, `digitalInputs[].title`,
+`lw_floorplan`) is plain text in its language.
+
 ```
 library/items/<topic>.json                  lw-demo-items   {slaves?, items}
 library/demos/<demoId>.json                 lw-demo
@@ -115,8 +126,8 @@ library/floorplans/<demoId>/<name>.json     lw-demo-floorplan (+ <image>.png|jpg
 `control` (`slider {min,max,step,default}` | `switch {default 0|1}` | `select {options:[{value,
 label{de,en}}],default}` | `counter {default}`), `generator` (`randomWalk {center,spread,step?}` |
 `sine {period s,amplitude,center?}` | `dailyProfile {points: 24}` | `counter {ratePerHour}`),
-`effects` (`event {type,text}` with `{value}`/`{label}`, `inventory {property}`, `alarm {type,
-severity,text,threshold}`).
+`effects` (`event {type,text}` with `{value}`/`{label}` (label in the device language), `inventory
+{property}`, `alarm {type,severity,text,threshold}`).
 - `dailyProfile` hours (00:00…23:00, linearly interpolated) are in the **device's time zone**
   (`lw_demo.timeZone`, default `Europe/Berlin`, DST-aware), not the laptop's.
 - `counter` generators are monotonic: allowed only with a `counter` control or on an
@@ -132,13 +143,14 @@ severity,text,threshold}`).
   `lw_modbus`; native alarm types. Use a `lw_demo*` prefix for properties / events / alarm types.
 
 Measurements are named from the app's config, not after the firmware (DECISIONS D10): **fragment =
-the item's German title** (`.` / `$` → `_`, trimmed; a DI's device title wins), **series = the item
-id**, e.g. `Attika 1.light-5`. The simulator writes and reads **no `lw_config*` fragment**: groups,
+the item's title in the device language** (D12; `.` / `$` → `_`, trimmed; a DI's device title
+wins), **series = the item id**, e.g. `Attika 1.light-5` (an English device uses the English
+title). The simulator writes and reads **no `lw_config*` fragment**: groups,
 DI config and the time zone live in `lw_demo`, apply / upgrade remove old `lw_config*` fragments.
 
 | kind | own fields | Cumulocity (type / `fragment.series`) |
 |---|---|---|
-| `dali` | `index` 1–64 | `daliControlGear` / `<title>.<id>` (brightness) + `<title>.<id> Lamp Status` / `<id> Converter Status` / `<id> Converter Runtime`; a grouped lamp without item: `DALI Leuchte NN.lamp-NN` |
+| `dali` | `index` 1–64 | `daliControlGear` / `<title>.<id>` (brightness) + `<title>.<id> Lamp Status` / `<id> Converter Status` / `<id> Converter Runtime`; a grouped lamp without item: `DALI Leuchte NN.lamp-NN` (en: `DALI Lamp NN.lamp-NN`) |
 | `daliBrightness` / `daliMotion` | `index` 1–10 | `daliBrightness` / `daliMotion`, `<title>.<id>` |
 | `digitalInput` / `impulseCounter` | `index` 1–10 (counter: `unit` ≤ 19 bytes, must equal the demo DI entry's `unit`; `control.default` must equal its `initCount`) | `digitalInput` / `impulseCounter` (by the device DI type), `<DI title>.<id>` |
 | `system` | `system: rssi \| temperature` | `c8y_SignalStrength` / `c8y_TemperatureMeasurement`, `<title>.<id>` |
@@ -161,7 +173,8 @@ in a group), `daliGroups[]` ≤ 16 `{id 1–16, name, converters:[lamps], minLev
 luxThreshold?, slaveOf?, dynamicControl?, automaticSwitch?}`, `digitalInputs[]` `{index?, itemId,
 type: measurement | daliAction (+highLevelAction/lowLevelAction/groups) | impulseCounter
 (+initCount/increment/unit), isActive?}` (item = DI item with the same index; `index` may be
-omitted and is taken from the item; its German title becomes `lw_demo.digitalInputs[].title`;
+omitted and is taken from the item; its title in the device language becomes
+`lw_demo.digitalInputs[].title`;
 actions are exactly `on` | `off` | `auto`, lowercase; every selected DI item needs an active
 entry, like every selected lamp needs a group), `daliLampCount` may be omitted (default: highest
 converter / selected lamp index), `sendIntervalSec` 5–899, `scenarios[]` `{id, name, description? {de,en},
@@ -177,7 +190,8 @@ image, imageWidth, imageHeight (px), imageOpacity?, widgets[]}`. Widgets `{id, k
 icon}` plus:
 - `sensor`: `measurement {itemId, series?}` (series only for DALI lamps: `Brightness` (default) /
   `Lamp Status` / `Converter Status` / `Converter Runtime`, sent as `<id>` / `<id> Lamp Status` …),
-  `title?` (default item title de / DI device title, fallback `Eingang <N>`), `unit?`,
+  `title?` (default item title in the device language / DI device title, fallback `Eingang <N>` /
+  `Input <N>`), `unit?`,
   `decimals?` (0–6), `display?`, `ranges[]` (must not overlap; `min` inclusive, `max` exclusive),
   `autoAlarms` (default true: the item's own alarms), `alarms[]`, `staleAfterMin?` (≥ 1);
 - `alarm`: `text`, `note?`, `alarms[]` (≥ 1);
@@ -199,14 +213,16 @@ Brightness / motion sensor widgets watch (and the presenter can raise) the senso
 fragments `lw_demoLock` / `lw_demoSnapshot`, not part of `lw_demo` (DECISIONS D7), and not exported):
 `lw_demo.tags/includes/excludes/daliLampCount/
 sendIntervalSec` → demo; `lw_demo.daliGroups` → `daliGroups` (`slaveOf` absent → omit);
-`lw_demo.digitalInputs` → `digitalInputs` (`title` → the DI item's `title.de`); a device without
+`lw_demo.digitalInputs` → `digitalInputs` (`title` → the DI item's title in `lw_demo.language`); texts
+are written as plain strings (the device's language); a device without
 them (older app version) uses the library demo's; `lw_demo.customSlaves/customItems` → an
 item file; `lw_demo.generators` → item `generator`s or a `start` scenario; widgets: replace
 `measurement {fragment, series}` by `{itemId}` (the series is the item id, D10; a DALI
 `<id> Lamp Status` etc. becomes `series: "Lamp Status"`), Modbus `target`/`readback` by `itemId`,
-`alarmTypes` by alarm refs (drop the ones `autoAlarms` adds); drop `deviceId`; drop a DI
-widget's `title` when it equals the DI device title (otherwise later title edits never reach the
-floorplan). Widgets that still use the old firmware names (`LW Dali Control Gear 1-NN`, …) cannot
+`alarmTypes` by alarm refs (drop the ones `autoAlarms` adds); drop `deviceId`; drop a widget's
+`title` when it equals its default (DI device title, item title in the device language, group
+name), otherwise later title edits never reach the floorplan and another language keeps the old
+text. Widgets that still use the old firmware names (`LW Dali Control Gear 1-NN`, …) cannot
 be mapped: re-apply the demo first.
 
 ## Shipped demos
@@ -221,6 +237,7 @@ Library content rules:
 - **The library is the source of truth** for item titles (`library/items/*.json`, e.g. the digital input titles). `docs/research/prototype-inventory.md` is a snapshot of the old prototype and may word some titles differently.
 - Sensors: the library ships one `daliBrightness` item (`lux-1`) and no `daliMotion` item; the code, fault menu and floorplan support both kinds, add a motion item when a demo needs one.
 - **Slave names are ASCII** (`Kuehlung`, `Ladesaeule 1`, `Klima Kueche`; they appear in the timeout alarm text and a real Core may read the config); titles and alarm texts use umlauts.
+- **The shipped library is bilingual** (D12): every human-readable text is `{de, en}`, none is a plain string. English uses one term per thing across items, alarms, groups and floorplans (`Cold room`, `Dry storage`, `Restroom`, `AC`, `EV bay` / `EV charger`); slave names are Title Case ASCII in both (`AC Kitchen`, `EV Charger 1`). Widget titles that equal their default (item title / group name) are left out, so they follow the device language. Floorplan names must not repeat across the layouts of a demo in any language (an apply matches either language).
 - The `normal` (start) scenario is a **full reset**: it sets every value another scenario sets (a generator step for items with a library generator, a value step otherwise) and clears every fault another scenario raises. Applied by hand it first clears every open alarm of the device ("Clear all", D9); at session start only its steps run, so the explicit `active: false` steps are what resets restored faults.
 - A fault scenario must not hide its own effect: never time out the slave whose value it shows (communication loss is its own `comm-loss` scenario).
 - Floorplans: widgets are fixed screen size and do not scale with the image; lay them out in room "cells" (circle 130 x 140, control 260 x 56 image px), room labels top-left, widgets below the label.

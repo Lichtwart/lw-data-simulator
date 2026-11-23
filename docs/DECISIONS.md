@@ -3,6 +3,53 @@
 Decisions that change or extend `PRD.md`. Newest first. Affected PRD sections are marked inline with
 "(changed 2026-10-12, see DECISIONS.md)". Evidence lives in `docs/research/`.
 
+## 2026-11-23
+
+### D12. Every demo device has a content language; library texts come in de and en
+
+User request: the UI can be switched to English, but everything the simulator creates in Cumulocity
+was German (measurement fragments = German titles, DI titles, group names, alarm / event texts,
+floorplans). A device created while the app is in English should be English throughout. Decision:
+
+- **Per-device content language** `lw_demo.language` (`"de"` | `"en"`). **Absent = `de`**: devices set
+  up before this keep their exact names; nothing is renamed by an upgrade. It is chosen when a demo is
+  applied: `ApplyDemoRequest.language` (optional; `create_demo_device` passes it through `applyDemo`).
+  `None` keeps the device's language (`de` for a new device); the UI sends the UI language on create.
+  An upgrade keeps it. It is not the UI language: the UI may be English while a device is German.
+- **Everything named from the library is resolved in it**: the measurement fragment (the item's title
+  in the device language; the series stays the item id, D10), a grouped lamp without an item
+  (`DALI Leuchte NN` / `DALI Lamp NN`), the digital input titles and DALI group names written to
+  `lw_demo` at apply time, item effect texts (`{label}` = the select option label in that language,
+  also for inventory effects), custom / slave alarm texts, the slave name in the timeout alarm and
+  `lw_modbus` event, the fault menu texts, the floorplan (name, description, widget titles, texts,
+  labels; a DI widget without any title is `Eingang N` / `Input N`). Firmware texts (native alarms,
+  `lw_daliGroupChange`, `lw_alarm`) stay as the firmware sends them (English). Units and ids are not
+  translated. The operation prompt's technical `summary` uses the item title in the device language.
+- **Library format**: human-readable fields that were plain strings take either a plain string (the
+  same text in both languages; old files and device copies stay valid) or `{de, en}`
+  (`LocalizableText`, untagged; schema `$defs/text` / `optionalText`): slave `name`, slave alarm
+  `text`, `customAlarm` `text`, effect `text`, demo `daliGroups[].name` (`DemoDaliGroup`), floorplan
+  `name` / `description`, widget `title` / `text` / `note`, `onLabel` / `offLabel`, Modbus option
+  `label`. Validation holds in each language (non-empty, slave name 1–19 bytes and ASCII in library
+  files, floorplan names unique per demo across both languages, since an apply matches either); a
+  `{de, en}` text needs both languages.
+- **What the device stores stays monolingual**: `lw_demo.daliGroups[].name`,
+  `lw_demo.digitalInputs[].title` and the `lw_floorplan` payload are plain strings in the device
+  language, so the device editors and the plugin format do not change. Custom slaves / items are
+  stored as edited (plain strings; item titles stay `{de, en}`).
+- **Changing the language** is a re-apply: the preview carries `language` and `languageChange
+  {from, to}` (set only for a device that already has a demo) so the UI can warn that every
+  measurement gets a new fragment (new series in Cumulocity; the old ones stay as history) and DI
+  titles, group names and floorplans are rewritten. A floorplan counts as "the same" when its name
+  matches the layout's name in **either** language, so the re-apply replaces (or, unconfirmed, skips)
+  the other-language floorplan; `appliedFloorplans` is keyed by the name in the device language. A
+  running session keeps its language; a changed one sets `restartNeeded` (apply stops the session
+  anyway).
+- **Export** (PRD §13) of a device writes its texts as plain strings (its language); a DI title maps
+  back to the library item when it equals the item's title in the device language; a widget title
+  equal to its default (item / DI title, group name) is dropped, so the pack names it in whatever
+  language it is applied in.
+
 ## 2026-10-13
 
 ### D11. Scenarios are editable per device; "Reset to defaults"

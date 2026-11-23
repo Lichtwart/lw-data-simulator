@@ -365,6 +365,10 @@ export type ApplyDemoPreview = {
 	slaves: SlaveAssignment[],
 	/**  Existing floorplans that would be replaced. */
 	floorplanConflicts: FloorplanRef[],
+	/**  The content language the device gets. */
+	language: Language,
+	/**  Set when the device already has a demo and the apply changes its language. */
+	languageChange: LanguageChange | null,
 	warnings: string[],
 };
 
@@ -377,6 +381,11 @@ export type ApplyDemoRequest = {
 	replaceExistingFloorplans: boolean,
 	/**  Take over a fresh advisory lock held by another user (else `deviceLocked`). */
 	force?: boolean,
+	/**
+	 *  Content language for the device (`lw_demo.language`, D12). `None` keeps the device's
+	 *  language (`de` for a device without one).
+	 */
+	language?: Language | null,
 };
 
 /**  Result of `apply_demo`. */
@@ -505,6 +514,59 @@ export type DaliGroup_Serialize = {
 	automaticSwitch: boolean,
 };
 
+/**
+ *  DALI group of a demo pack (`daliGroups[]`): a [`DaliGroup`] whose `name` is plain or
+ *  `{de, en}` (D12). Applying the demo stores it in the device language
+ *  ([`DemoDaliGroup::resolve`]).
+ */
+export type DemoDaliGroup = DemoDaliGroup_Serialize | DemoDaliGroup_Deserialize;
+
+/**
+ *  DALI group of a demo pack (`daliGroups[]`): a [`DaliGroup`] whose `name` is plain or
+ *  `{de, en}` (D12). Applying the demo stores it in the device language
+ *  ([`DemoDaliGroup::resolve`]).
+ */
+export type DemoDaliGroup_Deserialize = {
+	/**  1–16. */
+	id: number,
+	name: LocalizableText,
+	/**  Lamp (converter) numbers 1–64. A lamp is only measured if it is in a group. */
+	converters: number[],
+	/**  0–100 % (firmware integer). */
+	minLevel: number,
+	/**  0–100 %; the level `lw_switchGroupMode` `on` switches to. */
+	maxLevel: number,
+	/**  Lux threshold 0–200000 (firmware default 4500 when absent). */
+	luxThreshold?: number | null,
+	/**  Id of the master group (`slaveOf`). */
+	slaveOf?: number | null,
+	dynamicControl?: boolean,
+	automaticSwitch?: boolean,
+};
+
+/**
+ *  DALI group of a demo pack (`daliGroups[]`): a [`DaliGroup`] whose `name` is plain or
+ *  `{de, en}` (D12). Applying the demo stores it in the device language
+ *  ([`DemoDaliGroup::resolve`]).
+ */
+export type DemoDaliGroup_Serialize = {
+	/**  1–16. */
+	id: number,
+	name: LocalizableText,
+	/**  Lamp (converter) numbers 1–64. A lamp is only measured if it is in a group. */
+	converters: number[],
+	/**  0–100 % (firmware integer). */
+	minLevel: number,
+	/**  0–100 %; the level `lw_switchGroupMode` `on` switches to. */
+	maxLevel: number,
+	/**  Lux threshold 0–200000 (firmware default 4500 when absent). */
+	luxThreshold?: number | null,
+	/**  Id of the master group (`slaveOf`). */
+	slaveOf?: number | null,
+	dynamicControl: boolean,
+	automaticSwitch: boolean,
+};
+
 /**  Full demo device, as shown in the workspace. */
 export type DemoDevice = DemoDevice_Serialize | DemoDevice_Deserialize;
 
@@ -581,7 +643,8 @@ export type DemoPack_Deserialize = {
 	 *  loaded as the highest converter number in `daliGroups` or selected lamp index.
 	 */
 	daliLampCount?: number,
-	daliGroups?: DaliGroup_Deserialize[],
+	/**  Group names are plain or `{de, en}` (D12). */
+	daliGroups?: DemoDaliGroup_Deserialize[],
 	digitalInputs?: DigitalInputConfig_Deserialize[],
 	sendIntervalSec: number,
 	scenarios?: Scenario_Deserialize[],
@@ -604,7 +667,8 @@ export type DemoPack_Serialize = {
 	 *  loaded as the highest converter number in `daliGroups` or selected lamp index.
 	 */
 	daliLampCount: number,
-	daliGroups: DaliGroup_Serialize[],
+	/**  Group names are plain or `{de, en}` (D12). */
+	daliGroups: DemoDaliGroup_Serialize[],
 	digitalInputs: DigitalInputConfig_Serialize[],
 	sendIntervalSec: number,
 	scenarios: Scenario_Serialize[],
@@ -713,8 +777,8 @@ export type DeviceConfig_Serialize = {
 
 /**
  *  Digital input in a demo pack. The title is **not** stored here: the entry references
- *  the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
- *  title (D1, single source of truth).
+ *  the `digitalInput` / `impulseCounter` item, whose title (in the device language, D12) becomes
+ *  the device's input title (D1, single source of truth).
  * 
  *  Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
  *  would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -723,8 +787,8 @@ export type DigitalInputConfig = DigitalInputConfig_Serialize | DigitalInputConf
 
 /**
  *  Digital input in a demo pack. The title is **not** stored here: the entry references
- *  the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
- *  title (D1, single source of truth).
+ *  the `digitalInput` / `impulseCounter` item, whose title (in the device language, D12) becomes
+ *  the device's input title (D1, single source of truth).
  * 
  *  Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
  *  would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -741,8 +805,8 @@ export type DigitalInputConfig_Deserialize = {
 
 /**
  *  Digital input in a demo pack. The title is **not** stored here: the entry references
- *  the `digitalInput` / `impulseCounter` item, whose German title becomes the device's input
- *  title (D1, single source of truth).
+ *  the `digitalInput` / `impulseCounter` item, whose title (in the device language, D12) becomes
+ *  the device's input title (D1, single source of truth).
  * 
  *  Deserialization is hand-written ([`DigitalInputConfigRaw`]) because `#[serde(flatten)]`
  *  would disable `deny_unknown_fields`: a typo like `"groupz"` is an error, as everywhere else.
@@ -1008,11 +1072,15 @@ export type GroupRef = {
  */
 export type ItemEffect = 
 /**  Send an event on every value change. `text` may contain `{value}` / `{label}`. */
-{ kind: "event"; type: string; text: string } | 
+{ kind: "event"; type: string; 
+/**  Plain or `{de, en}` (D12). */
+text: LocalizableText } | 
 /**  Write the value (or select label) to a device inventory property. */
 { kind: "inventory"; property: string } | 
 /**  Raise an alarm while the value is ≥ `threshold` (cleared below it). */
-{ kind: "alarm"; type: string; severity: Severity; text: string; threshold: number };
+{ kind: "alarm"; type: string; severity: Severity; 
+/**  Plain or `{de, en}` (D12). */
+text: LocalizableText; threshold: number };
 
 /**  Live state of one item in the session. */
 export type ItemRuntimeState = {
@@ -1044,6 +1112,23 @@ export type ItemValuesChanged = {
 	revision: number,
 	deviceId: string,
 	values: ItemValue[],
+};
+
+/**
+ *  Content language of a demo device (`lw_demo.language`, DECISIONS D12): the language of
+ *  everything the simulator names in Cumulocity from the library (measurement fragments, digital
+ *  input titles, group names, alarm / event texts, floorplans). Absent on a device = `de`.
+ */
+export type Language = "de" | "en";
+
+/**
+ *  A re-apply changes the content language of a device that is already set up (D12): measurement
+ *  fragments get new names (new series in Cumulocity), digital input titles, group names and
+ *  floorplans are rewritten in `to`.
+ */
+export type LanguageChange = {
+	from: Language,
+	to: Language,
 };
 
 /**  The whole bundled library, as loaded at startup. */
@@ -1101,7 +1186,7 @@ index: number; title: LocalizedText; tags?: string[]; unit?: string | null; cont
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title becomes the device's input title (D1). */
+/**  For digital inputs the title in the device language becomes the device's input title (D1, D12). */
 title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
 /**  Digital input impulse counter; `unit` is the counter unit (≤ 19 bytes). */
 ({ kind: "impulseCounter"; 
@@ -1109,7 +1194,7 @@ title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control |
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title becomes the device's input title (D1). */
+/**  For digital inputs the title in the device language becomes the device's input title (D1, D12). */
 title: LocalizedText; tags?: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
 /**  System measurement: signal strength or board temperature. */
 ({ kind: "system"; id: string; 
@@ -1134,8 +1219,8 @@ writable?: boolean; control?: Control | null; generator?: GeneratorConfig | null
  *  (`payload::naming::is_valid_device_alarm_name`).
  */
 ({ kind: "customAlarm"; id: string; title: LocalizedText; tags?: string[]; severity: Severity; 
-/**  Alarm text sent to Cumulocity. */
-text: string }) & { control?: never; datatype?: never; effects?: never; generator?: never; index?: never; registerType?: never; slave?: never; system?: never; unit?: never; writable?: never };
+/**  Alarm text sent to Cumulocity; plain or `{de, en}` (D12). */
+text: LocalizableText }) & { control?: never; datatype?: never; effects?: never; generator?: never; index?: never; registerType?: never; slave?: never; system?: never; unit?: never; writable?: never };
 
 /**
  *  One reusable item (PRD §11.3). Tagged by `kind`, so every kind carries exactly the fields
@@ -1171,7 +1256,7 @@ index: number; title: LocalizedText; tags: string[]; unit?: string | null; contr
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title becomes the device's input title (D1). */
+/**  For digital inputs the title in the device language becomes the device's input title (D1, D12). */
 title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
 /**  Digital input impulse counter; `unit` is the counter unit (≤ 19 bytes). */
 ({ kind: "impulseCounter"; 
@@ -1179,7 +1264,7 @@ title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | 
 id: string; 
 /**  Sensor / input number: DI 1–10, brightness / motion sensor 1–10. */
 index: number; 
-/**  For digital inputs the German title becomes the device's input title (D1). */
+/**  For digital inputs the title in the device language becomes the device's input title (D1, D12). */
 title: LocalizedText; tags: string[]; unit?: string | null; control?: Control | null; generator?: GeneratorConfig | null; effects?: ItemEffect[] }) & { datatype?: never; registerType?: never; severity?: never; slave?: never; system?: never; text?: never; writable?: never } | 
 /**  System measurement: signal strength or board temperature. */
 ({ kind: "system"; id: string; 
@@ -1204,10 +1289,17 @@ writable: boolean; control?: Control | null; generator?: GeneratorConfig | null;
  *  (`payload::naming::is_valid_device_alarm_name`).
  */
 ({ kind: "customAlarm"; id: string; title: LocalizedText; tags: string[]; severity: Severity; 
-/**  Alarm text sent to Cumulocity. */
-text: string }) & { control?: never; datatype?: never; effects?: never; generator?: never; index?: never; registerType?: never; slave?: never; system?: never; unit?: never; writable?: never };
+/**  Alarm text sent to Cumulocity; plain or `{de, en}` (D12). */
+text: LocalizableText }) & { control?: never; datatype?: never; effects?: never; generator?: never; index?: never; registerType?: never; slave?: never; system?: never; unit?: never; writable?: never };
 
-/**  German + English text. Both are required in library files. */
+/**
+ *  A human-readable library text: a plain string (the same text in both languages; what older
+ *  files and device-stored copies have) or `{de, en}`. Resolved to the device language
+ *  ([`LocalizableText::get`]) wherever it reaches Cumulocity (DECISIONS D12).
+ */
+export type LocalizableText = string | LocalizedText;
+
+/**  German + English text. Both are required in library files; other keys are rejected. */
 export type LocalizedText = {
 	de: string,
 	en: string,
@@ -1285,6 +1377,12 @@ export type LwDemoState_Deserialize = {
 	 *  `Europe/Berlin`.
 	 */
 	timeZone?: string | null,
+	/**
+	 *  Content language of the device (D12): measurement fragments, digital input titles,
+	 *  group names, alarm / event texts and floorplans are named in it. Set by an apply;
+	 *  `None` = `de` (devices set up before D12). Use [`LwDemoState::language`].
+	 */
+	language?: Language | null,
 	generators?: { [key in string]: GeneratorConfig },
 	sendIntervalSec: number,
 	realisticMode?: boolean,
@@ -1356,6 +1454,12 @@ export type LwDemoState_Serialize = {
 	 *  `Europe/Berlin`.
 	 */
 	timeZone?: string | null,
+	/**
+	 *  Content language of the device (D12): measurement fragments, digital input titles,
+	 *  group names, alarm / event texts and floorplans are named in it. Set by an apply;
+	 *  `None` = `de` (devices set up before D12). Use [`LwDemoState::language`].
+	 */
+	language?: Language | null,
 	generators: { [key in string]: GeneratorConfig },
 	sendIntervalSec: number,
 	realisticMode: boolean,
@@ -1682,7 +1786,8 @@ export type Severity = "CRITICAL" | "MAJOR" | "MINOR" | "WARNING";
 export type SlaveAlarmDefinition = {
 	/**  `[A-Za-z0-9_-]`; used in the alarm type and as the fault target. */
 	name: string,
-	text: string,
+	/**  Plain or `{de, en}` (D12). */
+	text: LocalizableText,
 	severity: Severity,
 };
 
@@ -1704,8 +1809,8 @@ export type SlaveAssignment = {
 /**  A Modbus slave = one functional group (PRD §7.4, §11.3). */
 export type SlaveDefinition = {
 	key: string,
-	/**  ≤ 19 UTF-8 bytes (firmware buffer). */
-	name: string,
+	/**  ≤ 19 UTF-8 bytes (firmware buffer) in every language; plain or `{de, en}` (D12). */
+	name: LocalizableText,
 	/**  Request interval in seconds. */
 	requestInterval: number,
 	/**  Custom alarms of this slave (D2). */

@@ -11,7 +11,7 @@ use serde_json::Value;
 use crate::error::{AppError, AppResult};
 use crate::library::{Library, select};
 use crate::model::{
-    DaliGroup, DemoPack, DeviceConfig, DigitalInputEntry, LibraryItem, LwDemoState,
+    DaliGroup, DemoPack, DeviceConfig, DigitalInputEntry, Language, LibraryItem, LwDemoState,
     ModbusRegisterType, Scenario, SlaveAssignment, SlaveDefinition,
 };
 use crate::payload::config::digital_input_entry;
@@ -293,29 +293,40 @@ pub const DEMO_FIELDS: &[&str] = &[
     "sendIntervalSec",
 ];
 
-/// The demo pack's digital inputs as the device stores them (`lw_demo.digitalInputs`, with the
-/// item's German title).
-pub fn demo_inputs(demo: &DemoPack, items: &[&LibraryItem]) -> AppResult<Vec<DigitalInputEntry>> {
+/// The demo pack's digital inputs as a device in `lang` stores them (`lw_demo.digitalInputs`,
+/// with the item's title in `lang`, D12).
+pub fn demo_inputs(
+    demo: &DemoPack,
+    items: &[&LibraryItem],
+    lang: Language,
+) -> AppResult<Vec<DigitalInputEntry>> {
     demo.digital_inputs
         .iter()
-        .map(|c| digital_input_entry(c, items))
+        .map(|c| digital_input_entry(c, items, lang))
         .collect()
 }
 
-/// Digests of the demo pack's values as they are written to the device.
+/// The demo pack's DALI groups as a device in `lang` stores them (`lw_demo.daliGroups`, names in
+/// `lang`, D12).
+pub fn demo_groups(demo: &DemoPack, lang: Language) -> Vec<DaliGroup> {
+    demo.dali_groups.iter().map(|g| g.resolve(lang)).collect()
+}
+
+/// Digests of the demo pack's values as they are written to a device in `lang`.
 pub fn demo_digests(
     demo: &DemoPack,
     items: &[&LibraryItem],
+    lang: Language,
 ) -> AppResult<BTreeMap<String, String>> {
-    let inputs = demo_inputs(demo, items)?;
-    let groups = &demo.dali_groups;
+    let inputs = demo_inputs(demo, items, lang)?;
+    let groups = demo_groups(demo, lang);
     Ok(device_digests(
         &demo.tags,
         &demo.includes,
         &demo.excludes,
         demo.dali_lamp_count,
         demo.send_interval_sec,
-        groups,
+        &groups,
         &inputs,
     ))
 }
@@ -409,12 +420,14 @@ fn canonical_inputs(inputs: &[DigitalInputEntry]) -> Vec<DigitalInputEntry> {
 
 /// DALI groups and digital inputs of a device: `lw_demo.daliGroups` / `lw_demo.digitalInputs`.
 /// A device set up by an older app version (which kept them in `lw_config*`, no longer read,
-/// D10) has neither: the library demo's groups / inputs are used then (none without a demo).
+/// D10) has neither: the library demo's groups / inputs are used then (none without a demo), in
+/// the device language (D12).
 pub fn device_config(library: &Library, state: &LwDemoState) -> DeviceConfig {
     let demo = state.demo_id.as_deref().and_then(|d| library.demo(d));
+    let lang = state.language();
     let groups = match &state.dali_groups {
         Some(g) => g.clone(),
-        None => demo.map(|d| d.dali_groups.clone()).unwrap_or_default(),
+        None => demo.map(|d| demo_groups(d, lang)).unwrap_or_default(),
     };
     let digital_inputs = match (&state.digital_inputs, demo) {
         (Some(i), _) => i.clone(),
@@ -423,7 +436,7 @@ pub fn device_config(library: &Library, state: &LwDemoState) -> DeviceConfig {
             let refs: Vec<&LibraryItem> = items.iter().collect();
             d.digital_inputs
                 .iter()
-                .filter_map(|c| digital_input_entry(c, &refs).ok())
+                .filter_map(|c| digital_input_entry(c, &refs, lang).ok())
                 .collect()
         }
         (None, None) => Vec::new(),
@@ -547,7 +560,7 @@ mod tests {
         st.includes.clone_from(&demo.includes);
         st.excludes.clone_from(&demo.excludes);
         let c = device_config(&lib, &st);
-        assert_eq!(c.groups, demo.dali_groups);
+        assert_eq!(c.groups, demo_groups(demo, Language::De));
         assert_eq!(c.digital_inputs.len(), demo.digital_inputs.len());
         assert_eq!(c.digital_inputs[0].title, "Zapfsäule 1");
         st.dali_groups = Some(Vec::new());

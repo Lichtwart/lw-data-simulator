@@ -7,6 +7,7 @@ import { ErrorNotice } from "@/components/ErrorNotice";
 import { Button } from "@/components/ui/button";
 import { api, type FaultDefinition } from "@/lib/api";
 import { loadLibrary, mergeItems, mergeScenarios, mergeSlaves } from "@/lib/library";
+import { textIn } from "@/lib/text";
 import { useAsync } from "@/lib/useAsync";
 
 import { useDevice } from "../devices/DeviceContext";
@@ -92,7 +93,10 @@ function Running({ deviceId }: { deviceId: string }) {
     [library.data, customSlaves],
   );
   const metaById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-  const slaveNames = useMemo(() => new Map(slaves.map((s) => [s.key, s.name])), [slaves]);
+  const slaveNames = useMemo(
+    () => new Map(slaves.map((s) => [s.key, textIn(s.name, lang)])),
+    [slaves, lang],
+  );
 
   // The list's shape depends on which items run, not on their values: rebuilt only when the item
   // set changes, so the cards' fault arrays keep their identity (memo) across value ticks.

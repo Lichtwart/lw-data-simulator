@@ -20,7 +20,7 @@ use crate::c8y::realtime::{RealtimeMsg, RealtimeSubscription};
 use crate::device::apply;
 use crate::library::{Library, loader};
 use crate::model::{
-    FaultTarget, GroupMode, OperationDecision, OperationResolution, OperationStatus,
+    FaultTarget, GroupMode, Language, OperationDecision, OperationResolution, OperationStatus,
 };
 
 pub(crate) fn fixture() -> Library {
@@ -29,8 +29,13 @@ pub(crate) fn fixture() -> Library {
 }
 
 fn prepared(lib: &Library, auto_accept: bool, realistic: bool) -> Prepared {
+    prepared_in(lib, auto_accept, realistic, Language::De)
+}
+
+/// [`prepared`] for a device applied in `language` (D12).
+fn prepared_in(lib: &Library, auto_accept: bool, realistic: bool, language: Language) -> Prepared {
     let demo = lib.demo("fixture").unwrap();
-    let mut plan = apply::plan(lib, demo, None).unwrap();
+    let mut plan = apply::plan(lib, demo, None, language).unwrap();
     plan.state.realistic_mode = realistic;
     Prepared {
         params: SessionParams {
@@ -39,7 +44,7 @@ fn prepared(lib: &Library, auto_accept: bool, realistic: bool) -> Prepared {
             user: "demo".into(),
             demo: plan.state,
             resolved: plan.resolved,
-            groups: demo.dali_groups.clone(),
+            groups: plan.groups,
             inputs: plan.inputs,
             scenarios: demo.scenarios.clone(),
             auto_accept,
@@ -468,6 +473,89 @@ mod paused {
         assert_eq!(ev[0]["text"], "Klima Modus: Heizen");
         assert!(items.iter().any(|i| matches!(&i.payload,
             OutboundPayload::InventoryPatch(b) if b["lw_demoAcMode"] == "Heizen")));
+    }
+
+    /// D12: an English device names its measurements after the English titles (series
+    /// unchanged), `DALI Lamp NN` for a grouped lamp without an item, and sends the English
+    /// library texts: effect events and inventory labels, custom / slave alarms, the slave name.
+    #[tokio::test(start_paused = true)]
+    async fn english_device_sends_english_names_and_texts() {
+        let mut r = rig_with(prepared_in(&fixture(), true, false, Language::En));
+        r.settle().await;
+        let items = r.drain();
+        let ms = measurements(&items);
+        assert_eq!(has_series(&ms, "Light 1", "light-1"), Some(80.0));
+        assert_eq!(has_series(&ms, "Light 1", "light-1 Lamp Status"), Some(1.0));
+        assert_eq!(has_series(&ms, "DALI Lamp 03", "lamp-03"), Some(90.0));
+        assert_eq!(
+            has_series(&ms, "Freezer temperature", "freezer_temp"),
+            Some(-18.0)
+        );
+        assert_eq!(has_series(&ms, "Door open", "di-door"), Some(0.0));
+        assert_eq!(has_series(&ms, "Gas meter", "gas-meter"), Some(1000.0));
+        assert!(has_series(&ms, "Signal strength", "rssi").is_some());
+        assert!(
+            ms.iter()
+                .all(|m| m.get("Tiefkühler Temperatur").is_none() && m.get("Licht 1").is_none())
+        );
+
+        // Select effect: event text and inventory label in English.
+        r.op(
+            json!({ "id": "op6", "status": "PENDING", "creationTime": now_iso(),
+                     "lw_modbusWrite": { "slaveAddress": 239, "registerAddress": 40001,
+                                         "value": 2, "type": "register" } }),
+        )
+        .await;
+        let items = r.drain();
+        let ev = events_of(&items);
+        assert_eq!(ev[0]["text"], "AC mode: Heat");
+        assert!(items.iter().any(|i| matches!(&i.payload,
+            OutboundPayload::InventoryPatch(b) if b["lw_demoAcMode"] == "Heat")));
+
+        // Library alarm texts and the slave name in the device language.
+        for target in [
+            FaultTarget::CustomAlarm {
+                item_id: "doorOpen".into(),
+            },
+            FaultTarget::SlaveAlarm {
+                slave_key: "kuehlung".into(),
+                alarm_name: "co2Leakage".into(),
+            },
+            FaultTarget::SlaveTimeout {
+                slave_key: "kuehlung".into(),
+            },
+        ] {
+            r.cmd(SessionCommand::SetFault {
+                target,
+                active: true,
+            })
+            .await
+            .unwrap();
+        }
+        let mut items = r.flush().await;
+        items.extend(r.drain());
+        let alarm_text = |t: &str| {
+            items
+                .iter()
+                .find_map(|i| match &i.payload {
+                    OutboundPayload::Alarm(b) if b["type"] == t => b["text"].as_str(),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("no alarm {t}"))
+                .to_owned()
+        };
+        assert_eq!(alarm_text("lw_demo_doorOpen"), "Back door open");
+        assert_eq!(alarm_text("lw_demo_20_co2Leakage"), "CO2 leak");
+        assert_eq!(
+            alarm_text("lw_modbus_20_timeoutError"),
+            "Modbus 20-240 Timeout Error Cooling"
+        );
+        assert!(
+            events_of(&items)
+                .iter()
+                .any(|e| e["type"] == "lw_modbus"
+                    && e["text"].as_str().unwrap().contains("(Cooling)"))
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -919,7 +1007,7 @@ mod paused {
     }
 
     fn fixture_groups() -> Vec<crate::model::DaliGroup> {
-        fixture().demo("fixture").unwrap().dali_groups.clone()
+        crate::device::setup::demo_groups(fixture().demo("fixture").unwrap(), Language::De)
     }
 
     /// All `_lost` alarms (lamps, then sensors) go out before any control gear failure, on
@@ -1113,7 +1201,10 @@ mod paused {
         r.drain();
         // The next sync (here: a group change) raises it once more.
         r.cmd(SessionCommand::ConfigChanged {
-            groups: Some(fixture_groups()),
+            groups: Some(crate::device::setup::demo_groups(
+                fixture().demo("fixture").unwrap(),
+                Language::De,
+            )),
             inputs: None,
         })
         .await
@@ -1491,6 +1582,7 @@ mod fake {
                 apply_floorplans: false,
                 replace_existing_floorplans: false,
                 force: false,
+                language: None,
             },
         )
         .await
@@ -2620,8 +2712,15 @@ mod review_paused {
         core.setup_changed(demo.clone(), now);
         assert!(core.snapshot().restart_needed, "item selection changed");
         demo.excludes.pop();
-        core.setup_changed(demo, now);
+        core.setup_changed(demo.clone(), now);
         assert!(!core.snapshot().restart_needed, "reverted selection");
+        // Another content language renames every fragment (D12): restart.
+        demo.language = Some(crate::model::Language::En);
+        core.setup_changed(demo.clone(), now);
+        assert!(core.snapshot().restart_needed, "language changed");
+        demo.language = None;
+        core.setup_changed(demo, now);
+        assert!(!core.snapshot().restart_needed, "absent language = de");
 
         // A new DI title is the new fragment (D10): taken over at once, no restart.
         let mut inputs = core.inputs.clone();
@@ -3115,7 +3214,10 @@ mod cloud_clear {
         assert!(r.flush().await.is_empty());
         assert!(paused(&r, "light-1"));
         r.cmd(SessionCommand::ConfigChanged {
-            groups: Some(fixture().demo("fixture").unwrap().dali_groups.clone()),
+            groups: Some(crate::device::setup::demo_groups(
+                fixture().demo("fixture").unwrap(),
+                Language::De,
+            )),
             inputs: None,
         })
         .await

@@ -4,51 +4,78 @@
   "slaves": [
     {
       "key": "lade_1",
-      "name": "Ladesaeule 1",
+      "name": {
+        "de": "Ladesaeule 1",
+        "en": "EV Charger 1"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "ev_slot_1_alarm",
-          "text": "Ladeplatz 1: Störung",
+          "text": {
+            "de": "Ladeplatz 1: Störung",
+            "en": "EV bay 1: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_ev1_alarm",
-          "text": "Energie Ladesäule 1: Störung",
+          "text": {
+            "de": "Energie Ladesäule 1: Störung",
+            "en": "EV charger 1 energy: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "lade_2",
-      "name": "Ladesaeule 2",
+      "name": {
+        "de": "Ladesaeule 2",
+        "en": "EV Charger 2"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "ev_slot_2_alarm",
-          "text": "Ladeplatz 2: Störung",
+          "text": {
+            "de": "Ladeplatz 2: Störung",
+            "en": "EV bay 2: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_ev2_alarm",
-          "text": "Energie Ladesäule 2: Störung",
+          "text": {
+            "de": "Energie Ladesäule 2: Störung",
+            "en": "EV charger 2 energy: fault"
+          },
           "severity": "MAJOR"
         }
       ]
     },
     {
       "key": "lade_3",
-      "name": "Ladesaeule 3",
+      "name": {
+        "de": "Ladesaeule 3",
+        "en": "EV Charger 3"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "ev_slot_3_alarm",
-          "text": "Ladeplatz 3: Störung",
+          "text": {
+            "de": "Ladeplatz 3: Störung",
+            "en": "EV bay 3: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_ev3_alarm",
-          "text": "Energie Ladesäule 3: Störung",
+          "text": {
+            "de": "Energie Ladesäule 3: Störung",
+            "en": "EV charger 3 energy: fault"
+          },
           "severity": "MAJOR"
         }
       ]
@@ -65,7 +92,7 @@
       "writable": false,
       "title": {
         "de": "Energie Ladesäule 1",
-        "en": "Energy EV charger 1"
+        "en": "EV charger 1 energy"
       },
       "tags": [
         "retail",
@@ -92,7 +119,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Ladesäule 1",
-        "en": "Peak current EV charger 1"
+        "en": "EV charger 1 peak current"
       },
       "tags": [
         "retail",
@@ -147,7 +174,7 @@
       "writable": false,
       "title": {
         "de": "Energie Ladesäule 2",
-        "en": "Energy EV charger 2"
+        "en": "EV charger 2 energy"
       },
       "tags": [
         "retail",
@@ -174,7 +201,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Ladesäule 2",
-        "en": "Peak current EV charger 2"
+        "en": "EV charger 2 peak current"
       },
       "tags": [
         "retail",
@@ -229,7 +256,7 @@
       "writable": false,
       "title": {
         "de": "Energie Ladesäule 3",
-        "en": "Energy EV charger 3"
+        "en": "EV charger 3 energy"
       },
       "tags": [
         "retail",
@@ -256,7 +283,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Ladesäule 3",
-        "en": "Peak current EV charger 3"
+        "en": "EV charger 3 peak current"
       },
       "tags": [
         "retail",

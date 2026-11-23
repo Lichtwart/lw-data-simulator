@@ -105,6 +105,13 @@ function Workspace({ deviceId, tab }: { deviceId: string; tab: WorkspaceTab }) {
                     {device.demo.libraryVersion}
                   </span>
                 )}
+                {device.demo?.demoId && (
+                  <span className="text-xs text-muted-foreground">
+                    {t("devices.contentLanguage", {
+                      language: t(`languages.${device.demo.language ?? "de"}`),
+                    })}
+                  </span>
+                )}
                 {device.upgradeAvailable && (
                   <Link to={`/devices/${device.id}/setup`}>
                     <Badge variant="warning">{t("devices.upgradeAvailable")}</Badge>

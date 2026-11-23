@@ -462,7 +462,8 @@ pub async fn prepare(
             .index()
             .and_then(|i| config.digital_inputs.iter().find(|e| e.index == i))
             .filter(|_| matches!(item, crate::model::LibraryItem::ImpulseCounter { .. }));
-        if let Some(n) = crate::payload::naming::item_naming_with_di(item, slave, di)
+        if let Some(n) =
+            crate::payload::naming::item_naming_with_di(item, slave, di, demo.language())
             && let Some(s) = n.series.first()
         {
             counter_queries.push((item.id().to_owned(), n.fragment.clone(), s.name.clone()));

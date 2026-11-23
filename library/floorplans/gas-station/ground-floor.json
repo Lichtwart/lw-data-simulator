@@ -1,8 +1,14 @@
 {
   "type": "lw-demo-floorplan",
   "schemaVersion": 1,
-  "name": "Erdgeschoss",
-  "description": "Tankstelle: Shop, Kühlung, Tankstellendach, Tankanlage und Ladeplätze",
+  "name": {
+    "de": "Erdgeschoss",
+    "en": "Ground floor"
+  },
+  "description": {
+    "de": "Tankstelle: Shop, Kühlung, Tankstellendach, Tankanlage und Ladeplätze",
+    "en": "Gas station: shop, cooling, canopy, fuel tanks and EV bays"
+  },
   "icon": "map",
   "image": "ground-floor.svg",
   "imageWidth": 1780,
@@ -14,7 +20,6 @@
       "x": 185,
       "y": 120,
       "icon": "light-bulb",
-      "title": "WC und Lager",
       "confirm": false,
       "control": {
         "type": "dali",
@@ -39,8 +44,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Wasser",
-        "offLabel": "Trocken",
+        "onLabel": {
+          "de": "Wasser",
+          "en": "Water"
+        },
+        "offLabel": {
+          "de": "Trocken",
+          "en": "Dry"
+        },
         "onLevel": "alarm",
         "offLevel": "good"
       },
@@ -71,7 +82,6 @@
       "x": 515,
       "y": 120,
       "icon": "light-bulb",
-      "title": "Personal",
       "confirm": false,
       "control": {
         "type": "dali",
@@ -89,7 +99,10 @@
       "x": 515,
       "y": 176,
       "icon": "fan",
-      "title": "Klima Personal",
+      "title": {
+        "de": "Klima Personal",
+        "en": "Crew AC"
+      },
       "confirm": false,
       "control": {
         "type": "modbus",
@@ -98,27 +111,42 @@
         "options": [
           {
             "value": 0,
-            "label": "Heizen",
+            "label": {
+              "de": "Heizen",
+              "en": "Heat"
+            },
             "icon": "fire"
           },
           {
             "value": 1,
-            "label": "Automatik",
+            "label": {
+              "de": "Automatik",
+              "en": "Auto"
+            },
             "icon": "rotate-right"
           },
           {
             "value": 2,
-            "label": "Kühlen",
+            "label": {
+              "de": "Kühlen",
+              "en": "Cool"
+            },
             "icon": "snowflake-o"
           },
           {
             "value": 3,
-            "label": "Entfeuchten",
+            "label": {
+              "de": "Entfeuchten",
+              "en": "Dehumidify"
+            },
             "icon": "air-quality"
           },
           {
             "value": 4,
-            "label": "Befeuchten",
+            "label": {
+              "de": "Befeuchten",
+              "en": "Humidify"
+            },
             "icon": "tint"
           }
         ]
@@ -137,8 +165,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -163,7 +197,10 @@
       "x": 845,
       "y": 120,
       "icon": "thermometer-half",
-      "title": "Klima Büro",
+      "title": {
+        "de": "Klima Büro",
+        "en": "Office AC"
+      },
       "confirm": false,
       "control": {
         "type": "modbus",
@@ -194,8 +231,14 @@
       "x": 1080,
       "y": 136,
       "icon": "air-quality",
-      "text": "CO₂-Tank",
-      "note": "Leck: Raum lüften",
+      "text": {
+        "de": "CO₂-Tank",
+        "en": "CO₂ tank"
+      },
+      "note": {
+        "de": "Leck: Raum lüften",
+        "en": "Leak: ventilate room"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -214,7 +257,10 @@
       "x": 1210,
       "y": 136,
       "icon": "bell",
-      "text": "Sicherungen",
+      "text": {
+        "de": "Sicherungen",
+        "en": "Fuses"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -271,8 +317,14 @@
       "id": "w-klima",
       "kind": "alarm",
       "icon": "air-conditioner",
-      "text": "Klima",
-      "note": "Störungen der Klimageräte",
+      "text": {
+        "de": "Klima",
+        "en": "AC"
+      },
+      "note": {
+        "de": "Störungen der Klimageräte",
+        "en": "AC unit faults"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -299,8 +351,14 @@
       "id": "w-subdist",
       "kind": "alarm",
       "icon": "warning",
-      "text": "Unterverteilung",
-      "note": "Energiezähler Störung",
+      "text": {
+        "de": "Unterverteilung",
+        "en": "Sub-distribution"
+      },
+      "note": {
+        "de": "Energiezähler Störung",
+        "en": "Energy meter fault"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -324,7 +382,6 @@
       "measurement": {
         "itemId": "energy_total"
       },
-      "title": "Energie gesamt",
       "unit": "kWh",
       "decimals": 0,
       "locked": true
@@ -338,7 +395,10 @@
       "measurement": {
         "itemId": "current_peak_total"
       },
-      "title": "Spitzenstrom",
+      "title": {
+        "de": "Spitzenstrom",
+        "en": "Peak current"
+      },
       "unit": "A",
       "decimals": 0,
       "ranges": [
@@ -373,8 +433,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Wasser",
-        "offLabel": "Trocken",
+        "onLabel": {
+          "de": "Wasser",
+          "en": "Water"
+        },
+        "offLabel": {
+          "de": "Trocken",
+          "en": "Dry"
+        },
         "onLevel": "alarm",
         "offLevel": "good"
       },
@@ -405,7 +471,6 @@
       "x": 185,
       "y": 467,
       "icon": "light-bulb",
-      "title": "Verkaufsraum",
       "confirm": false,
       "control": {
         "type": "dali",
@@ -491,7 +556,10 @@
       "measurement": {
         "itemId": "freezer_temp"
       },
-      "title": "Tiefkühler",
+      "title": {
+        "de": "Tiefkühler",
+        "en": "Freezer"
+      },
       "decimals": 1,
       "staleAfterMin": 15,
       "ranges": [
@@ -528,7 +596,10 @@
       "measurement": {
         "itemId": "cooler_temp"
       },
-      "title": "Kühlzelle",
+      "title": {
+        "de": "Kühlzelle",
+        "en": "Cold room"
+      },
       "decimals": 1,
       "staleAfterMin": 15,
       "ranges": [
@@ -569,8 +640,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -589,8 +666,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -602,7 +685,6 @@
       "x": 185,
       "y": 767,
       "icon": "light-bulb",
-      "title": "Tankstellendach",
       "confirm": false,
       "control": {
         "type": "dali",
@@ -618,7 +700,6 @@
       "id": "w-dali-ads",
       "kind": "control",
       "icon": "light-bulb",
-      "title": "Werbung",
       "confirm": false,
       "control": {
         "type": "dali",
@@ -693,7 +774,6 @@
       "measurement": {
         "itemId": "lux-1"
       },
-      "title": "Außenhelligkeit",
       "unit": "lx",
       "decimals": 0,
       "locked": true
@@ -707,7 +787,10 @@
       "measurement": {
         "itemId": "tank_super"
       },
-      "title": "Tank Super",
+      "title": {
+        "de": "Tank Super",
+        "en": "Super tank"
+      },
       "unit": "%",
       "decimals": 0,
       "ranges": [
@@ -738,7 +821,10 @@
       "measurement": {
         "itemId": "tank_diesel"
       },
-      "title": "Tank Diesel",
+      "title": {
+        "de": "Tank Diesel",
+        "en": "Diesel tank"
+      },
       "unit": "%",
       "decimals": 0,
       "ranges": [
@@ -766,8 +852,14 @@
       "x": 1080,
       "y": 783,
       "icon": "gas",
-      "text": "Tankanlage",
-      "note": "Leckage prüfen",
+      "text": {
+        "de": "Tankanlage",
+        "en": "Fuel tanks"
+      },
+      "note": {
+        "de": "Leckage prüfen",
+        "en": "Check for leak"
+      },
       "alarms": [
         {
           "kind": "item",
@@ -782,14 +874,23 @@
       "x": 885,
       "y": 907,
       "icon": "power-off",
-      "title": "Zapfsäulen",
+      "title": {
+        "de": "Zapfsäulen",
+        "en": "Fuel pumps"
+      },
       "confirm": true,
       "control": {
         "type": "modbus",
         "itemId": "pump_release",
         "valueType": "boolean",
-        "onLabel": "Frei",
-        "offLabel": "Gesperrt"
+        "onLabel": {
+          "de": "Frei",
+          "en": "Released"
+        },
+        "offLabel": {
+          "de": "Gesperrt",
+          "en": "Locked"
+        }
       }
     },
     {
@@ -805,8 +906,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -825,8 +932,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -845,8 +958,14 @@
         "kind": "boolean",
         "onValue": 1,
         "offValue": 0,
-        "onLabel": "Belegt",
-        "offLabel": "Frei",
+        "onLabel": {
+          "de": "Belegt",
+          "en": "Occupied"
+        },
+        "offLabel": {
+          "de": "Frei",
+          "en": "Free"
+        },
         "onLevel": "warning",
         "offLevel": "good"
       },
@@ -858,7 +977,10 @@
       "x": 1320,
       "y": 923,
       "icon": "charging-battery",
-      "text": "Ladesäulen",
+      "text": {
+        "de": "Ladesäulen",
+        "en": "EV chargers"
+      },
       "alarms": [
         {
           "kind": "item",

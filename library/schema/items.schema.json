@@ -20,7 +20,7 @@
       "required": ["name", "text", "severity"],
       "properties": {
         "name": { "$ref": "common.schema.json#/$defs/alarmName" },
-        "text": { "type": "string", "minLength": 1 },
+        "text": { "$ref": "common.schema.json#/$defs/text" },
         "severity": { "$ref": "common.schema.json#/$defs/severity" }
       }
     },
@@ -32,10 +32,19 @@
       "properties": {
         "key": { "$ref": "common.schema.json#/$defs/slaveKey" },
         "name": {
-          "description": "Firmware buffer: 19 UTF-8 bytes (validation is the byte gate; maxLength counts code points).",
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 19
+          "description": "Plain or {de, en}. ASCII; firmware buffer: 19 UTF-8 bytes in each language (validation is the byte gate; maxLength counts code points).",
+          "oneOf": [
+            { "type": "string", "minLength": 1, "maxLength": 19 },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["de", "en"],
+              "properties": {
+                "de": { "type": "string", "minLength": 1, "maxLength": 19 },
+                "en": { "type": "string", "minLength": 1, "maxLength": 19 }
+              }
+            }
+          ]
         },
         "requestInterval": {
           "description": "Seconds.",
@@ -139,7 +148,7 @@
         "title": { "$ref": "common.schema.json#/$defs/localizedText" },
         "tags": { "$ref": "common.schema.json#/$defs/tags" },
         "severity": { "$ref": "common.schema.json#/$defs/severity" },
-        "text": { "type": "string", "minLength": 1 }
+        "text": { "$ref": "common.schema.json#/$defs/text" }
       }
     },
     "item": {

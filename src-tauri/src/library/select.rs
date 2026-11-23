@@ -29,7 +29,7 @@ pub fn select_by<'a>(
     out
 }
 
-/// Full-text search over title (de + en), id, tags and slave name (Modbus items).
+/// Full-text search over title (de + en), id, tags and slave name (de + en, Modbus items).
 /// Case-insensitive; the query is split on whitespace and all words must match (AND).
 /// An empty query matches everything.
 pub fn search<'a>(
@@ -41,17 +41,16 @@ pub fn search<'a>(
     items
         .iter()
         .filter(|item| {
-            let slave_name = item
+            let slave = item
                 .slave_key()
-                .and_then(|k| slaves.iter().find(|s| s.key == k))
-                .map(|s| s.name.as_str());
+                .and_then(|k| slaves.iter().find(|s| s.key == k));
             let mut haystack = vec![
                 item.title().de.as_str(),
                 item.title().en.as_str(),
                 item.id(),
             ];
             haystack.extend(item.tags().iter().map(String::as_str));
-            haystack.extend(slave_name);
+            haystack.extend(slave.iter().flat_map(|s| s.name.each().map(|(_, n)| n)));
             let haystack: Vec<String> = haystack.into_iter().map(str::to_lowercase).collect();
             words
                 .iter()

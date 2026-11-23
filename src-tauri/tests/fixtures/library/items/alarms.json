@@ -5,6 +5,6 @@
     { "kind": "customAlarm", "id": "doorOpen",
       "title": { "de": "Hintertür offen", "en": "Back door open" },
       "tags": ["fixture", "category:security"],
-      "severity": "MAJOR", "text": "Hintertür offen" }
+      "severity": "MAJOR", "text": { "de": "Hintertür offen", "en": "Back door open" } }
   ]
 }

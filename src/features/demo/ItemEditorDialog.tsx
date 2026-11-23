@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, type LibraryItem_Serialize, type SlaveDefinition } from "@/lib/api";
+import { textIn } from "@/lib/text";
 
 import { draftToItem, EMPTY_DRAFT, type ItemDraft, itemToDraft, validateDraft } from "./itemDraft";
 import { parseIntIn } from "./parse";
@@ -56,7 +57,8 @@ export function ItemEditorDialog({
   takenIds: ReadonlySet<string>;
   onSubmit: (items: LibraryItem_Serialize[]) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "de";
   const [d, setD] = useState<ItemDraft>(EMPTY_DRAFT);
   const [count, setCount] = useState("4");
   const [start, setStart] = useState("1");
@@ -241,7 +243,7 @@ export function ItemEditorDialog({
                     <SelectContent>
                       {slaves.map((s) => (
                         <SelectItem key={s.key} value={s.key}>
-                          {s.name}
+                          {textIn(s.name, lang)}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -7,6 +7,26 @@ demo library.
 
 ## [Unreleased]
 
+### Added
+
+- Demo devices have a content language (`lw_demo.language`, German or English). A device created
+  while the app is in English gets English measurement names, digital input titles, group names,
+  alarm and event texts and floorplans; re-applying a demo can change the language (measurements
+  then get new names). Devices set up before stay German (DECISIONS D12).
+- Library texts that were plain strings (slave names, alarm and event texts, group names,
+  floorplan texts) can be given as `{de, en}`; plain strings still work for both languages.
+- Create device and "Apply demo" have a content language selector (default: the app language on
+  create, the device's language on re-apply); the preview warns when a re-apply changes the
+  language. The device header shows the content language.
+
+### Changed
+
+- The bundled demos (gas station, retail, restaurant) are fully bilingual. English item titles
+  follow one pattern (`Kitchen energy`, `Cold room temperature`, `Kitchen AC setpoint`).
+- Floorplan widgets whose title only repeated the item or group name take that name from the
+  device, in its language.
+- Floorplan names must be unique within a demo across both languages.
+
 ## [0.2.0] - 2026-10-13
 
 ### Changed

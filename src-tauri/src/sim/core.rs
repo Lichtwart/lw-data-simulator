@@ -30,8 +30,8 @@ use crate::events::{ItemValuesChanged, RealtimeStatus, SessionError};
 use crate::model::{
     ActiveFault, Control, DaliGroup, DaliGroupState, DemoSnapshot, DigitalInputEntry,
     DigitalInputType, GeneratorConfig, GroupMode, ItemEffect, ItemRuntimeState, ItemValue,
-    LibraryItem, LwDemoState, MeasurementNaming, OpenAlarmStatus, Scenario, SessionSnapshot,
-    SessionStatus, SlaveAssignment, SlaveDefinition,
+    Language, LibraryItem, LwDemoState, MeasurementNaming, OpenAlarmStatus, Scenario,
+    SessionSnapshot, SessionStatus, SlaveAssignment, SlaveDefinition,
 };
 use crate::payload::alarm::{AlarmSpec, build_alarm};
 use crate::payload::event::{
@@ -276,6 +276,9 @@ pub struct SessionCore {
     pub(super) last_gen_tick: Instant,
     pub(super) revision: u32,
     pub(super) time_zone: String,
+    /// Content language of the device when the session started (`lw_demo.language`, D12):
+    /// fragments, alarm and event texts. A change needs a restart (see [`selection_key`]).
+    pub(super) language: Language,
     pub(super) clock_skew: Arc<AtomicI64>,
     pub(super) rs485_active: bool,
     /// What the item selection was made from when the session started (see [`selection_key`]).
@@ -311,8 +314,9 @@ pub struct SessionCore {
     pub(super) last_error: Option<(String, Instant)>,
 }
 
-/// The part of the device setup that decides which items and slaves exist. A session keeps the
-/// selection it started with; a change shows up as `restart_needed`.
+/// The part of the device setup that decides which items and slaves exist and how they are named
+/// (the content language, D12). A session keeps the selection it started with; a change shows
+/// up as `restart_needed`.
 fn selection_key(demo: &LwDemoState) -> String {
     serde_json::to_string(&(
         &demo.tags,
@@ -321,6 +325,7 @@ fn selection_key(demo: &LwDemoState) -> String {
         demo.dali_lamp_count,
         &demo.custom_slaves,
         &demo.custom_items,
+        demo.language(),
     ))
     .unwrap_or_default()
 }
@@ -373,12 +378,13 @@ pub fn check_value(item: &LibraryItem, value: f64) -> AppResult<()> {
     }
 }
 
-/// Naming of an item: Modbus items follow their slave's assignment, digital inputs the device's
-/// digital input entry (type, unit and title, D10).
+/// Naming of an item on a device in `lang` (D12): Modbus items follow their slave's assignment,
+/// digital inputs the device's digital input entry (type, unit and title, D10).
 fn naming_of(
     def: &LibraryItem,
     slaves: &[(SlaveDefinition, SlaveAssignment)],
     inputs: &[DigitalInputEntry],
+    lang: Language,
 ) -> Option<MeasurementNaming> {
     let slave = def
         .slave_key()
@@ -393,7 +399,7 @@ fn naming_of(
             )
         })
         .and_then(|n| inputs.iter().find(|e| e.index == n));
-    item_naming_with_di(def, slave, di)
+    item_naming_with_di(def, slave, di, lang)
 }
 
 fn unix_secs() -> f64 {
@@ -408,10 +414,11 @@ fn initial_runtime_secs(lamp: u32) -> f64 {
 impl SessionCore {
     pub fn new(p: SessionParams, now: Instant) -> Self {
         let ResolvedSetup { items, slaves, .. } = p.resolved;
+        let language = p.demo.language();
         let live: Vec<LiveItem> = items
             .into_iter()
             .map(|def| {
-                let naming = naming_of(&def, &slaves, &p.inputs);
+                let naming = naming_of(&def, &slaves, &p.inputs, language);
                 let base = default_value(&def);
                 let generator = p
                     .demo
@@ -489,6 +496,7 @@ impl SessionCore {
             last_gen_tick: now,
             revision: 0,
             time_zone: p.time_zone,
+            language,
             clock_skew: p.clock_skew,
             rs485_active: p.rs485_active,
             group_modes: p.group_modes,
@@ -780,7 +788,7 @@ impl SessionCore {
             return Vec::new();
         }
         let b = self.lamps.get(&n).map_or(0.0, |l| l.brightness);
-        dali_lamp_values(n, b, self.lamp_status(n))
+        dali_lamp_values(n, b, self.lamp_status(n), self.language)
     }
 
     /// Queue the measurements of lamp `n` (item or hidden lamp).
@@ -875,13 +883,14 @@ impl SessionCore {
             Some(Control::Select { options, .. }) => options
                 .iter()
                 .find(|o| o.value == item.value)
-                .map(|o| o.label.de.clone()),
+                .map(|o| o.label.get(self.language).to_owned()),
             _ => None,
         };
         for e in effects {
             match e {
                 ItemEffect::Event { event_type, text } => {
                     let text = text
+                        .get(self.language)
                         .replace("{value}", &value_text)
                         .replace("{label}", label.as_deref().unwrap_or(&value_text));
                     self.event(&event_type, &text, None);
@@ -932,7 +941,7 @@ impl SessionCore {
                 if value >= threshold && !active && !suppressed {
                     self.raise_alarm(&AlarmSpec {
                         alarm_type,
-                        text,
+                        text: text.get(self.language).to_owned(),
                         severity,
                     });
                 } else if value < threshold {
@@ -1258,7 +1267,12 @@ impl SessionCore {
         if let Some(ins) = inputs {
             self.inputs = ins;
             for idx in 0..self.items.len() {
-                let naming = naming_of(&self.items[idx].def, &self.slaves, &self.inputs);
+                let naming = naming_of(
+                    &self.items[idx].def,
+                    &self.slaves,
+                    &self.inputs,
+                    self.language,
+                );
                 if naming == self.items[idx].naming {
                     continue;
                 }

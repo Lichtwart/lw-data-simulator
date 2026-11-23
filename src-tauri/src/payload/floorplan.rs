@@ -3,7 +3,8 @@
 //!
 //! Item references are resolved here: `measurement {fragment, series}` from the item naming
 //! (title / item id, D10), `alarmTypes` from alarm references (written literally, the plugin never suggests
-//! custom types), Modbus control targets from the slave / register assignment.
+//! custom types), Modbus control targets from the slave / register assignment. Texts (name,
+//! description, titles, labels) are resolved in the device's content language (D12).
 
 use serde_json::{Map, Value, json};
 
@@ -15,8 +16,9 @@ use super::json_number;
 use super::naming::{self, DALI_VALUE_SERIES, item_naming_with_di};
 use crate::error::{AppError, AppResult};
 use crate::model::{
-    AlarmRef, DaliGroup, DigitalInputEntry, FloorplanLayout, FloorplanWidget, LibraryItem,
-    ModbusValueType, SensorDisplay, SlaveAssignment, SlaveDefinition, WidgetControl, WidgetLevel,
+    AlarmRef, DaliGroup, DigitalInputEntry, FloorplanLayout, FloorplanWidget, Language,
+    LibraryItem, LocalizableText, ModbusValueType, SensorDisplay, SlaveAssignment, SlaveDefinition,
+    WidgetControl, WidgetLevel,
 };
 
 /// Managed-object `type` of a floorplan.
@@ -33,6 +35,8 @@ pub struct FloorplanContext<'a> {
     pub groups: &'a [DaliGroup],
     /// Digital inputs of the device (titles for DI widgets and measurement fragments).
     pub digital_inputs: &'a [DigitalInputEntry],
+    /// Content language of the device (`lw_demo.language`, D12).
+    pub language: Language,
 }
 
 impl<'a> FloorplanContext<'a> {
@@ -42,6 +46,11 @@ impl<'a> FloorplanContext<'a> {
             .find(|i| i.id() == id)
             .copied()
             .ok_or_else(|| AppError::NotFound(format!("item {id}")))
+    }
+
+    /// A library text in the device language.
+    fn text(&self, t: &LocalizableText) -> String {
+        t.get(self.language).to_owned()
     }
 
     fn slave(&self, key: &str) -> AppResult<(&'a SlaveDefinition, &'a SlaveAssignment)> {
@@ -76,11 +85,11 @@ fn native_alarm_types(item: &LibraryItem, ctx: &FloorplanContext<'_>) -> AppResu
         LibraryItem::DaliMotion { index, .. } => types(motion_alarms(*index)).collect(),
         LibraryItem::Modbus { slave, .. } => {
             let (def, a) = ctx.slave(slave)?;
-            std::iter::once(slave_timeout_alarm(def, a).alarm_type)
-                .chain(types(slave_custom_alarms(def, a)))
+            std::iter::once(slave_timeout_alarm(def, a, ctx.language).alarm_type)
+                .chain(types(slave_custom_alarms(def, a, ctx.language)))
                 .collect()
         }
-        LibraryItem::CustomAlarm { .. } => device_custom_alarm(item)
+        LibraryItem::CustomAlarm { .. } => device_custom_alarm(item, ctx.language)
             .map(|s| s.alarm_type)
             .into_iter()
             .collect(),
@@ -137,7 +146,7 @@ fn level(l: WidgetLevel) -> &'static str {
     }
 }
 
-fn display_json(d: &SensorDisplay) -> Value {
+fn display_json(d: &SensorDisplay, ctx: &FloorplanContext<'_>) -> Value {
     match d {
         SensorDisplay::Number {} => json!({ "kind": "number" }),
         SensorDisplay::Boolean {
@@ -153,8 +162,8 @@ fn display_json(d: &SensorDisplay) -> Value {
             o.insert("kind".into(), json!("boolean"));
             o.insert("onValue".into(), json_number(*on_value));
             o.insert("offValue".into(), json_number(*off_value));
-            o.insert("onLabel".into(), json!(on_label));
-            o.insert("offLabel".into(), json!(off_label));
+            o.insert("onLabel".into(), json!(ctx.text(on_label)));
+            o.insert("offLabel".into(), json!(ctx.text(off_label)));
             if let Some(l) = on_level {
                 o.insert("onLevel".into(), json!(level(*l)));
             }
@@ -192,7 +201,7 @@ fn measurement_ref(
                 LibraryItem::DigitalInput { .. } | LibraryItem::ImpulseCounter { .. }
             )
         });
-    let naming = item_naming_with_di(item, slave, di)
+    let naming = item_naming_with_di(item, slave, di, ctx.language)
         .ok_or_else(|| AppError::InvalidInput(format!("item {} has no measurement", item.id())))?;
     // The library names a DALI lamp's series (`Brightness`, `Lamp Status`, …); on the wire they
     // are the item id and `<id> <name>` (D10). Other items have exactly one series.
@@ -218,19 +227,23 @@ fn measurement_ref(
     ))
 }
 
-/// Default sensor title: the German item title; for a DI the device's digital input title when
-/// it has one (the same text as the measurement fragment, D10), and `Eingang <N>` when neither
-/// has a title (the widget texts are German).
-fn default_title(item: &LibraryItem, ctx: &FloorplanContext<'_>) -> String {
+/// Default sensor title: the item title in the device language; for a DI the device's digital
+/// input title when it has one (the same text as the measurement fragment, D10), and
+/// `Eingang <N>` / `Input <N>` when neither has a title (D12).
+pub fn default_title(item: &LibraryItem, ctx: &FloorplanContext<'_>) -> String {
+    let own = item.title().get(ctx.language).to_owned();
     match item {
         LibraryItem::DigitalInput { index, .. } | LibraryItem::ImpulseCounter { index, .. } => ctx
             .digital_inputs
             .iter()
             .find(|e| e.index == *index && !e.title.trim().is_empty())
             .map(|e| e.title.clone())
-            .or_else(|| Some(item.title().de.clone()).filter(|t| !t.trim().is_empty()))
-            .unwrap_or_else(|| format!("Eingang {index}")),
-        _ => item.title().de.clone(),
+            .or_else(|| Some(own).filter(|t| !t.trim().is_empty()))
+            .unwrap_or_else(|| match ctx.language {
+                Language::De => format!("Eingang {index}"),
+                Language::En => format!("Input {index}"),
+            }),
+        _ => own,
     }
 }
 
@@ -266,7 +279,11 @@ fn widget_json(w: &FloorplanWidget, ctx: &FloorplanContext<'_>) -> AppResult<Val
             o.insert("icon".into(), json!(icon));
             o.insert(
                 "title".into(),
-                json!(title.clone().unwrap_or_else(|| default_title(item, ctx))),
+                json!(
+                    title
+                        .as_ref()
+                        .map_or_else(|| default_title(item, ctx), |t| ctx.text(t))
+                ),
             );
             o.insert("measurement".into(), m);
             if let Some(u) = unit.clone().or(series_unit) {
@@ -274,7 +291,7 @@ fn widget_json(w: &FloorplanWidget, ctx: &FloorplanContext<'_>) -> AppResult<Val
             }
             o.insert("decimals".into(), json!(decimals.unwrap_or(1)));
             if let Some(d) = display {
-                o.insert("display".into(), display_json(d));
+                o.insert("display".into(), display_json(d, ctx));
             }
             let ranges: Vec<Value> = ranges
                 .iter()
@@ -303,9 +320,9 @@ fn widget_json(w: &FloorplanWidget, ctx: &FloorplanContext<'_>) -> AppResult<Val
             o.insert("y".into(), json_number(y));
             o.insert("locked".into(), json!(locked));
             o.insert("icon".into(), json!(icon));
-            o.insert("text".into(), json!(text));
+            o.insert("text".into(), json!(ctx.text(text)));
             if let Some(n) = note {
-                o.insert("note".into(), json!(n));
+                o.insert("note".into(), json!(ctx.text(n)));
             }
             o.insert("alarmTypes".into(), json!(alarm_types(alarms, ctx)?));
         }
@@ -325,7 +342,7 @@ fn widget_json(w: &FloorplanWidget, ctx: &FloorplanContext<'_>) -> AppResult<Val
             o.insert("icon".into(), json!(icon));
             o.insert(
                 "title".into(),
-                json!(title.clone().unwrap_or(default_title)),
+                json!(title.as_ref().map_or(default_title, |t| ctx.text(t))),
             );
             o.insert("confirm".into(), json!(confirm));
             o.insert("control".into(), control);
@@ -334,8 +351,9 @@ fn widget_json(w: &FloorplanWidget, ctx: &FloorplanContext<'_>) -> AppResult<Val
     Ok(Value::Object(o))
 }
 
-/// Plugin `control` object + default widget title.
-fn control_json(c: &WidgetControl, ctx: &FloorplanContext<'_>) -> AppResult<(Value, String)> {
+/// Plugin `control` object + default widget title (group name / item title in the device
+/// language).
+pub fn control_json(c: &WidgetControl, ctx: &FloorplanContext<'_>) -> AppResult<(Value, String)> {
     match c {
         WidgetControl::Dali { group, modes } => {
             // Groups are edited on the device (D6): a missing group fails the apply like every
@@ -409,11 +427,11 @@ fn control_json(c: &WidgetControl, ctx: &FloorplanContext<'_>) -> AppResult<(Val
                     o.insert("valueType".into(), json!("boolean"));
                     o.insert(
                         "onLabel".into(),
-                        json!(on_label.clone().unwrap_or_default()),
+                        json!(on_label.as_ref().map(|l| ctx.text(l)).unwrap_or_default()),
                     );
                     o.insert(
                         "offLabel".into(),
-                        json!(off_label.clone().unwrap_or_default()),
+                        json!(off_label.as_ref().map(|l| ctx.text(l)).unwrap_or_default()),
                     );
                     o.insert("invert".into(), json!(invert));
                 }
@@ -430,19 +448,22 @@ fn control_json(c: &WidgetControl, ctx: &FloorplanContext<'_>) -> AppResult<(Val
                     o.insert("valueType".into(), json!("multi"));
                     let opts: Vec<Value> = options
                         .iter()
-                        .map(|x| json!({ "value": x.value, "label": x.label, "icon": x.icon }))
+                        .map(|x| {
+                            json!({ "value": x.value, "label": ctx.text(&x.label), "icon": x.icon })
+                        })
                         .collect();
                     o.insert("options".into(), Value::Array(opts));
                 }
             }
-            Ok((Value::Object(o), item.title().de.clone()))
+            Ok((Value::Object(o), item.title().get(ctx.language).to_owned()))
         }
     }
 }
 
 /// `POST /inventory/managedObjects` body of a floorplan: `{type: "lw_floorplan", name,
 /// lw_floorplan: {description, icon, imageBinaryId, imageWidth, imageHeight, imageOpacity?,
-/// widgets}}`. `image_binary_id` is the id returned by `POST /inventory/binaries`.
+/// widgets}}`, texts in the device language. `image_binary_id` is the id returned by
+/// `POST /inventory/binaries`.
 pub fn floorplan_body(
     layout: &FloorplanLayout,
     ctx: &FloorplanContext<'_>,
@@ -454,7 +475,7 @@ pub fn floorplan_body(
         .map(|w| widget_json(w, ctx))
         .collect::<AppResult<Vec<_>>>()?;
     let mut fp = Map::new();
-    fp.insert("description".into(), json!(layout.description));
+    fp.insert("description".into(), json!(ctx.text(&layout.description)));
     fp.insert(
         "icon".into(),
         json!(layout.icon.clone().unwrap_or_else(|| "map".into())),
@@ -466,7 +487,7 @@ pub fn floorplan_body(
         fp.insert("imageOpacity".into(), json_number(o));
     }
     fp.insert("widgets".into(), Value::Array(widgets));
-    Ok(json!({ "type": FLOORPLAN_TYPE, "name": layout.name, "lw_floorplan": fp }))
+    Ok(json!({ "type": FLOORPLAN_TYPE, "name": ctx.text(&layout.name), "lw_floorplan": fp }))
 }
 
 #[cfg(test)]
@@ -500,6 +521,7 @@ mod tests {
             slaves: &[],
             groups: &[],
             digital_inputs: &[],
+            language: Language::De,
         };
         assert_eq!(item_alarm_types(&item, &ctx).unwrap(), vec!["lw_demo_leak"]);
     }
@@ -528,6 +550,7 @@ mod tests {
     fn fixture_floorplan_resolves_to_plugin_widgets() {
         let lib = fixture();
         let demo = &lib.demos[0];
+        let groups = crate::device::setup::demo_groups(demo, Language::De);
         let items = lib.demo_items(demo);
         let slaves = assignments(&items);
         let pairs: Vec<(&SlaveDefinition, &SlaveAssignment)> = slaves
@@ -537,13 +560,14 @@ mod tests {
         let inputs: Vec<DigitalInputEntry> = demo
             .digital_inputs
             .iter()
-            .map(|c| digital_input_entry(c, &items).unwrap())
+            .map(|c| digital_input_entry(c, &items, Language::De).unwrap())
             .collect();
         let ctx = FloorplanContext {
             items: &items,
             slaves: &pairs,
-            groups: &demo.dali_groups,
+            groups: &groups,
             digital_inputs: &inputs,
+            language: Language::De,
         };
         let layout = lib.floorplan(&demo.floorplans[0]).unwrap();
         let body = floorplan_body(layout, &ctx, "4711").unwrap();
@@ -660,6 +684,7 @@ mod tests {
             slaves: &[],
             groups: &[],
             digital_inputs: &[],
+            language: Language::De,
         };
         let (m, unit) = measurement_ref(lamp, Some("Lamp Status"), &ctx).unwrap();
         assert_eq!(
@@ -683,6 +708,7 @@ mod tests {
             slaves: &[],
             groups: &[],
             digital_inputs: &[],
+            language: Language::De,
         };
         // Without slave assignments a Modbus widget cannot be resolved.
         let layout = lib.floorplan(&demo.floorplans[0]).unwrap();
@@ -695,6 +721,7 @@ mod tests {
     fn missing_group_fails_and_di_label_falls_back() {
         let lib = fixture();
         let demo = &lib.demos[0];
+        let groups = crate::device::setup::demo_groups(demo, Language::De);
         let items = lib.demo_items(demo);
         let slaves = assignments(&items);
         let pairs: Vec<(&SlaveDefinition, &SlaveAssignment)> = slaves
@@ -706,13 +733,14 @@ mod tests {
             slaves: &pairs,
             groups: &[],
             digital_inputs: &[],
+            language: Language::De,
         };
         let layout = lib.floorplan(&demo.floorplans[0]).unwrap();
         let err = floorplan_body(layout, &ctx, "1").unwrap_err().to_string();
         assert!(err.contains("group 1"), "{err}");
 
         let ctx = FloorplanContext {
-            groups: &demo.dali_groups,
+            groups: &groups,
             ..ctx
         };
         let body = floorplan_body(layout, &ctx, "1").unwrap();
@@ -738,7 +766,7 @@ mod tests {
         let mut inputs: Vec<DigitalInputEntry> = demo
             .digital_inputs
             .iter()
-            .map(|c| digital_input_entry(c, &items).unwrap())
+            .map(|c| digital_input_entry(c, &items, Language::De).unwrap())
             .collect();
         inputs[2].settings.unit = Some("kWh".into());
         inputs[2].title = "Gas Küche".into();
@@ -747,6 +775,7 @@ mod tests {
             slaves: &[],
             groups: &[],
             digital_inputs: &inputs,
+            language: Language::De,
         };
         let (m, unit) = measurement_ref(gas, None, &ctx).unwrap();
         assert_eq!(m, json!({"fragment": "Gas Küche", "series": "gas-meter"}));
@@ -761,5 +790,95 @@ mod tests {
         let (m, unit) = measurement_ref(gas, None, &ctx).unwrap();
         assert_eq!(m["series"], "gas-meter");
         assert_eq!(unit, None);
+    }
+
+    /// An English device (D12): every text of the floorplan in English where the library has
+    /// one, plain strings unchanged; references (series, alarm types, targets) do not change.
+    #[test]
+    fn english_device_gets_english_floorplan_texts() {
+        let lib = fixture();
+        let demo = &lib.demos[0];
+        let items = lib.demo_items(demo);
+        let slaves = assignments(&items);
+        let pairs: Vec<(&SlaveDefinition, &SlaveAssignment)> = slaves
+            .iter()
+            .map(|a| (lib.slave(&a.key).unwrap(), a))
+            .collect();
+        let en = Language::En;
+        let inputs: Vec<DigitalInputEntry> = demo
+            .digital_inputs
+            .iter()
+            .map(|c| digital_input_entry(c, &items, en).unwrap())
+            .collect();
+        let groups = crate::device::setup::demo_groups(demo, en);
+        let ctx = FloorplanContext {
+            items: &items,
+            slaves: &pairs,
+            groups: &groups,
+            digital_inputs: &inputs,
+            language: en,
+        };
+        let layout = lib.floorplan(&demo.floorplans[0]).unwrap();
+        let body = floorplan_body(layout, &ctx, "1").unwrap();
+        assert_eq!(body["name"], "Ground floor");
+        let fp = &body["lw_floorplan"];
+        assert_eq!(fp["description"], "Testdemo: Shop");
+        let w = |id: &str| {
+            fp["widgets"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|w| w["id"] == id)
+                .unwrap()
+                .clone()
+        };
+        let freezer = w("w-freezer");
+        assert_eq!(freezer["title"], "Tiefkühler");
+        assert_eq!(
+            freezer["measurement"],
+            json!({"fragment": "Freezer temperature", "series": "freezer_temp"})
+        );
+        assert_eq!(freezer["alarmTypes"][0], "lw_modbus_20_timeoutError");
+        let lamp = w("w-lamp-1");
+        assert_eq!(lamp["title"], "Light 1");
+        assert_eq!(lamp["measurement"]["fragment"], "Light 1");
+        let door = w("w-door");
+        assert_eq!(door["title"], "Door open");
+        assert_eq!(door["measurement"]["fragment"], "Door open");
+        assert_eq!(door["display"]["onLabel"], "Open");
+        assert_eq!(door["display"]["offLabel"], "Geschlossen");
+        let co2 = w("w-co2");
+        assert_eq!(co2["text"], "CO2 tank");
+        assert_eq!(co2["note"], "Leck: Hintertür öffnen");
+        let fan = w("w-hoodfan");
+        assert_eq!(fan["title"], "Hood fan");
+        assert_eq!(fan["control"]["onLabel"], "On");
+        assert_eq!(fan["control"]["readback"]["fragment"], "Hood fan");
+        assert_eq!(w("w-ac-set")["title"], "AC setpoint");
+        let mode = w("w-ac-mode");
+        assert_eq!(mode["title"], "AC mode");
+        assert_eq!(mode["control"]["options"][1]["label"], "Cool");
+        assert_eq!(mode["control"]["options"][0]["label"], "Aus");
+        assert_eq!(w("w-dali-shop")["title"], "Shop");
+
+        // A DI without any title: `Input <N>` on an English device.
+        let mut untitled = items.clone();
+        let mut blank = (*untitled.iter().find(|i| i.id() == "di-door").unwrap()).clone();
+        if let LibraryItem::DigitalInput { title, .. } = &mut blank {
+            *title = crate::model::LocalizedText::both("");
+        }
+        untitled.retain(|i| i.id() != "di-door");
+        untitled.push(&blank);
+        let ctx = FloorplanContext {
+            items: &untitled,
+            digital_inputs: &[],
+            ..ctx
+        };
+        assert_eq!(default_title(&blank, &ctx), "Input 2");
+        let ctx = FloorplanContext {
+            language: Language::De,
+            ..ctx
+        };
+        assert_eq!(default_title(&blank, &ctx), "Eingang 2");
     }
 }

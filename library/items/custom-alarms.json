@@ -7,7 +7,7 @@
       "id": "fry_oil_exchange",
       "title": {
         "de": "Fritteuse Ölwechsel",
-        "en": "Fry station oil exchange"
+        "en": "Fryer oil change"
       },
       "tags": [
         "restaurant",
@@ -15,7 +15,10 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Fritteuse: Ölwechsel fällig"
+      "text": {
+        "de": "Fritteuse: Ölwechsel fällig",
+        "en": "Fryer: oil change due"
+      }
     },
     {
       "kind": "customAlarm",
@@ -30,7 +33,10 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Flurry-Station: Reinigung fällig"
+      "text": {
+        "de": "Flurry-Station: Reinigung fällig",
+        "en": "Flurry station: cleaning due"
+      }
     },
     {
       "kind": "customAlarm",
@@ -45,7 +51,10 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Grill 1: Störung"
+      "text": {
+        "de": "Grill 1: Störung",
+        "en": "Grill 1: fault"
+      }
     },
     {
       "kind": "customAlarm",
@@ -60,7 +69,10 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Grill 2: Störung"
+      "text": {
+        "de": "Grill 2: Störung",
+        "en": "Grill 2: fault"
+      }
     },
     {
       "kind": "customAlarm",
@@ -75,7 +87,10 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Presenter 1: Störung"
+      "text": {
+        "de": "Presenter 1: Störung",
+        "en": "Presenter 1: fault"
+      }
     },
     {
       "kind": "customAlarm",
@@ -90,14 +105,17 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Presenter 2: Störung"
+      "text": {
+        "de": "Presenter 2: Störung",
+        "en": "Presenter 2: fault"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "orderpanel_1",
       "title": {
         "de": "Bestellterminal 1",
-        "en": "Order panel 1"
+        "en": "Order terminal 1"
       },
       "tags": [
         "restaurant",
@@ -105,14 +123,17 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Bestellterminal 1: Störung"
+      "text": {
+        "de": "Bestellterminal 1: Störung",
+        "en": "Order terminal 1: fault"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "orderpanel_2",
       "title": {
         "de": "Bestellterminal 2",
-        "en": "Order panel 2"
+        "en": "Order terminal 2"
       },
       "tags": [
         "restaurant",
@@ -120,14 +141,17 @@
         "zone:building"
       ],
       "severity": "MAJOR",
-      "text": "Bestellterminal 2: Störung"
+      "text": {
+        "de": "Bestellterminal 2: Störung",
+        "en": "Order terminal 2: fault"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "co2_leakage",
       "title": {
         "de": "CO₂-Leckage",
-        "en": "CO₂ leakage"
+        "en": "CO₂ leak"
       },
       "tags": [
         "retail",
@@ -137,7 +161,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "CO₂-Leckage erkannt"
+      "text": {
+        "de": "CO₂-Leckage erkannt",
+        "en": "CO₂ leak detected"
+      }
     },
     {
       "kind": "customAlarm",
@@ -152,14 +179,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Küche ausgelöst"
+      "text": {
+        "de": "Sicherung Küche ausgelöst",
+        "en": "Kitchen fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_dining",
       "title": {
         "de": "Sicherung Gastraum",
-        "en": "Dining fuse"
+        "en": "Dining area fuse"
       },
       "tags": [
         "restaurant",
@@ -167,7 +197,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Gastraum ausgelöst"
+      "text": {
+        "de": "Sicherung Gastraum ausgelöst",
+        "en": "Dining area fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -184,7 +217,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung CO₂ ausgelöst"
+      "text": {
+        "de": "Sicherung CO₂ ausgelöst",
+        "en": "CO₂ fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -201,14 +237,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Parkplatz ausgelöst"
+      "text": {
+        "de": "Sicherung Parkplatz ausgelöst",
+        "en": "Parking fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_scullery",
       "title": {
         "de": "Sicherung Spülküche",
-        "en": "Scullery fuse"
+        "en": "Dishwashing area fuse"
       },
       "tags": [
         "restaurant",
@@ -216,14 +255,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Spülküche ausgelöst"
+      "text": {
+        "de": "Sicherung Spülküche ausgelöst",
+        "en": "Dishwashing area fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_presenters",
       "title": {
         "de": "Sicherung Presenter",
-        "en": "Presenters fuse"
+        "en": "Presenter fuse"
       },
       "tags": [
         "restaurant",
@@ -231,14 +273,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Presenter ausgelöst"
+      "text": {
+        "de": "Sicherung Presenter ausgelöst",
+        "en": "Presenter fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_vestibules",
       "title": {
         "de": "Sicherung Vorräume",
-        "en": "Vestibules fuse"
+        "en": "Vestibule fuse"
       },
       "tags": [
         "retail",
@@ -248,7 +293,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Vorräume ausgelöst"
+      "text": {
+        "de": "Sicherung Vorräume ausgelöst",
+        "en": "Vestibule fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -265,7 +313,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung WC ausgelöst"
+      "text": {
+        "de": "Sicherung WC ausgelöst",
+        "en": "Restroom fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -282,7 +333,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Trockenlager ausgelöst"
+      "text": {
+        "de": "Sicherung Trockenlager ausgelöst",
+        "en": "Dry storage fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -299,14 +353,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Tiefkühler ausgelöst"
+      "text": {
+        "de": "Sicherung Tiefkühler ausgelöst",
+        "en": "Freezer fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_cooler",
       "title": {
         "de": "Sicherung Kühlzelle",
-        "en": "Cooler fuse"
+        "en": "Cold room fuse"
       },
       "tags": [
         "retail",
@@ -316,14 +373,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Kühlzelle ausgelöst"
+      "text": {
+        "de": "Sicherung Kühlzelle ausgelöst",
+        "en": "Cold room fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_crew",
       "title": {
         "de": "Sicherung Personalraum",
-        "en": "Crew fuse"
+        "en": "Crew room fuse"
       },
       "tags": [
         "retail",
@@ -333,7 +393,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Personalraum ausgelöst"
+      "text": {
+        "de": "Sicherung Personalraum ausgelöst",
+        "en": "Crew room fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -350,7 +413,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Manager ausgelöst"
+      "text": {
+        "de": "Sicherung Manager ausgelöst",
+        "en": "Manager fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -367,14 +433,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Support ausgelöst"
+      "text": {
+        "de": "Sicherung Support ausgelöst",
+        "en": "Support fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_order",
       "title": {
         "de": "Sicherung Bestellung",
-        "en": "Order fuse"
+        "en": "Ordering fuse"
       },
       "tags": [
         "restaurant",
@@ -382,14 +451,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Bestellung ausgelöst"
+      "text": {
+        "de": "Sicherung Bestellung ausgelöst",
+        "en": "Ordering fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_drive",
       "title": {
         "de": "Sicherung Drive-In",
-        "en": "Drive-in fuse"
+        "en": "Drive-through fuse"
       },
       "tags": [
         "restaurant",
@@ -397,7 +469,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Drive ausgelöst"
+      "text": {
+        "de": "Sicherung Drive ausgelöst",
+        "en": "Drive-through fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
@@ -414,14 +489,17 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Totem ausgelöst"
+      "text": {
+        "de": "Sicherung Totem ausgelöst",
+        "en": "Totem fuse tripped"
+      }
     },
     {
       "kind": "customAlarm",
       "id": "fuse_signages",
       "title": {
         "de": "Sicherung Beschilderung",
-        "en": "Signages fuse"
+        "en": "Signage fuse"
       },
       "tags": [
         "retail",
@@ -431,7 +509,10 @@
         "zone:tech-room"
       ],
       "severity": "CRITICAL",
-      "text": "Sicherung Beschilderung ausgelöst"
+      "text": {
+        "de": "Sicherung Beschilderung ausgelöst",
+        "en": "Signage fuse tripped"
+      }
     }
   ]
 }

@@ -930,7 +930,7 @@ mod engine {
                         device_id: self.device_id.clone(),
                         operation_id: id,
                         kind: op.kind(),
-                        summary: summary(&op, title.as_ref().map(|t| t.de.as_str())),
+                        summary: summary(&op, title.as_ref().map(|t| t.get(self.language))),
                         detail: detail(&op, title.as_ref()),
                         by,
                         received_at: iso(received),

@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use super::library::{
-    DaliGroup, DigitalInputEntry, GeneratorConfig, LibraryItem, ModbusRegisterType, Scenario,
-    SlaveDefinition,
+    DaliGroup, DigitalInputEntry, GeneratorConfig, Language, LibraryItem, ModbusRegisterType,
+    Scenario, SlaveDefinition,
 };
 
 /// `c8y_Position`.
@@ -136,6 +136,11 @@ pub struct LwDemoState {
     /// `Europe/Berlin`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub time_zone: Option<String>,
+    /// Content language of the device (D12): measurement fragments, digital input titles,
+    /// group names, alarm / event texts and floorplans are named in it. Set by an apply;
+    /// `None` = `de` (devices set up before D12). Use [`LwDemoState::language`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<Language>,
     #[serde(default)]
     pub generators: BTreeMap<String, GeneratorConfig>,
     pub send_interval_sec: u32,
@@ -164,6 +169,13 @@ pub struct LwDemoState {
     /// whether someone edited it in the plugin.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub applied_floorplan_bodies: BTreeMap<String, String>,
+}
+
+impl LwDemoState {
+    /// The device's content language (`de` when `lw_demo.language` is absent, D12).
+    pub fn language(&self) -> Language {
+        self.language.unwrap_or_default()
+    }
 }
 
 /// One row in the device list.
@@ -244,6 +256,20 @@ pub struct ApplyDemoRequest {
     /// Take over a fresh advisory lock held by another user (else `deviceLocked`).
     #[serde(default)]
     pub force: bool,
+    /// Content language for the device (`lw_demo.language`, D12). `None` keeps the device's
+    /// language (`de` for a device without one).
+    #[serde(default)]
+    pub language: Option<Language>,
+}
+
+/// A re-apply changes the content language of a device that is already set up (D12): measurement
+/// fragments get new names (new series in Cumulocity), digital input titles, group names and
+/// floorplans are rewritten in `to`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LanguageChange {
+    pub from: Language,
+    pub to: Language,
 }
 
 /// What `apply_demo` would do (for the confirmation dialog).
@@ -255,6 +281,10 @@ pub struct ApplyDemoPreview {
     pub slaves: Vec<SlaveAssignment>,
     /// Existing floorplans that would be replaced.
     pub floorplan_conflicts: Vec<FloorplanRef>,
+    /// The content language the device gets.
+    pub language: Language,
+    /// Set when the device already has a demo and the apply changes its language.
+    pub language_change: Option<LanguageChange>,
     pub warnings: Vec<String>,
 }
 

@@ -14,7 +14,7 @@ use super::naming::{
     hidden_lamp_naming,
 };
 use crate::error::{AppError, AppResult};
-use crate::model::MeasurementNaming;
+use crate::model::{Language, MeasurementNaming};
 
 /// Max DALI lamps per message (`CLOUD_SEND_LIMIT 6`).
 pub const MAX_DALI_LAMPS_PER_MESSAGE: usize = 6;
@@ -167,13 +167,15 @@ pub fn item_values_with_grid(
         .collect()
 }
 
-/// The four values of DALI lamp `lamp` (1–64) that has no item ([`hidden_lamp_naming`]).
+/// The four values of DALI lamp `lamp` (1–64) that has no item ([`hidden_lamp_naming`]) on a
+/// device in `lang`.
 pub fn dali_lamp_values(
     lamp: u32,
     brightness: f64,
     status: DaliLampStatus,
+    lang: Language,
 ) -> Vec<MeasurementValue> {
-    item_values(&hidden_lamp_naming(lamp), brightness, Some(status))
+    item_values(&hidden_lamp_naming(lamp, lang), brightness, Some(status))
 }
 
 /// The lamp a DALI series belongs to: its value series is the lamp's id, the other three are
@@ -289,7 +291,7 @@ mod tests {
     }
 
     fn dali_naming(fragment: &str, id: &str) -> MeasurementNaming {
-        let mut n = hidden_lamp_naming(1);
+        let mut n = hidden_lamp_naming(1, Language::De);
         n.fragment = fragment.into();
         for (s, (lib, _)) in n.series.iter_mut().zip(super::super::naming::DALI_SERIES) {
             s.name = super::super::naming::dali_series_name(id, lib);
@@ -328,7 +330,7 @@ mod tests {
         let hidden = build_measurement_bodies(
             "9",
             T,
-            &dali_lamp_values(3, 80.0, DaliLampStatus::default()),
+            &dali_lamp_values(3, 80.0, DaliLampStatus::default(), Language::De),
         )
         .unwrap();
         assert_eq!(
@@ -353,7 +355,7 @@ mod tests {
     #[test]
     fn at_most_six_lamps_per_message() {
         let values: Vec<MeasurementValue> = (1..=13)
-            .flat_map(|lamp| dali_lamp_values(lamp, 50.0, DaliLampStatus::default()))
+            .flat_map(|lamp| dali_lamp_values(lamp, 50.0, DaliLampStatus::default(), Language::De))
             .collect();
         let bodies = build_measurement_bodies("9", T, &values).unwrap();
         let sizes: Vec<usize> = bodies
@@ -433,7 +435,7 @@ mod tests {
         let v = item_values(&naming, 1.0, None);
         assert_eq!(v.len(), 1);
         assert_eq!((v[0].series.as_str(), v[0].value), ("di-2", 1.0));
-        let lamp = dali_lamp_values(1, 42.0, DaliLampStatus::default());
+        let lamp = dali_lamp_values(1, 42.0, DaliLampStatus::default(), Language::De);
         assert_eq!(lamp.len(), 4);
         assert_eq!(lamp[3].series, "lamp-01");
         assert_eq!(lamp[3].value, 42.0);
@@ -485,7 +487,7 @@ mod tests {
 
     #[test]
     fn item_values_are_quantized() {
-        let lamp = dali_lamp_values(1, 57.349, DaliLampStatus::default());
+        let lamp = dali_lamp_values(1, 57.349, DaliLampStatus::default(), Language::De);
         assert_eq!(lamp[3].value, 57.0);
         let naming = MeasurementNaming {
             measurement_type: "impulseCounter".into(),

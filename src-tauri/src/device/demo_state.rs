@@ -50,6 +50,7 @@ pub fn empty_state() -> LwDemoState {
         dali_groups: None,
         digital_inputs: None,
         time_zone: None,
+        language: None,
         generators: Default::default(),
         send_interval_sec: DEFAULT_SEND_INTERVAL_SEC,
         realistic_mode: false,

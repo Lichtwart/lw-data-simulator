@@ -10,8 +10,9 @@ use crate::c8y::C8yClient;
 use crate::c8y::fake::FakeC8y;
 use crate::library::{Library, loader};
 use crate::model::{
-    ApplyDemoRequest, Control, CreateDeviceRequest, DemoSetupPatch, ExportRequest, LibraryItem,
-    LocalizedText, ResetDeviceRequest, SlaveDefinition, UpdateDeviceRequest,
+    ApplyDemoRequest, Control, CreateDeviceRequest, DemoSetupPatch, ExportRequest, Language,
+    LanguageChange, LibraryItem, LocalizedText, ResetDeviceRequest, SlaveDefinition,
+    UpdateDeviceRequest,
 };
 
 fn fixture_root() -> PathBuf {
@@ -68,6 +69,7 @@ fn req(demo: &str, floorplans: bool, replace: bool) -> ApplyDemoRequest {
         apply_floorplans: floorplans,
         replace_existing_floorplans: replace,
         force: false,
+        language: None,
     }
 }
 
@@ -398,7 +400,10 @@ async fn apply_removes_old_config_fragments_and_config_lives_in_lw_demo() {
     }
     // Not read any more: the library demo's groups / inputs apply.
     let cfg = demo_state::get_config(&client, &lib, &id).await.unwrap();
-    assert_eq!(cfg.groups, lib.demo("fixture").unwrap().dali_groups);
+    assert_eq!(
+        cfg.groups,
+        setup::demo_groups(lib.demo("fixture").unwrap(), Language::De)
+    );
     assert_eq!(cfg.digital_inputs[0].title, "Zapfsäule 1");
 
     apply::apply(&client, &lib, &id, &req("fixture", false, false))
@@ -767,6 +772,244 @@ async fn upgrade_preview_and_apply_keep_local_setup() {
     assert!(upgrade::check(&client, &new, &id).await.unwrap().is_none());
     let fp = mo(&fake, &st.floorplan_ids[0]);
     assert_eq!(fp["lw_floorplan"]["description"], "neu");
+}
+
+// ───────────────────────────── content language (D12) ─────────────────────────────
+
+fn req_in(demo: &str, floorplans: bool, replace: bool, lang: Option<Language>) -> ApplyDemoRequest {
+    ApplyDemoRequest {
+        language: lang,
+        ..req(demo, floorplans, replace)
+    }
+}
+
+/// D12: a device applied in English gets everything from the library in English; the preview
+/// reports a language change of a set-up device; a re-apply in German replaces the English
+/// floorplan; an upgrade keeps the language.
+#[tokio::test]
+async fn apply_in_english_names_everything_in_english() {
+    let fake = FakeC8y::start().await;
+    let client = fake.client();
+    let lib = fixture("1.0.0");
+    let id = new_device(&client, &lib, "D").await;
+    let en = Some(Language::En);
+
+    // A new device: the language is set, there is nothing to change.
+    let preview = apply::preview(&client, &lib, &id, &req_in("fixture", true, false, en))
+        .await
+        .unwrap();
+    assert_eq!(preview.language, Language::En);
+    assert_eq!(preview.language_change, None);
+
+    let res = apply::apply(&client, &lib, &id, &req_in("fixture", true, false, en))
+        .await
+        .unwrap();
+    let st = demo_state::read(&mo(&fake, &id)).unwrap().unwrap();
+    assert_eq!(mo(&fake, &id)["lw_demo"]["language"], "en");
+    assert_eq!(st.language(), Language::En);
+    let titles: Vec<&str> = st
+        .digital_inputs
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|e| e.title.as_str())
+        .collect();
+    assert_eq!(titles, vec!["Pump 1", "Door open", "Gas meter"]);
+    let groups: Vec<&str> = st
+        .dali_groups
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|g| g.name.as_str())
+        .collect();
+    assert_eq!(groups, vec!["Shop", "Outside"]);
+    let fp_en = res.floorplans_created[0].clone();
+    assert_eq!(fp_en.name, "Ground floor");
+    let fp = mo(&fake, &fp_en.id);
+    assert_eq!(fp["name"], "Ground floor");
+    assert_eq!(
+        fp["lw_floorplan"]["widgets"][0]["measurement"],
+        json!({"fragment": "Freezer temperature", "series": "freezer_temp"})
+    );
+    assert!(st.applied_floorplans.contains_key("Ground floor"));
+    // The fault menu speaks the device language too.
+    let catalog = crate::sim::faults::catalog(&lib, &st);
+    assert!(catalog.iter().any(|f| f.text == "Back door open"));
+    assert!(
+        catalog
+            .iter()
+            .any(|f| f.text == "Modbus 20-240 Timeout Error Cooling")
+    );
+
+    // Without a language the device keeps its own.
+    let keep = apply::preview(&client, &lib, &id, &req("fixture", true, false))
+        .await
+        .unwrap();
+    assert_eq!(keep.language, Language::En);
+    assert_eq!(keep.language_change, None);
+
+    // Back to German: the preview says so and the English floorplan is the conflict.
+    let de = Some(Language::De);
+    let preview = apply::preview(&client, &lib, &id, &req_in("fixture", true, false, de))
+        .await
+        .unwrap();
+    assert_eq!(
+        preview.language_change,
+        Some(LanguageChange {
+            from: Language::En,
+            to: Language::De
+        })
+    );
+    assert_eq!(preview.floorplan_conflicts, vec![fp_en.clone()]);
+    let res = apply::apply(&client, &lib, &id, &req_in("fixture", true, true, de))
+        .await
+        .unwrap();
+    assert_eq!(res.floorplans_replaced, vec![fp_en.clone()]);
+    assert_eq!(res.floorplans_created[0].name, "Erdgeschoss");
+    assert!(!exists(&fake, &fp_en.id));
+    let st = demo_state::read(&mo(&fake, &id)).unwrap().unwrap();
+    assert_eq!(st.language(), Language::De);
+    assert_eq!(st.digital_inputs.as_ref().unwrap()[0].title, "Zapfsäule 1");
+    assert!(st.applied_floorplans.contains_key("Erdgeschoss"));
+    assert!(!st.applied_floorplans.contains_key("Ground floor"));
+
+    // English again, then an upgrade: the language stays.
+    apply::apply(&client, &lib, &id, &req_in("fixture", true, true, en))
+        .await
+        .unwrap();
+    let new = fixture("1.1.0");
+    let p = upgrade::check(&client, &new, &id).await.unwrap().unwrap();
+    assert!(p.floorplans_added.is_empty() && p.floorplans_removed.is_empty());
+    let dev = upgrade::apply(&client, &new, &id, false).await.unwrap();
+    let st = dev.demo.unwrap();
+    assert_eq!(st.language(), Language::En);
+    assert_eq!(st.digital_inputs.as_ref().unwrap()[0].title, "Pump 1");
+    assert_eq!(dev.floorplans[0].name, "Ground floor");
+}
+
+/// D12: a device without `lw_demo.language` (set up before D12) is German; an apply without a
+/// language keeps it German.
+#[tokio::test]
+async fn a_device_without_a_language_stays_german() {
+    let fake = FakeC8y::start().await;
+    let client = fake.client();
+    let lib = fixture("1.0.0");
+    let id = new_device(&client, &lib, "D").await;
+    apply::apply(&client, &lib, &id, &req("fixture", false, false))
+        .await
+        .unwrap();
+    {
+        let mut st = fake.state();
+        let m = st
+            .managed_objects
+            .iter_mut()
+            .find(|m| m["id"] == id)
+            .unwrap();
+        m["lw_demo"].as_object_mut().unwrap().remove("language");
+    }
+    let st = demo_state::read(&mo(&fake, &id)).unwrap().unwrap();
+    assert_eq!(st.language, None);
+    assert_eq!(st.language(), Language::De);
+    let preview = apply::preview(&client, &lib, &id, &req("fixture", false, false))
+        .await
+        .unwrap();
+    assert_eq!(preview.language, Language::De);
+    assert_eq!(preview.language_change, None);
+    apply::apply(&client, &lib, &id, &req("fixture", false, false))
+        .await
+        .unwrap();
+    let st = demo_state::read(&mo(&fake, &id)).unwrap().unwrap();
+    assert_eq!(st.language, Some(Language::De));
+    assert_eq!(st.digital_inputs.as_ref().unwrap()[0].title, "Zapfsäule 1");
+}
+
+/// D12: an English device exports to a pack that applies back to the same English device, and
+/// the same pack applied in German speaks German where the library has German (dropped default
+/// titles, library DI items).
+#[tokio::test]
+async fn english_export_round_trips_through_apply() {
+    let fake = FakeC8y::start().await;
+    let client = fake.client();
+    let lib = fixture("1.0.0");
+    let en = Some(Language::En);
+    let a = new_device(&client, &lib, "Original").await;
+    apply::apply(&client, &lib, &a, &req_in("fixture", true, false, en))
+        .await
+        .unwrap();
+
+    let out = temp_dir("export-en");
+    let res = export::export(
+        &client,
+        &lib,
+        &ExportRequest {
+            device_id: a.clone(),
+            demo_id: "zz-english".into(),
+            target_dir: out.display().to_string(),
+        },
+    )
+    .await
+    .unwrap();
+    assert!(res.warnings.is_empty(), "{:?}", res.warnings);
+    let merged = temp_dir("merged-en");
+    copy_dir(&fixture_root(), &merged);
+    copy_dir(&out, &merged);
+    let lib2 = loader::load(&merged, "1.0.0").unwrap();
+    let problems: Vec<&String> = lib2
+        .warnings
+        .iter()
+        .filter(|w| w.contains("zz-english"))
+        .collect();
+    assert!(problems.is_empty(), "{problems:?}");
+    // The DI entries reference the library items (titles map back to the English titles).
+    let exported = lib2.demo("zz-english").unwrap();
+    assert_eq!(exported.digital_inputs[0].item_id, "di-pump-1");
+
+    let b = new_device(&client, &lib2, "Copy").await;
+    apply::apply(&client, &lib2, &b, &req_in("zz-english", true, false, en))
+        .await
+        .unwrap();
+    let (da, db) = (
+        demo_state::read(&mo(&fake, &a)).unwrap().unwrap(),
+        demo_state::read(&mo(&fake, &b)).unwrap().unwrap(),
+    );
+    assert_eq!(db.language(), Language::En);
+    assert_eq!(da.dali_groups, db.dali_groups);
+    assert_eq!(da.digital_inputs, db.digital_inputs);
+    let fp = |dev: &str| {
+        let id = fake.state().child_additions[dev][0].clone();
+        let mut f = mo(&fake, &id)["lw_floorplan"].clone();
+        f["imageBinaryId"].take();
+        f
+    };
+    assert_eq!(fp(&a), fp(&b));
+
+    // The same pack in German: default titles follow the language again.
+    let c = new_device(&client, &lib2, "Kopie").await;
+    apply::apply(
+        &client,
+        &lib2,
+        &c,
+        &req_in("zz-english", true, false, Some(Language::De)),
+    )
+    .await
+    .unwrap();
+    let dc = demo_state::read(&mo(&fake, &c)).unwrap().unwrap();
+    assert_eq!(dc.digital_inputs.as_ref().unwrap()[0].title, "Zapfsäule 1");
+    let widgets = fp(&c)["widgets"].clone();
+    let w = |id: &str| {
+        widgets
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|w| w["id"] == id)
+            .unwrap()
+            .clone()
+    };
+    assert_eq!(w("w-lamp-1")["title"], "Licht 1");
+    assert_eq!(w("w-door")["title"], "Tür offen");
+    assert_eq!(w("w-hoodfan")["title"], "Abluft");
+    let _ = std::fs::remove_dir_all(out);
+    let _ = std::fs::remove_dir_all(merged);
 }
 
 // ───────────────────────────── phase 3 review fixes (docs/reviews/phase3-engine.md) ─────────────────────────────
@@ -1290,7 +1533,13 @@ async fn released_export_does_not_break_the_source_device() {
             .is_err()
     );
     // Applying the pack again carries no warning either.
-    let plan = apply::plan(&released, released.demo("fixture").unwrap(), Some(&st)).unwrap();
+    let plan = apply::plan(
+        &released,
+        released.demo("fixture").unwrap(),
+        Some(&st),
+        st.language(),
+    )
+    .unwrap();
     assert!(plan.warnings.is_empty(), "{:?}", plan.warnings);
 }
 

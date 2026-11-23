@@ -2,7 +2,6 @@ import { CopyPlusIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, type LibraryItem_Serialize, type Severity, type SlaveDefinition } from "@/lib/api";
+import { uiLanguage } from "@/lib/contentLanguage";
 import { errorMessage } from "@/lib/errors";
 import { loadLibrary, mergeSlaves } from "@/lib/library";
+import { textIn } from "@/lib/text";
 import { useAsync } from "@/lib/useAsync";
 import { useSeededForm } from "@/lib/useSeededForm";
 
@@ -32,15 +33,19 @@ interface SlaveRow {
   key: string;
   name: string;
   requestInterval: string;
-  alarms: SlaveDefinition["alarms"];
+  alarms: { name: string; text: string; severity: Severity }[];
 }
 
+/**
+ * Custom slaves are stored as plain strings in the device language (D12); a `{de, en}` text (only
+ * possible by hand) is edited in the German form.
+ */
 function toRow(s: SlaveDefinition): SlaveRow {
   return {
     key: s.key,
-    name: s.name,
+    name: textIn(s.name, "de"),
     requestInterval: String(s.requestInterval),
-    alarms: s.alarms ?? [],
+    alarms: (s.alarms ?? []).map((a) => ({ ...a, text: textIn(a.text, "de") })),
   };
 }
 
@@ -68,7 +73,7 @@ interface Form {
 
 /** Custom slaves and items stored on the device (`lw_demo.customSlaves` / `customItems`, D6). */
 export function CustomEditor() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { device, reload } = useDevice();
   const library = useAsync(() => loadLibrary(), []);
   const demo = device.demo;
@@ -338,7 +343,9 @@ export function CustomEditor() {
             <li key={it.id} className="flex items-center gap-3 px-3 py-2">
               <Badge variant="secondary">{it.kind}</Badge>
               <span className="font-mono text-xs">{it.id}</span>
-              <span className="min-w-0 flex-1 truncate text-sm">{it.title.de}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {it.title[uiLanguage(i18n.language)]}
+              </span>
               <Button
                 variant="ghost"
                 size="icon"

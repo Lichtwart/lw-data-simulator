@@ -4,17 +4,26 @@
   "slaves": [
     {
       "key": "tankanlage",
-      "name": "Tankanlage",
+      "name": {
+        "de": "Tankanlage",
+        "en": "Fuel Tanks"
+      },
       "requestInterval": 60,
       "alarms": [
         {
           "name": "tank_leak",
-          "text": "Tankanlage: Leckage",
+          "text": {
+            "de": "Tankanlage: Leckage",
+            "en": "Fuel tanks: leak"
+          },
           "severity": "CRITICAL"
         },
         {
           "name": "tank_low",
-          "text": "Tankanlage: Füllstand niedrig",
+          "text": {
+            "de": "Tankanlage: Füllstand niedrig",
+            "en": "Fuel tanks: level low"
+          },
           "severity": "MINOR"
         }
       ]
@@ -91,7 +100,7 @@
       "writable": true,
       "title": {
         "de": "Zapfsäulen Freigabe",
-        "en": "Pump release"
+        "en": "Fuel pump release"
       },
       "tags": [
         "gas-station",

@@ -73,7 +73,8 @@
       "parentGroup": "Parent group",
       "demo": "Demo pack",
       "noDemo": "No demo pack"
-    }
+    },
+    "contentLanguage": "Content: {{language}}"
   },
   "workspace": {
     "title": "Device",
@@ -330,7 +331,12 @@
     "done": "Demo applied. Floorplans: {{created}} new, {{replaced}} replaced.",
     "slaveLine": "{{key}} · id {{id}} · address {{address}}",
     "takeOverText": "{{user}} has been using this device since {{since}}. Apply the demo pack anyway?",
-    "takeOver": "Take over and apply"
+    "takeOver": "Take over and apply",
+    "language": "Content language",
+    "languageHint": "Measurement names, alarms and floorplans are created in this language.",
+    "languageChange": "The content language changes from {{from}} to {{to}}.",
+    "languageChangeSeries": "Measurements get new names. Cumulocity starts new series; the old ones stay as history.",
+    "languageChangeRewrite": "Input titles, group names and floorplans are rewritten."
   },
   "upgrade": {
     "title": "Library upgrade",

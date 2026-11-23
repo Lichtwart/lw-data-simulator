@@ -4,17 +4,26 @@
   "slaves": [
     {
       "key": "kuehlung",
-      "name": "Kuehlung",
+      "name": {
+        "de": "Kuehlung",
+        "en": "Cooling"
+      },
       "requestInterval": 30,
       "alarms": [
         {
           "name": "en_frz_alarm",
-          "text": "Energie Tiefkühler: Störung",
+          "text": {
+            "de": "Energie Tiefkühler: Störung",
+            "en": "Freezer energy: fault"
+          },
           "severity": "MAJOR"
         },
         {
           "name": "en_clr_alarm",
-          "text": "Energie Kühlzelle: Störung",
+          "text": {
+            "de": "Energie Kühlzelle: Störung",
+            "en": "Cold room energy: fault"
+          },
           "severity": "MAJOR"
         }
       ]
@@ -64,7 +73,7 @@
       "writable": false,
       "title": {
         "de": "Kühlzelle Temperatur",
-        "en": "Cooler temperature"
+        "en": "Cold room temperature"
       },
       "tags": [
         "retail",
@@ -97,7 +106,7 @@
       "writable": false,
       "title": {
         "de": "Energie Tiefkühler",
-        "en": "Energy freezer"
+        "en": "Freezer energy"
       },
       "tags": [
         "retail",
@@ -125,7 +134,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Tiefkühler",
-        "en": "Peak current freezer"
+        "en": "Freezer peak current"
       },
       "tags": [
         "retail",
@@ -181,7 +190,7 @@
       "writable": false,
       "title": {
         "de": "Energie Kühlzelle",
-        "en": "Energy cooler"
+        "en": "Cold room energy"
       },
       "tags": [
         "retail",
@@ -209,7 +218,7 @@
       "writable": false,
       "title": {
         "de": "Spitzenstrom Kühlzelle",
-        "en": "Peak current cooler"
+        "en": "Cold room peak current"
       },
       "tags": [
         "retail",

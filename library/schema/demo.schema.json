@@ -64,7 +64,10 @@
       "required": ["id", "name", "converters", "minLevel", "maxLevel"],
       "properties": {
         "id": { "type": "integer", "minimum": 1, "maximum": 16 },
-        "name": { "type": "string", "minLength": 1 },
+        "name": {
+          "description": "Plain or {de, en}; stored in the device language.",
+          "$ref": "common.schema.json#/$defs/text"
+        },
         "converters": {
           "description": "Lamp numbers 1-64 (the dali item index). Only grouped lamps send measurements.",
           "type": "array",
@@ -80,7 +83,7 @@
       }
     },
     "digitalInput": {
-      "description": "Digital input (stored in lw_demo.digitalInputs on the device); the referenced item's German title becomes the title.",
+      "description": "Digital input (stored in lw_demo.digitalInputs on the device); the referenced item's title in the device language (lw_demo.language, D12) becomes the title.",
       "type": "object",
       "additionalProperties": false,
       "required": ["itemId", "type"],

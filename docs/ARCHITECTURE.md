@@ -63,12 +63,12 @@ src-tauri/            Rust backend (crate `lichtwart-demo-simulator`, lib `lw_si
 | `c8y/realtime.rs` | Bayeux/CometD long-polling on `/notification/realtime`, subscriptions to `/operations/<deviceId>` and `/alarms/<deviceId>` (one client) | **Implemented + tested.** `subscribe_device` spawns the task and returns at once; `RealtimeSubscription` (cancel-on-drop, `recv()` → `RealtimeMsg::{Connected, Disconnected(err), Operation(json), PendingOperation(json), Alarm(json), OpenAlarms {alarms, fetched_at}}`). handshake → subscribe both channels → GET PENDING ops + open alarms → `Connected` + ops + `OpenAlarms` → connect loop (D9: an alarm DELETE arrives as `CLEARED`). `402::Unknown client` / `advice.reconnect=handshake` → silent re-handshake (first one at once, repeats with backoff; then `Connected` + PENDING again); errors → `Disconnected` + backoff 1 s … 30 s; 401 / 403 / `reconnect: none` → `Disconnected` and the task ends. See §15 "Realtime". Realtime payload `{realtimeAction, data}` is unwrapped; `DELETE` skipped. **Ops may arrive more than once** (PENDING list + CREATE, UPDATEs) — the worker drops repeats and status regressions per id (`OpDedup`); the session must still ignore the UPDATE echo of its own status changes. Quiet long-polls are not logged. |
 | `c8y/activity.rs` | `ActivityLog` ring buffer (500) + `to_curl(entry)` | **Implemented.** Entries carry `baseUrl` + `user`, so `to_curl` needs no client; password masked as `-u 'tenant/user:****'`, headers are never logged (`to_curl` derives `Accept` / `Content-Type` again via `media::for_request`; a binary upload becomes `-F` parts). Bodies cut at 2 kB; binary responses logged as `[N bytes]`. |
 | `library/` | `Library` (immutable, loaded once; items / slaves / demos + referenced floorplan layouts + `origins` per file), `loader` (`load` skips bad files with a warning, check `type` + `schemaVersion`), `validate` (`validate`, `validate_custom` for D6; findings with file + JSON path), `select` (`select_items` / `select_by` = tags ∪ includes − excludes, `search`, `filter_chips` / `matches_chips`), `series` ("generate series"), `schema_tests` (files ⇄ schema ⇄ serde) | **Implemented + tested** (fixture library `src-tauri/tests/fixtures/library/`). |
-| `payload/naming.rs` | measurement names for every item kind (`item_naming` / `item_naming_with_di`: fragment = German title via `fragment_name`, series = item id, D10; DALI lamp series `<id>` + `<id> Lamp Status` …, `dali_series_name` / `dali_library_series`; lamps without an item `hidden_lamp_naming`), types + units, slave id/address assignment (`assign_slaves`, keeps existing), register address assignment (`assign_registers`), alarm types / texts, alarm-name rules (D2) | **Implemented + tested**; firmware facts (units, alarms) checked against `research/firmware-core-v2.md`. |
+| `payload/naming.rs` | measurement names for every item kind (`item_naming` / `item_naming_with_di`: fragment = the title in the device language via `fragment_name`, series = item id, D10, D12; DALI lamp series `<id>` + `<id> Lamp Status` …, `dali_series_name` / `dali_library_series`; lamps without an item `hidden_lamp_naming`: `DALI Leuchte NN` / `DALI Lamp NN`), types + units, slave id/address assignment (`assign_slaves`, keeps existing), register address assignment (`assign_registers`), alarm types / texts, alarm-name rules (D2) | **Implemented + tested**; firmware facts (units, alarms) checked against `research/firmware-core-v2.md`. |
 | `payload/measurement.rs` | `item_values` / `dali_lamp_values` → `MeasurementValue`s (quantized per measurement type), `build_measurement_bodies` (collections in firmware order, ≤ 6 DALI lamps each, one object per lamp even when two share a title, `time` on all, empty units omitted) | **Implemented + tested.** |
-| `payload/alarm.rs` | `AlarmSpec`, native lamp / bus / brightness / motion alarms (firmware texts + severities), slave timeout / custom alarms, `device_custom_alarm`, `fault_catalog` + `resolve_fault` (`FaultSetup`), `build_alarm`, `build_alarm_clear` | **Implemented + tested.** |
+| `payload/alarm.rs` | `AlarmSpec`, native lamp / bus / brightness / motion alarms (firmware texts + severities), slave timeout / custom alarms, `device_custom_alarm` (library texts in the device language, D12), `fault_catalog` + `resolve_fault` (`FaultSetup` incl. `language`), `build_alarm`, `build_alarm_clear` | **Implemented + tested.** |
 | `payload/event.rs` | `build_event`, `build_group_change` (capitalised modes), `build_alarm_cleared`, `build_modbus_timeout_event` | **Implemented + tested.** |
-| `payload/floorplan.rs` | `floorplan_body(layout, FloorplanContext, imageBinaryId)` → `lw_floorplan` MO (item refs → `{fragment: title, series: id}`, library DALI series names → wire names, alarm types, Modbus targets), `item_alarm_types` | **Implemented + tested.** |
-| `payload/config.rs` | `demo_device_body(NewDemoDevice, lw_demo?)` (§6.1, no `lw_config*`, D10), `missing_required_fragments`, `digital_input_entry` (demo DI → device entry with the item title), `truncate_bytes` | **Implemented + tested.** |
+| `payload/floorplan.rs` | `floorplan_body(layout, FloorplanContext, imageBinaryId)` → `lw_floorplan` MO (item refs → `{fragment: title, series: id}`, library DALI series names → wire names, alarm types, Modbus targets; texts in `FloorplanContext.language`, D12), `item_alarm_types`, `default_title` / `control_json` (defaults, also used by export) | **Implemented + tested.** |
+| `payload/config.rs` | `demo_device_body(NewDemoDevice, lw_demo?)` (§6.1, no `lw_config*`, D10), `missing_required_fragments`, `digital_input_entry` (demo DI → device entry with the item title in the device language, D12), `truncate_bytes` | **Implemented + tested.** |
 | `sim/session.rs` | `SessionHandle` + `SessionSender` (cloneable), `prepare` (device, lock, resolve, counter seeds, group modes, open alarms minus the ones the firmware already recovered, written registers), the task loop, `SessionCommand` (incl. internal `SetupChanged`), `announce_exit` | **Implemented + tested.** Stop: open prompts → FAILED "Simulator stopped", lock released, queue drained (≤ 5 s). |
 | `sim/outbound.rs` | the outbound worker: two lanes (normal; priority = operation statuses, in order, never behind measurements), results channel, `test_pair()` double | **Implemented + tested.** |
 | `sim/generators.rs` | `next_value(cfg, state, Tick, base, &mut dyn RandomSource)`, `SeededRng`, `local_hour` | **Implemented + tested** (deterministic). |
@@ -124,8 +124,8 @@ Files: `app`, `auth`, `library`, `devices`, `session`, `raw`, `activity` in
 | `update_demo_device` | `deviceId, request: UpdateDeviceRequest` | `DemoDevice` | device::crud | impl |
 | `reset_demo_device` | `deviceId, request: ResetDeviceRequest` | `null` | device::crud | impl (stops session first) |
 | `delete_demo_device` | `deviceId` | `null` | device::crud | impl (stops session first) |
-| `preview_apply_demo` | `deviceId, request: ApplyDemoRequest` | `ApplyDemoPreview` | device::apply | impl |
-| `apply_demo` | `deviceId, request: ApplyDemoRequest` | `ApplyDemoResult` | device::apply | impl (stops session first; removes old `lw_config*` fragments, D10) |
+| `preview_apply_demo` | `deviceId, request: ApplyDemoRequest` | `ApplyDemoPreview` (incl. `language` the device gets and `languageChange {from, to} \| null` for a set-up device whose content language changes, D12) | device::apply | impl |
+| `apply_demo` | `deviceId, request: ApplyDemoRequest` (`language?: "de" \| "en"`, absent = keep the device's, D12) | `ApplyDemoResult` | device::apply | impl (stops session first; removes old `lw_config*` fragments, D10; writes `lw_demo.language`, D12) |
 | `update_demo_setup` | `deviceId, patch: DemoSetupPatch` | `LwDemoState` | device::demo_state | impl (`generators` replaces the whole map; a running session on the device picks up interval / realistic mode / generators / scenarios; patch also carries `customSlaves` / `customItems`, D6, and `customScenarios` / `hiddenScenarios` (optional), D11: custom scenarios are validated against the device's items and faults) |
 | `get_device_config` | `deviceId` | `DeviceConfig` (`groups`, `digitalInputs`) | device::demo_state | impl (`lw_demo.daliGroups` / `digitalInputs`, else the library demo's; D6, D10) |
 | `set_dali_groups` | `deviceId, groups: DaliGroup[]` | `DaliGroup[]` | device::demo_state | impl (writes `lw_demo.daliGroups`, D6, D10) |
@@ -176,7 +176,8 @@ session (or when the task has already ended) they fail with `noSession`. They ne
 ### Not commands
 - **App updates** use the updater JS plugin directly (`@tauri-apps/plugin-updater` `check()`,
   `@tauri-apps/plugin-process` `relaunch()`), see `src/features/updates/useUpdateCheck.ts`.
-- **Language / theme** are frontend-only (localStorage).
+- **Language / theme** are frontend-only (localStorage). The content language of a device
+  (`lw_demo.language`, D12) is separate: the UI sends its language when a device is created.
 
 ## 5. IPC contract — events
 
@@ -334,8 +335,14 @@ Details live in `model/library.rs`, `model/device.rs`, `model/session.rs`; decis
   `system` (`system: rssi | temperature`), `modbus` (`slave`, `registerType?` — default
   `holding`, `coil` for a switch control — `writable`), `customAlarm` (`severity`, `text`).
 - **Slaves** (`SlaveDefinition`): `key`, `name`, `requestInterval`, `alarms[]` (any number).
+- **Texts in two languages** (D12): `LocalizableText` = a plain string (both languages) or
+  `LocalizedText {de, en}` (untagged; TS `string | LocalizedText`, helper `textIn` in
+  `src/lib/text.ts`) for slave `name`, slave alarm / `customAlarm` / effect `text`, demo group
+  `name` (`DemoDaliGroup`, resolved to a device `DaliGroup` by `resolve(lang)`), floorplan
+  `name` / `description`, widget `title` / `text` / `note` / labels. `Language` = `de` | `en`.
+  Resolved in the device's content language wherever it reaches Cumulocity.
 - **Naming** (`payload::naming`, D10): every measurement is `<fragment>.<series>` with fragment =
-  the item's German title (`.` / `$` → `_`, trimmed) and series = the item id (a DALI lamp also
+  the item's title in the device language (D12; `.` / `$` → `_`, trimmed) and series = the item id (a DALI lamp also
   sends `<id> Lamp Status` / `<id> Converter Status` / `<id> Converter Runtime`); a DI's device
   title wins over the item title. Alarm types `lw_demo_<id:02>_<name>` (slave) and
   `lw_demo_<name>` (device level, name must not start with two digits plus `_`) (D2); timeout text
@@ -346,11 +353,13 @@ Details live in `model/library.rs`, `model/device.rs`, `model/session.rs`; decis
   source of truth for the title) + `DigitalInputSettings` (`type` daliAction | impulseCounter |
   measurement, `isActive`, `initCount`, `increment`, `unit`, `highLevelAction`,
   `lowLevelAction`, `groups`). On the device it becomes `DigitalInputEntry` (same settings +
-  `title` = item title de) → `lw_demo.digitalInputs[]`.
+  `title` = item title in the device language, D12) → `lw_demo.digitalInputs[]`.
 - **`lw_demo`** (`LwDemoState`) adds, next to `slaves`: per slave `registers[]` (assigned register
   `address` + `registerType`, so upgrades never renumber), `customSlaves[]`, `customItems[]` (D6),
   `daliGroups[]`, `digitalInputs[]`, `timeZone` (D10; absent on devices from older app versions:
-  the library demo's groups / inputs apply). The matching `lw_modbusWrite` has `slaveAddress`,
+  the library demo's groups / inputs apply), `language` (`de` | `en`, D12; absent = `de`,
+  `LwDemoState::language()`; set by apply, kept by upgrade; part of the session's selection key,
+  so a change sets `restartNeeded`). The matching `lw_modbusWrite` has `slaveAddress`,
   `registerAddress`, `type: coil | register` (`ModbusRegisterType::write_operation_type`).
 - **Device-local edits** (D6): `update_demo_setup` (custom slaves / items), `set_dali_groups`,
   `set_digital_inputs`, read back with `get_device_config`. Export (PRD §13) reads the same data.

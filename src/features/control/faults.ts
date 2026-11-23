@@ -6,6 +6,7 @@ import type {
   OpenAlarmStatus,
   SlaveDefinition,
 } from "@/lib/api";
+import { textIn } from "@/lib/text";
 
 import { type FilterableEntry, faultHaystack, itemHaystack, type Lang } from "./itemFilter";
 
@@ -143,7 +144,7 @@ export function buildEntries<R extends { meta: LibraryItem_Serialize }>(
   slaves: readonly SlaveDefinition[],
   labels: EntryLabels,
 ): ControlEntry<R>[] {
-  const slaveNames = new Map(slaves.map((s) => [s.key, s.name]));
+  const slaveNames = new Map(slaves.map((s) => [s.key, textIn(s.name, labels.lang)]));
   const byOwner = new Map<string, FaultDefinition[]>();
   const custom = new Map<string, FaultDefinition[]>();
   const slaveFaults = new Map<string, FaultDefinition[]>();

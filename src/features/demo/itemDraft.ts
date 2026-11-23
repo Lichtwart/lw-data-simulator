@@ -7,6 +7,8 @@ import type {
   Severity,
 } from "@/lib/api";
 
+import { textIn } from "@/lib/text";
+
 import { isValidDeviceAlarmName, isValidItemId, isValidUnit, parseTagList } from "./parse";
 
 /** One row of a select control (value stays text while typing). */
@@ -180,7 +182,8 @@ export function itemToDraft(item: LibraryItem_Serialize): ItemDraft | null {
     tags: item.tags.join(", "),
   };
   if (item.kind === "customAlarm") {
-    return { ...base, kind: "customAlarm", severity: item.severity, text: item.text };
+    // Plain from the editor; a `{de, en}` text (D12, only by hand) is edited in its German form.
+    return { ...base, kind: "customAlarm", severity: item.severity, text: textIn(item.text, "de") };
   }
   if (item.kind !== "modbus") return null;
   const c = item.control;
